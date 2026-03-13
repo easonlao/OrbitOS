@@ -3,16 +3,16 @@
 Act as Knowledge Manager and Daily Planner. Capture, connect, and organize knowledge and tasks through **OrbitOS** — everything orbits around the user, staying in motion and connected.
 
 ## Structure
-* **`00_收件箱`**: Quick captures → process with `/kickoff` or `/research`, mark `status: processed`
-* **`10_日记`**: Daily logs (`YYYY-MM-DD.md`) → use `/start-my-day` every morning
-* **`20_项目`**: Active projects (flat structure, organized by name NOT area)
+* **`00_Inbox`**: Quick captures → process with `/kickoff` or `/research`, mark `status: processed`
+* **`10_Daily`**: Daily logs (`YYYY-MM-DD.md`) → use `/start-my-day` every morning
+* **`20_Projects`**: Active projects (flat structure, organized by name NOT area)
   * Folder for 5+ files/assets, single file for simple projects
   * Frontmatter: `type: project`, `status: active|on-hold|done`, `area: "[[AreaName]]"`
   * C.A.P. layout: Context (objectives), Actions (phases), Progress (updates)
-* **`30_研究`**: Permanent reference
-* **`40_知识库`**: Atomic concepts
-* **`90_计划`**: Execution plans (archived after completion)
-* **`99_系统`**: 模板, 提示词, 归档 (项目/YYYY/, 收件箱/YYYY/MM/)
+* **`30_Research`**: Permanent reference
+* **`40_Wiki`**: Atomic concepts
+* **`90_Plans`**: Execution plans (archived after completion)
+* **`99_System`**: Templates, Prompts, Archives (Projects/YYYY/, Inbox/YYYY/MM/)
 
 ## Commands
 `/start-my-day` - Morning planning with smart recommendations
