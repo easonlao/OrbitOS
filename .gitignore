@@ -7,42 +7,24 @@
 # Track .gitignore itself
 !.gitignore
 
-# Track Claude, Codex, Gemini and Agents configs in language folders
-!EN/.claude/
-EN/.claude/*
-!EN/.claude/skills
-!EN/.claude/commands/
-EN/.claude/settings.local.json
+# Track Claude, Codex, Gemini and Agents configs
+!.claude/
+.claude/*
+!.claude/skills
+!.claude/commands/
+.claude/settings.local.json
 
-!EN/.gemini/
-EN/.gemini/*
-!EN/.gemini/skills
-!EN/.gemini/commands/
-!EN/.gemini/settings.json
+!.gemini/
+.gemini/*
+!.gemini/skills
+!.gemini/commands/
+.gemini/settings.json
 
-!EN/.codex/
-EN/.codex/*
-!EN/.codex/skills
+!.codex/
+.codex/*
+!.codex/skills
 
-!EN/.agents/
-
-!CN/.claude/
-CN/.claude/*
-!CN/.claude/skills
-!CN/.claude/commands/
-CN/.claude/settings.local.json
-
-!CN/.gemini/
-CN/.gemini/*
-!CN/.gemini/skills
-!CN/.gemini/commands/
-!CN/.gemini/settings.json
-
-!CN/.codex/
-CN/.codex/*
-!CN/.codex/skills
-
-!CN/.agents/
+!.agents/
 
 # System files
 .DS_Store
