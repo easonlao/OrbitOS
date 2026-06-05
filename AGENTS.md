@@ -40,3 +40,4 @@ Act as Knowledge Manager and Daily Planner. Capture, connect, and organize knowl
 - Daily notes link to projects; projects track progress in daily notes
 - No empty line after frontmatter `---` (it becomes visible in body)
 - 必须使用中文与用户进行交流，所有生成的文件也必须为中文。
+- **新增 skill 时必须同步更新 `/help`**：在 `.agents/skills/help/SKILL.md` 中添加新命令的说明，确保用户通过 `/help` 能看到所有可用功能。
