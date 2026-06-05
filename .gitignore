@@ -4,8 +4,9 @@
 # But track .gitkeep for empty directories
 !.gitkeep
 
-# Track .gitignore itself
+# Track .gitignore and .gitattributes
 !.gitignore
+!.gitattributes
 
 # Track Claude, Codex, Gemini and Agents configs
 !.claude/
@@ -56,6 +57,9 @@
 # Temporary files
 *.tmp
 *~
+
+# User workspace content
+OH-Works/
 
 # Log files
 *.log

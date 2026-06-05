@@ -43,6 +43,7 @@ Output the following in Chinese:
 | `/brainstorm` | 互动式头脑风暴 | 打磨和完善想法 |
 | `/parse-knowledge` | 零散文本 → 知识库 | 处理笔记、文章、会议记录 |
 | `/archive` | 清理已完成内容 | 定期维护、项目收尾 |
+| `/reflect` | 道痕六层自我反思 | 每天复盘，记录驱动力 |
 
 ---
 
