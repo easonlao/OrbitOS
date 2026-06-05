@@ -26,6 +26,29 @@
 
 !.agents/
 
+# 用户数据目录（只保留目录结构，不推送实际内容）
+00_收件箱/*
+!00_收件箱/.gitkeep
+
+10_日记/*
+!10_日记/.gitkeep
+
+20_项目/*
+!20_项目/.gitkeep
+
+30_研究/*
+!30_研究/.gitkeep
+
+40_知识库/*
+!40_知识库/.gitkeep
+
+50_资源/*
+!50_资源/.gitkeep
+!50_资源/Screenshot.png
+
+90_计划/*
+!90_计划/.gitkeep
+
 # System files
 .DS_Store
 .trash/
