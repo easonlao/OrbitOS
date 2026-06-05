@@ -1,201 +1,190 @@
 # OrbitOS
 
-English | [中文](README_CN.md)
+> 一个 **AI 驱动**的个人生产力系统——让 AI 助手帮你打理**知识管理**和**每日规划**。
 
-> An **AI-powered** personal productivity system where **knowledge management** and **daily task planning** are intelligently orchestrated by your AI assistant.
+![Screenshot](50_资源/Screenshot.png)
 
-![Screenshot](EN/50_Resources/Screenshot.png)
-
-## Installation
-
-**Option 1: Git Sparse Checkout** (downloads only English version)
+## 安装
 
 ```bash
-git clone --filter=blob:none --sparse https://github.com/MarsWang42/OrbitOS.git my-vault
-cd my-vault
-git sparse-checkout set EN
-mv EN/* EN/.* . 2>/dev/null; rmdir EN
+git clone https://github.com/easonlao/OrbitOS.git my-vault
 ```
 
-**Option 2: Using degit** (no git history, simpler)
-
-```bash
-npx degit MarsWang42/OrbitOS/EN my-vault
-```
+然后用 Obsidian 打开 `my-vault` 文件夹即可。
 
 ---
 
-## What is OrbitOS?
+## 什么是 OrbitOS？
 
-OrbitOS is an Obsidian-based productivity framework designed around a simple principle: **everything orbits around you**. Your projects, knowledge, and daily tasks stay in motion and connected — all managed through natural language conversations with AI.
+OrbitOS 是一个基于 Obsidian 的生产力框架，核心理念很简单：**你是中心，万物围绕你运转**。项目、知识、日常任务如同行星一般环环相扣、持续演进——而管理这一切，只需用自然语言和 AI 聊聊天。
 
-Unlike traditional note-taking systems that require manual organization, OrbitOS leverages **Claude Code** or **Gemini CLI** as your intelligent knowledge manager and daily planner. The AI doesn't just store your information — it actively helps you:
+传统笔记系统需要你亲力亲为地整理归档，OrbitOS 则不同——它让 **Claude Code** 或 **Gemini CLI** 充当你的智能知识管家和每日规划师。AI 不只是帮你存东西，它会主动：
 
-- **Capture ideas** and transform them into structured, actionable projects
-- **Plan your day** with context-aware recommendations based on your active work
-- **Research topics** and automatically organize findings into your knowledge base
-- **Connect the dots** between notes, projects, and concepts through smart wikilinks
-- **Archive and clean up** completed work to keep your system lean and focused
+- **捕捉灵感**，把零散想法变成结构清晰、可执行的项目
+- **规划每日**，基于你手头的工作给出有针对性的建议
+- **深入研究**，自动把调研成果整理进知识库
+- **串联一切**，通过智能双向链接把笔记、项目、概念编织成网
+- **定期清理**，归档已完成的工作，让系统保持精简
 
-## Key Features
+## 核心特性
 
-### AI-Driven Workflows
+### AI 驱动的工作流
 
-Every major workflow is initiated through simple slash commands, with the AI handling the heavy lifting:
+主要工作流都通过简单的斜杠命令启动，繁重的活儿交给 AI：
 
-| Workflow              | What the AI Does                                                                                      |
-| --------------------- | ----------------------------------------------------------------------------------------------------- |
-| **Daily Planning**    | Reviews yesterday's progress, surfaces active projects, recommends focus areas, processes inbox items |
-| **Project Creation**  | Converts rough ideas into structured projects with objectives, phases, and success metrics            |
-| **Research**          | Conducts deep dives, structures findings, creates atomic wiki entries, builds knowledge connections   |
-| **Knowledge Parsing** | Takes unstructured text and organizes it into your vault with proper categorization and linking       |
-| **Archiving**         | Identifies completed items and moves them to archives while preserving historical context             |
+| 工作流 | AI 做什么 |
+| :--- | :--- |
+| **每日规划** | 回顾昨日进展，列出活跃项目，推荐今日重点，处理收件箱 |
+| **项目创建** | 把粗略想法变成结构化项目，包含目标、阶段和成功指标 |
+| **课题研究** | 深度调研，整理成结构化笔记，提取核心概念，建立知识关联 |
+| **知识解析** | 把零散文本分类整理进知识库，自动添加链接 |
+| **归档处理** | 识别已完成的内容，移入归档，保留历史脉络 |
 
-### Intelligent Knowledge Graph
+### 智能知识图谱
 
-OrbitOS uses wikilinks extensively to build a connected knowledge graph:
+OrbitOS 大量使用双向链接，构建相互连通的知识网络：
 
-- **Projects** link to related **Research** notes for context and reference
-- **Daily notes** link to projects you worked on each day
-- **Wiki entries** are atomic concepts that can be referenced from anywhere
-- **Research notes** synthesize information and link to source concepts
+- **项目**链接到相关的**研究笔记**，随时查阅背景资料
+- **每日笔记**链接到当天推进的项目
+- **知识库条目**是原子化的概念，可以在任何地方被引用
+- **研究笔记**汇总信息，并链接回源头概念
 
-The AI automatically creates these connections as you work, building a web of knowledge over time.
+AI 会在你工作的过程中自动建立这些连接，日积月累，知识网络越织越密。
 
-### Structured Yet Flexible
+### 结构清晰，灵活可变
 
-The folder structure provides clear organization while remaining adaptable:
+文件夹结构一目了然，同时保持足够的灵活性：
 
 ```
-├── 00_Inbox/          # Quick captures — the AI processes these into proper locations
-├── 10_Daily/          # Daily logs (YYYY-MM-DD.md) — AI-generated each morning
-├── 20_Project/        # Active projects — AI helps create and track progress
-├── 30_Research/       # Deep research notes — AI-structured from your explorations
-├── 40_Wiki/           # Atomic concepts — AI extracts reusable definitions
-├── 50_Resources/      # Curated content — newsletters, product launches, references
-├── 90_Plans/          # Execution plans — AI drafts, you approve, then archived
-└── 99_System/         # System configuration
-    ├── Archives/      # Historical records (organized by year/month)
-    ├── Prompts/       # AI personas for different domains
-    └── Templates/     # Markdown templates for consistency
+├── 00_收件箱/         # 快速捕获 —— AI 会将其处理到合适的位置
+├── 10_日记/           # 每日日志 (YYYY-MM-DD.md) —— 每天早晨由 AI 生成
+├── 20_项目/           # 活跃项目 —— AI 协助创建并跟踪进度
+├── 30_研究/           # 深度研究笔记 —— 由 AI 根据你的探索进行结构化
+├── 40_知识库/         # 原子概念 —— AI 提取可复用的定义
+├── 50_资源/           # 精选内容 —— 通讯、产品发布、参考资料
+├── 90_计划/           # 执行方案 —— AI 起草，你批准，随后归档
+└── 99_系统/           # 系统配置
+    ├── 归档/          # 历史记录 (按年/月组织)
+    ├── 提示词/        # 针对不同领域的 AI 人设 (Personas)
+    └── 模板/          # 保持一致性的 Markdown 模板
 ```
 
 ---
 
-## Getting Started
+## 快速入门
 
-### Prerequisites
+### 前提条件
 
-1. **Install Obsidian** — [Download](https://obsidian.md/download) (macOS, Windows, Linux)
-2. **Install an AI Assistant** (choose one):
-   - **Claude Code** — `npm install -g @anthropic-ai/claude-code` ([Documentation](https://docs.anthropic.com/en/docs/claude-code))
-   - **Gemini CLI** — `npm install -g @google/gemini-cli` ([Documentation](https://github.com/google-gemini/gemini-cli))
-3. Open the vault folder in Obsidian and run your AI assistant from the same directory
-4. **Recommended**: Install the [Terminal plugin](https://github.com/polyipseity/obsidian-terminal) to run Claude Code directly within Obsidian — this provides a seamless experience without switching between apps
+1. **安装 Obsidian** — [下载地址](https://obsidian.md/download)（支持 macOS、Windows、Linux）
+2. **安装 AI 助手**（任选其一）：
+   - **Claude Code** — `npm install -g @anthropic-ai/claude-code`（[官方文档](https://docs.anthropic.com/en/docs/claude-code)）
+   - **Gemini CLI** — `npm install -g @google/gemini-cli`（[官方文档](https://github.com/google-gemini/gemini-cli)）
+3. 在 Obsidian 中打开库文件夹，在同一目录下启动 AI 助手
+4. **推荐**：安装 [Terminal 插件](https://github.com/polyipseity/obsidian-terminal)，这样可以直接在 Obsidian 里运行 Claude Code，不用来回切换窗口
 
-### Your First Day
+### 第一天怎么用
 
-1. **Capture your first idea**: Drop a quick note in `00_Inbox/`.
-   - Just write down a thought, project idea, or something you want to explore
-   - Don't worry about formatting — the AI will help structure it later
+1. **随手记下第一个想法**：往 `00_收件箱/` 里扔一条笔记
+   - 写什么都行——灵感、项目点子、想研究的东西
+   - 不用管格式，AI 稍后会帮你整理
 
-2. **Start your day**: Run `/start-my-day` in your AI assistant
-   - The AI will scan your inbox and surface items to process
-   - Review any active projects (empty on day one, and that's okay!)
-   - Generate a daily note with recommendations
+2. **开始新的一天**：运行 `/start-my-day`
+   - AI 会扫描收件箱，把待处理的事项列出来
+   - 回顾进行中的项目（第一天是空的，没关系）
+   - 生成一份带建议的每日笔记
 
-3. **Kick off a project**: Run `/kickoff` to transform an inbox item into a project
-   - The AI will draft a plan and ask clarifying questions
-   - Creates a structured project with objectives, phases, and success metrics
+3. **启动一个项目**：运行 `/kickoff`，把收件箱里的想法变成正式项目
+   - AI 会起草计划，问你一些细节问题
+   - 最终生成一份结构完整的项目文档，包含目标、阶段和成功指标
 
-4. **Research something**: Run `/research <topic>`
-   - The AI conducts a thorough investigation
-   - Creates structured notes in `30_Research/`
-   - Extracts atomic concepts to `40_Wiki/`
-   - Links everything together automatically
+4. **研究一个话题**：运行 `/research <话题>`
+   - AI 会深入调研
+   - 在 `30_研究/` 创建结构化笔记
+   - 把核心概念提取到 `40_知识库/`
+   - 自动把所有内容链接起来
 
-5. **Ask a quick question**: Run `/ask <question>`
-   - Get a direct answer without creating heavy documentation
-   - Optionally save useful findings to your wiki
-
----
-
-## Command Reference
-
-### Core Workflows
-
-| Command | Purpose | When to Use |
-|---------|---------|-------------|
-| `/start-my-day` | AI-guided daily planning and review | Every morning to set your focus |
-| `/kickoff` | Transform ideas into structured projects | Starting any new initiative |
-| `/research` | Deep dive with automatic knowledge structuring | Learning something comprehensively |
-| `/ask` | Quick answers without heavy note-taking | Simple questions, fact lookups |
-| `/brainstorm` | Interactive idea exploration | Developing and refining concepts |
-| `/parse-knowledge` | Structure unstructured text into vault | Processing notes, articles, meeting transcripts |
-| `/archive` | Clean up completed items | Regular maintenance, project completion |
-
-### Obsidian-Specific Features
-
-| Skill | Purpose |
-|-------|---------|
-| `obsidian-markdown` | Wikilinks, callouts, embeds, and Obsidian-flavored syntax |
-| `obsidian-bases` | Create database-like views with filters and formulas (.base files) |
-| `json-canvas` | Visual mind maps and flowcharts (.canvas files) |
-
-### Content Curation (Optional)
-
-| Command           | Purpose                                                            |
-| ----------------- | ------------------------------------------------------------------ |
-| `/ai-newsletters` | Curate and summarize AI newsletters (TLDR AI, The Rundown AI)      |
-| `/ai-products`    | Discover AI product launches from Product Hunt, HN, GitHub, Reddit |
+5. **快速提问**：运行 `/ask <问题>`
+   - 直接拿到答案，不用写一堆笔记
+   - 有用的发现可以选择存进知识库
 
 ---
 
-## Project Concepts
+## 命令一览
 
-### The C.A.P. Project Layout
+### 核心工作流
 
-Every project follows a consistent structure:
+| 命令 | 用途 | 适用场景 |
+| :--- | :--- | :--- |
+| `/start-my-day` | AI 引导每日规划与回顾 | 每天早上，明确今日重点 |
+| `/kickoff` | 把想法变成结构化项目 | 启动任何新计划 |
+| `/research` | 深度调研，自动整理成知识 | 系统性地学习一个领域 |
+| `/ask` | 快问快答，不留笔记 | 简单问题、查个事实 |
+| `/brainstorm` | 互动式头脑风暴 | 打磨和完善想法 |
+| `/parse-knowledge` | 把零散文本整理进知识库 | 处理笔记、文章、会议记录 |
+| `/archive` | 清理已完成的内容 | 定期维护、项目收尾 |
 
-- **Context**: What are we trying to achieve? What does success look like?
-- **Actions**: Phased checklists of tasks to complete
-- **Progress**: Timestamped updates linking to daily notes
+### Obsidian 专属功能
 
-### Wikilinks and Connections
+| 技能 | 用途 |
+| :--- | :--- |
+| `obsidian-markdown` | 双向链接、Callout 块、嵌入等 Obsidian 特有语法 |
+| `obsidian-bases` | 用过滤器和公式创建类数据库视图 (.base 文件) |
+| `json-canvas` | 可视化思维导图和流程图 (.canvas 文件) |
 
-OrbitOS relies heavily on Obsidian's wikilink syntax:
+### 内容筛选（可选）
+
+| 命令 | 用途 |
+| :--- | :--- |
+| `/ai-newsletters` | 筛选并总结 AI 领域通讯 (TLDR AI, The Rundown AI 等) |
+| `/ai-products` | 发现 Product Hunt、HN、GitHub、Reddit 上的 AI 新产品 |
+
+---
+
+## 项目理念
+
+### C.A.P. 项目结构
+
+每个项目都遵循统一格式：
+
+- **Context（背景）**：要做什么？怎样算成功？
+- **Actions（行动）**：分阶段的任务清单
+- **Progress（进展）**：带时间戳的更新，链接到每日笔记
+
+### 双向链接
+
+OrbitOS 重度使用 Obsidian 的双向链接语法：
 
 ```markdown
-[[NoteName]]                  # Basic link
-[[NoteName|Display Text]]     # Custom display text
-![[NoteName]]                 # Embed entire note
-![[NoteName#Section]]         # Embed specific section
+[[笔记名称]]                # 基础链接
+[[笔记名称|显示文本]]       # 自定义显示文本
+![[笔记名称]]               # 嵌入整篇笔记
+![[笔记名称#章节]]          # 嵌入特定章节
 ```
 
-The AI creates these links automatically, but you should also link liberally — connections create value.
+AI 会自动创建链接，但你也要养成手动链接的习惯——连接越多，价值越大。
 
-### Daily Notes as the Anchor
+### 每日笔记是锚点
 
-Daily notes (`10_Daily/YYYY-MM-DD.md`) serve as your central anchor:
+每日笔记 (`10_日记/YYYY-MM-DD.md`) 是整个系统的锚点：
 
-- Every project update references the daily note where work happened
-- Inbox items are processed and linked from daily notes
-- The `/start-my-day` workflow generates these automatically
-
----
-
-## Philosophy
-
-OrbitOS is built on these principles:
-
-1. **AI as Partner**: The AI isn't just a tool — it's an active collaborator that understands your system and helps maintain it
-2. **Capture Everything, Process Later**: The inbox exists so you never lose an idea; the AI helps you process when ready
-3. **Connections Over Categories**: Rigid folder hierarchies fail; wikilinks create a flexible, queryable knowledge graph
-4. **Daily Rhythm**: The daily note anchors everything, creating a timeline of your work and thoughts
-5. **Progressive Formalization**: Ideas start rough and become structured over time through AI-assisted refinement
+- 每次项目更新都会引用当天的每日笔记
+- 收件箱事项处理后，从每日笔记链接出去
+- `/start-my-day` 会自动生成每日笔记
 
 ---
 
-## License
+## 设计哲学
 
-MIT License — Use freely, modify as needed, share with others.
+OrbitOS 基于这些原则：
+
+1. **AI 是伙伴**：AI 不只是工具，而是理解你的系统、帮你维护它的协作者
+2. **先记下来，再整理**：收件箱让你永不丢失灵感；准备好了再让 AI 帮你处理
+3. **连接比分类重要**：死板的文件夹层级迟早崩溃；双向链接构建灵活可查的知识图谱
+4. **每日节奏**：每日笔记锚定一切，为工作和思考建立时间线
+5. **渐进式结构化**：想法从粗糙开始，在 AI 辅助下逐步变得清晰有序
+
+---
+
+## 开源协议
+
+MIT License — 随便用，随便改，欢迎分享。
