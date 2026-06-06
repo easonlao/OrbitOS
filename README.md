@@ -4,21 +4,21 @@
 
 ## 安装
 
-\\\ash
+```bash
 git clone https://github.com/easonlao/OrbitOS.git my-vault
-\\\
+```
 
-用 Obsidian 打开 my-vault 即可。
+用 Obsidian 打开 `my-vault` 即可。
 
 ## 设计理念
 
 - **Agent-native**：所有知识库操作由 AI Agent 驱动
-- **自描述**：.orbit/workspace-index.yaml 即代表"这里是知识库"
+- **自描述**：`.orbit/workspace-index.yaml` 即代表"这里是知识库"
 - **路径无关**：任意目录 clone 均可直接使用
 
 ## 目录结构
 
-\\\
+```
 .orbit/                   ← vault 根锚点 + schema 规范
 00-系统/
   Skills/                 ← Agent Skill 定义
@@ -32,7 +32,7 @@ git clone https://github.com/easonlao/OrbitOS.git my-vault
 06-输出/                  ← 对外发布内容
 99-归档/                  ← 已归档内容
 .obsidian/plugins/        ← OrbitOS Dashboard 插件
-\\\
+```
 
 ## 许可
 
