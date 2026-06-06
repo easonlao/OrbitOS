@@ -4,16 +4,18 @@
 
 ```yaml
 ---
-type: newsletter-digest
-date: YYYY-MM-DD
+title: "AI Newsletter 摘要: YYYY-MM-DD"
+type: note
+topic: ai
+workspace: "05-资源"
+created: "YYYY-MM-DD HH:MM:SS"
+modified: "YYYY-MM-DD HH:MM:SS"
+tags: ["newsletter", "ai", "digest"]
+source: web
+status: active
 sources: [TLDR AI, The Rundown AI]
-raw_sources:
-  - "[[YYYY-MM-DD_TLDR-AI-Raw]]"
-  - "[[YYYY-MM-DD_Rundown-AI-Raw]]"
 item_count: 12
 duplicates_merged: 3
-top_topics: [话题1, 话题2, 话题3]
-created: YYYY-MM-DD HH:MM
 ---
 ```
 
@@ -23,14 +25,13 @@ created: YYYY-MM-DD HH:MM
 # AI Newsletter 摘要: YYYY-MM-DD
 
 > 来源: TLDR AI 和 The Rundown AI
-> 原始 Newsletter: [[YYYY-MM-DD_TLDR-AI-Raw]] | [[YYYY-MM-DD_Rundown-AI-Raw]]
+> 原始数据: [[YYYY-MM-DD_TLDR-AI-Raw]] | [[YYYY-MM-DD_Rundown-AI-Raw]]
 
 ## 精选推荐 (内容创作机会)
 
 - [ ] **[标题]** ([来源])
   链接: [URL]
   亮点: [相关性说明]
-  角度: [教程 | 工具评测 | 趋势分析 | 对比]
 
 ## AI动态
 
@@ -49,15 +50,5 @@ created: YYYY-MM-DD HH:MM
 - **[标题]** ([来源]) - 链接: [URL]
 
 ---
-
-**统计:**
-- 获取条目总数: X
-- 合并重复数: Y
-- 最终精选数: Z
+**统计:** 获取 X | 合并重复 Y | 精选 Z
 ```
-
-## Content Angle Suggestions
-
-- High AI relevance: "教程机会", "趋势分析"
-- High productivity: "工作流展示", "工具评测"
-- Novel + trending: "抢先报道", "思想引领"

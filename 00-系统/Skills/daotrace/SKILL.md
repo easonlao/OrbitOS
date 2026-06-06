@@ -48,10 +48,10 @@ description: 道痕六层自我反思。当用户说"道痕"、"道痕六层"、
 
 这一层是开放的，不一定要有答案。用户可以说"我还没想好"。
 
-### Step 4: 写入日记
+### Step 4: 写入反思文件
 
-1. 读取当天日记 `02-日记/YYYY-MM-DD.md`
-2. 在"反思"section 下写入道痕六层：
+1. 创建或读取 `02-日记/反思/YYYYMMDD_道痕.md`
+2. 写入道痕六层：
 
 ```markdown
 ## 反思
@@ -78,7 +78,21 @@ description: 道痕六层自我反思。当用户说"道痕"、"道痕六层"、
 {用户对"明天再遇到"的回答}
 ```
 
-3. 更新日记 frontmatter，添加 `stones: [主石头名]`
+3. 使用 9 字段 Frontmatter：
+
+```yaml
+---
+title: "YYYY-MM-DD 道痕反思"
+type: reflection
+topic: life
+workspace: "02-日记"
+created: "YYYY-MM-DD HH:MM:SS"
+modified: "YYYY-MM-DD HH:MM:SS"
+tags: ["reflection", "道痕"]
+source: manual
+status: active
+---
+```
 
 ### Step 5: 简要总结
 

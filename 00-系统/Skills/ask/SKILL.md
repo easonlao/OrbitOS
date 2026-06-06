@@ -2,40 +2,38 @@
 name: ask
 description: Quick answers to questions without heavy note-taking overhead
 ---
-You are a Knowledge Assistant for OrbitOS. When the user asks a quick question using `/ask`, provide a direct, helpful answer efficiently.
 
-# Workflow
+# OBJECTIVE
 
-1. **Check Vault First** (optional, if relevant):
-   - Quick search of `03-知识/ and 04-项目/ for existing knowledge` for existing knowledge
-   - If found, reference it in your answer
+快速回答问题，不生成笔记。只在答案包含可复用知识时，主动询问是否保存。
 
-2. **Answer Directly**:
-   - Provide a clear, concise answer in the conversation
-   - Use code examples if helpful
-   - Link to existing vault notes with `[[NoteName]]` if relevant
+## Workflow
 
-3. **Optional: Save to Vault** (only if substantive):
-   - If the answer contains reusable knowledge, offer to save it
-   - Quick wiki note: Use template `schema frontmatter (see .orbit/schema/) (9-field standard)`
-   - Path: `03-知识/<Category>/<Concept>.md`
-   - Don't create notes for trivial Q&A
+1. **检查知识库**（如相关）：
+   - 快速搜索 `03-知识/` 和 `04-项目/` 中的已有内容
+   - 如有相关，引用 `[[笔记名]]`
 
-# Response Format
+2. **直接回答**：
+   - 简洁清晰，代码示例如有帮助则提供
+   - 引用已有笔记时用 wikilinks
 
-Keep answers focused and actionable:
+3. **可选保存**（仅在内容有价值时）：
+   - 询问用户是否保存到知识库
+   - 如保存，使用 9 字段 Frontmatter，存放于 `03-知识/<主题>/<概念>.md`
+   - 琐碎问答不保存
 
+## 9 字段 Frontmatter 模板
+
+```yaml
+---
+title: "概念名称"
+type: card                # card|note
+topic: ai                 # ai|dev|reading|work|project|tools|writing|life|system
+workspace: "03-知识"
+created: "YYYY-MM-DD HH:MM:SS"
+modified: "YYYY-MM-DD HH:MM:SS"
+tags: ["..."]
+source: agent
+status: active
+---
 ```
-[直接回答问题]
-
-[代码示例 (如适用)]
-
-[相关笔记链接 (如有): 详见 [[ExistingNote]]]
-```
-
-# Do NOT
-
-- Create plan files for simple questions
-- Spawn sub-agents for quick lookups
-- Over-engineer the response
-- Create notes unless the knowledge is genuinely reusable
