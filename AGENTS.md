@@ -1,75 +1,39 @@
-# OrbitOS 代理行为规范
+# OrbitOS Agent 入口
 
-你是 OrbitOS 的知识管家和每日规划师。核心职责：帮用户捕想法、建立知识关联、管理日常任务。记住：**一切围绕用户运转**。
+## 读取顺序
 
-## 文件夹结构说明
+0. 如果当前目录不在知识库内，向上遍历父目录直到找到 `.orbit/workspace-index.yaml`，该目录即为 vault 根。
+1. 读取 `.orbit/workspace-index.yaml`，先根据用户意图判断目标工作区；如果当前 `pwd` 在 vault 内，再把 `pwd` 作为辅助信号校准。
+2. 读取 `.orbit/schema/taxonomy.yaml`，确认当前工作区允许的 type/topic 枚举。
+3. 读取 `.orbit/schema/subsystems.yaml`，确认当前工作区的自治子系统契约。
+4. 读取 `.orbit/schema/event-capture.yaml`，确认全局路由和 Hook 事件采集规则。
+5. 读取 `.orbit/schema/workspace-tools.yaml`，确认当前工作区可用工具 Skill 和领域 Skill。
+6. 读取 `00-系统/Skills/` 下的 HanaAgent Skills（daotrace, start-my-day, kickoff, research 等）。
+7. 读取当前工作区的 `WORKSPACE.md`。
+8. 按 `workspace-index.yaml` 中的 `skill` 加载对应子 Skill。
+9. 仅在意图命中时加载领域 Skill。
+10. 创建、更新或整理文件前，检查 `.orbit/schema/`。
 
-| 文件夹 | 用途 | 处理方式 |
-|--------|------|----------|
-| `00_收件箱` | 快速记录想法、灵感 | 用 `/kickoff` 转为项目，或用 `/research` 深入研究，处理后标记 `status: processed` |
-| `10_日记` | 每日工作记录 | 文件名格式 `YYYY-MM-DD.md`，每天早上运行 `/start-my-day` 生成 |
-| `20_项目` | 正在进行的项目 | 扁平结构，按项目名称命名，不要按领域分类 |
-| `30_研究` | 深度调研笔记 | 长期保存的参考资料 |
-| `40_知识库` | 原子化知识点 | 每个文件一个概念，方便引用 |
-| `50_资源` | 精选内容 | 包含 Newsletters/ 和 产品发布/ 子目录 |
-| `90_计划` | 执行方案 | 完成后归档 |
-| `99_系统` | 系统配置 | 包含模板、提示词、归档（按年/月组织） |
+## 全局规则
 
-### 项目管理规则
+- 新 Markdown 文件默认使用 `YYYYMMDD_主题.md`。
+- 每个 Markdown 文件必须有 Frontmatter（9 字段：title, type, topic, workspace, created, modified, tags, source, status）。
+- `workspace` 字段必须等于当前工作区目录名。
+- 不确定归属时，写入 `01-收件箱/待整理/`。
+- 不直接批量删除历史内容。
+- 大规模迁移先写入 `.orbit/manifests/`。
+- 每个工作区都是自治子系统，必须遵守输入、输出、状态、审计和修复边界。
+- 任意目录触发知识库操作时，先 resolve vault，再按意图 route-create。
 
-- 项目文件必须包含 frontmatter：`type: project`, `status: active|on-hold|done`, `area: "[[领域名]]"`
-- 项目通过 frontmatter 的 `area` 字段关联领域，**不要用文件夹层级**
-- 5 个以上文件的项目建文件夹，简单项目用单文件
-- 项目结构遵循 C.A.P. 模式：
-  - **Context**：项目目标和成功标准
-  - **Actions**：分阶段的任务清单
-  - **Progress**：带时间戳的进展记录
+## 工作区切换
 
-## 可用技能
+当前目录只在位于 vault 内时辅助决定工作状态；外部目录触发知识库操作时，以用户意图和工作区规范为准：
 
-### 系统命令
-| 命令 | 功能 |
-|------|------|
-| `/help` | 显示所有可用命令和快速入门指南 |
-
-### 内容筛选
-| 命令 | 功能 |
-|------|------|
-| `/ai-newsletters` | 筛选每日 AI 领域通讯（TLDR AI、The Rundown AI 等） |
-| `/ai-products` | 发现 AI 新产品（Product Hunt、Hacker News、GitHub、Reddit） |
-
-### 核心工作流
-| 命令 | 功能 |
-|------|------|
-| `/start-my-day` | 每日规划：回顾昨日进展，生成今日待办，推荐重点工作 |
-| `/kickoff` | 把收件箱里的想法变成结构化项目 |
-| `/research <话题>` | 深度调研，自动整理成知识库（双代理工作流） |
-| `/ask <问题>` | 快问快答，不生成笔记 |
-| `/parse-knowledge` | 把零散文本（笔记、文章、会议记录）整理进知识库 |
-| `/archive` | 归档已完成的项目和已处理的收件箱条目 |
-| `/reflect` | 道痕六层自我反思，记录驱动力 |
-
-### Obsidian 专属功能
-| 技能 | 功能 |
-|------|------|
-| `obsidian-markdown` | 双向链接、Callout 块、嵌入等 Obsidian 特有语法 |
-| `obsidian-bases` | 用过滤器和公式创建类数据库视图（.base 文件） |
-| `json-canvas` | 可视化思维导图和流程图（.canvas 文件） |
-
-## 模板
-
-系统提供以下模板，位于 `99_系统/模板/`：
-- `Daily_Note.md` — 每日笔记模板
-- `Project_Template.md` — 项目模板
-- `Content_Template.md` — 内容模板
-- `Wiki_Template.md` — 知识库条目模板
-- `Inbox_Template.md` — 收件箱条目模板
-
-## 必须遵守的规则
-
-1. **语言要求**：必须使用中文与用户交流，所有生成的文件内容也必须是中文
-2. **链接优先**：大量使用双向链接 `[[笔记名]]`，建立知识网络
-3. **每日笔记是锚点**：每日笔记链接当天推进的项目，项目进展记录在每日笔记中
-4. **Frontmatter 格式**：`---` 后不要空行（空行会显示在正文）
-5. **项目关联**：项目通过 frontmatter 的 `area` 字段关联领域，不要用文件夹层级
-6. **保持同步**：新增 skill 时，必须同步更新 `.agents/skills/help/SKILL.md` 中的帮助信息，确保用户通过 `/help` 能看到所有可用功能
+- `00-系统`：规范、Schema、Skills、Agent、审计。
+- `01-收件箱`：接收、粗分、生成整理队列。
+- `02-日记`：记录、反思、复盘。
+- `03-知识`：沉淀知识卡片和主题笔记。
+- `04-项目`：推进项目，项目内可有局部 `AGENTS.md` 或 `CLAUDE.md`。
+- `05-资源`：保存长期参考资料和附件。
+- `06-输出`：维护可发布成品。
+- `99-归档`：保存迁移记录、废弃系统、废弃工具、完结项目和非活跃内容。
