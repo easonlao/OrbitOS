@@ -2,7 +2,7 @@
 
 当 Claude Code 在 vault 根目录（含 .orbit/workspace-index.yaml 的目录）打开时，按顺序读取：
 
-1. ./00-系统/Skills/orbit-vault/SKILL.md（核心路由 Skill，保留 ThirdSpace 原名）
+1. `./00-系统/Skills/orbit-vault/SKILL.md`（核心路由 Skill）
 2. .orbit/workspace-index.yaml（工作区索引）
 3. .orbit/schema/subsystems.yaml（工作区契约）
 4. .orbit/schema/event-capture.yaml（Agent 事件采集规格）

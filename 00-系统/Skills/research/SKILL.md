@@ -41,7 +41,7 @@ Follow these steps:
    - Check if this relates to an active project in 04-项目/
    - Determine the relevant Area (SoftwareEngineering, Finance, Health, etc.)
    - Search 03-知识/ to avoid duplication
-2. Identify Persona: Skip (ThirdSpace does not use global prompts)
+2. Identify Persona: Skip (OrbitOS does not use global prompts)
 3. Create the plan file at 04-项目/Plan_YYYY-MM-DD_Research_<Topic>.md using this format:
 
 # 研究计划: [主题]
@@ -156,7 +156,7 @@ status: complete
 ---
 
 Wiki Notes:
-- Use template: ThirdSpace schema frontmatter 规范
+- Use template: OrbitOS schema frontmatter 规范
 - Path: 03-知识/<Category>/<ConceptName>.md
 - Keep notes atomic and focused on a single concept
 

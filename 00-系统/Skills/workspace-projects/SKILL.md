@@ -1,6 +1,6 @@
 ---
 name: workspace-projects
-description: Use when working inside ThirdSpace `04-项目`, creating or updating project files, auditing project categories, or deciding where an active project belongs.
+description: Use when working inside OrbitOS `04-项目`, creating or updating project files, auditing project categories, or deciding where an active project belongs.
 triggers:
   - "项目"
   - "roadmap"

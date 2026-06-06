@@ -1,6 +1,6 @@
 ---
 name: lifeos
-description: Use when handling ThirdSpace interpersonal events, relationship analysis, people profiles, LifeOS records, event retrospectives, or decisions involving people and context.
+description: Use when handling OrbitOS interpersonal events, relationship analysis, people profiles, LifeOS records, event retrospectives, or decisions involving people and context.
 triggers:
   - "人际事件"
   - "记录关系"

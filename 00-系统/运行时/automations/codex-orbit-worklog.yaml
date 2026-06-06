@@ -1,4 +1,4 @@
-name: "ThirdSpace 每日工作日志初始化"
+name: "OrbitOS 每日工作日志初始化"
 kind: "cron"
 status: "ACTIVE"
 schedule: "daily 08:00 Asia/Shanghai"

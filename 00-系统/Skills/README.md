@@ -1,6 +1,6 @@
 # Skills 索引
 
-本文记录 ThirdSpace 当前 Skill 的真实位置、分层职责和加载规则。后续 Agent 不应再寻找旧 `prompts/`、`ai-context/` 或人类手动 CLI 入口。
+本文记录 OrbitOS 当前 Skill 的真实位置、分层职责和加载规则。后续 Agent 不应再寻找旧 `prompts/`、`ai-context/` 或人类手动 CLI 入口。
 
 ## Skill 位置
 
@@ -8,7 +8,7 @@
 |---|---|---|
 | 全局入口 | `{AGENTS_SKILLS}/orbit-vault/SKILL.md` | 任意目录触发知识库操作时首先加载的入口 Skill。 |
 | 全局领域入口 | `{AGENTS_SKILLS}/lifeos/SKILL.md` | LifeOS 的全局轻量入口，指向 canonical Skill。 |
-| Canonical ThirdSpace Skills | `{VAULT}/00-系统/Skills/` | 工作区 Skill、领域 Skill、局部创作 Skill 和内部脚本的唯一主维护位置。 |
+| Canonical OrbitOS Skills | `{VAULT}/00-系统/Skills/` | 工作区 Skill、领域 Skill、局部创作 Skill 和内部脚本的唯一主维护位置。 |
 | 运行时资产 | `{VAULT}/00-系统/运行时/` | hook、crontab、Agent 自动化规格的可迁移源。 |
 
 ## 对外入口

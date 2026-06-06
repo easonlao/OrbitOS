@@ -1,6 +1,6 @@
 ---
 name: knowledge
-description: Use when turning collected web, video, Feishu, or reading material into ThirdSpace knowledge cards, study notes, or long-term topic notes.
+description: Use when turning collected web, video, Feishu, or reading material into OrbitOS knowledge cards, study notes, or long-term topic notes.
 triggers:
   - "知识卡片"
   - "整理成知识"

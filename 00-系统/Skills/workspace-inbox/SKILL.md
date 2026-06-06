@@ -1,6 +1,6 @@
 ---
 name: workspace-inbox
-description: Use when handling ThirdSpace `01-收件箱`, web clippings, old flux intake, temporary ideas, unclassified materials, intake routing, frontmatter normalization, or content flow queues.
+description: Use when handling OrbitOS `01-收件箱`, web clippings, old flux intake, temporary ideas, unclassified materials, intake routing, frontmatter normalization, or content flow queues.
 triggers:
   - "整理收件箱"
   - "网页剪藏"

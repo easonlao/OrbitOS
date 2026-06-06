@@ -1,5 +1,5 @@
 #!/bin/bash
-# ThirdSpace Claude Code Stop Hook
+# OrbitOS Claude Code Stop Hook
 # 存储位置（vault 内）：00-系统/运行时/hooks/claude-stop-hook.sh
 # 安装位置（机器上）：~/.claude/hooks/session-stop.sh
 #
@@ -31,9 +31,9 @@ find_vault() {
         fi
         dir=$(dirname "$dir")
     done
-    # 兜底：$THIRDSPACE_VAULT 环境变量
-    if [ -n "${THIRDSPACE_VAULT:-}" ] && [ -f "$THIRDSPACE_VAULT/.orbit/workspace-index.yaml" ]; then
-        echo "$THIRDSPACE_VAULT"
+    # 兜底：$OrbitOS_VAULT 环境变量
+    if [ -n "${OrbitOS_VAULT:-}" ] && [ -f "$OrbitOS_VAULT/.orbit/workspace-index.yaml" ]; then
+        echo "$OrbitOS_VAULT"
         return 0
     fi
     # 兜底：~/.orbit/config.yaml

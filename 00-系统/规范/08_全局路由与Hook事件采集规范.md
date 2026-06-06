@@ -2,7 +2,7 @@
 
 ## 目标
 
-让 Agent 在任何目录都能操作 ThirdSpace 知识库，并让 Git Hook、Agent Hook、定时任务自动记录高价值工作日志。
+让 Agent 在任何目录都能操作 OrbitOS 知识库，并让 Git Hook、Agent Hook、定时任务自动记录高价值工作日志。
 
 这不是流水账系统，而是工作记忆系统：
 
@@ -15,7 +15,7 @@
 
 ```text
 任何目录触发
-  -> resolve-vault 找到 ThirdSpace
+  -> resolve-vault 找到 OrbitOS
   -> intent-router 判断意图和目标工作区
   -> workspace/subsystem skill 应用规范
   -> create/worklog/event 命令落盘
@@ -26,7 +26,7 @@
 知识库路径查找顺序：
 
 1. 从当前 `pwd` 向上查找 `.orbit/workspace-index.yaml`。
-2. 读取环境变量 `THIRDSPACE_VAULT`。
+2. 读取环境变量 `OrbitOS_VAULT`。
 3. 读取 `~/.orbit/config.yaml`。
 4. 无可用配置时报错退出（不设硬编码 fallback，避免在错误路径写入）。
 
@@ -77,7 +77,7 @@
 定时任务规格必须在 vault 内留存：
 
 ```text
-00-系统/运行时/crontab/thirdspace-worklog.cron
+00-系统/运行时/crontab/OrbitOS-worklog.cron
 ```
 
 ## Git Hook

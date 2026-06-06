@@ -12,7 +12,7 @@ triggers:
   - "配置知识库"
   - "帮我配置"
   - "第一次使用"
-parent: orbit-vault  # ThirdSpace 核心 Skill，保留原名
+parent: orbit-vault  # OrbitOS 核心 Skill，保留原名
 ---
 
 # OrbitOS 知识库初始化

@@ -2,9 +2,9 @@
 name: orbit-vault
 description: >-
   激活词：知识库。任何时候用户说"知识库"、"存进知识库"、"记到知识库"、"查知识库"、"整理知识库"，
-  或涉及 ThirdSpace vault 的操作（创建笔记、归类文件、工作区路由、Frontmatter 规范、审计结构），
+  或涉及 OrbitOS vault 的操作（创建笔记、归类文件、工作区路由、Frontmatter 规范、审计结构），
   立即加载本 Skill。从任意目录工作，无需用户手动指定路径。
-  Activation: any mention of "知识库", "ThirdSpace", "vault", or knowledge-base operations.
+  Activation: any mention of "知识库", "OrbitOS", "vault", or knowledge-base operations.
 triggers:
   - "知识库"
   - "存进知识库"
@@ -15,11 +15,11 @@ triggers:
   - "维护知识库"
   - "初始化知识库"
   - "当前工作区"
-  - "ThirdSpace"
+  - "OrbitOS"
   - "vault"
 ---
 
-# ThirdSpace Vault Root Skill
+# OrbitOS Vault Root Skill
 
 ## Agent-native Contract
 
@@ -82,8 +82,7 @@ node {SKILLS}/orbit-vault/scripts/orbit-vault.mjs audit-skill-locations --vault 
 - CLI 不是用户入口；旧 CLI 能力必须被包装成 Skill。
 - 所有 Skill scripts 的 canonical 根目录是 `00-系统/Skills`；不得再把可维护脚本散落到 Workbase、`.codex/skills` 或项目子目录的 Skill 中。
 - Hook、crontab 和 Agent 自动化规格必须在 `00-系统/运行时` 留存；跨电脑迁移时由 Agent 调用 `install-runtime --all` 自动注册。
-- `flux/`、`space/crafted/lifeos` 只能作为 legacy source，不作为新内容入口。
-- 旧 `flux/intake` 已迁入 `01-收件箱/网页剪藏` 和 `05-资源/图片/flux-intake-assets`，需要追溯时读取 migration manifest。
+
 
 ## Project Classification Policy
 

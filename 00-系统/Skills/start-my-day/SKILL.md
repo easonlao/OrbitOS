@@ -59,7 +59,7 @@ Use the AskUserQuestion tool to gather:
 
 1. **Check if today's note exists** at `02-日记/工作日志/YYYYMMDD_工作日志_周X.md`
    - If exists: read and update (preserve existing content)
-   - If not: create using ThirdSpace worklog template
+   - If not: create using OrbitOS worklog template
 
 2. **Populate the daily note:**
    - **待办事项**: Carryover incomplete tasks from yesterday, then user's focus, then project next actions
@@ -156,4 +156,4 @@ Output a concise summary in Chinese:
 
 # TEMPLATE
 
-Use `ThirdSpace worklog template (00-系统/Skills/worklog/)` as the base format for daily notes.
+Use `OrbitOS worklog template (00-系统/Skills/worklog/)` as the base format for daily notes.

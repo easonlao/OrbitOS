@@ -1,6 +1,6 @@
 ---
 name: workspace-archive
-description: Use when maintaining ThirdSpace `99-归档`, migration records, deprecated systems, deprecated tools, completed projects, archived files, or historical trace.
+description: Use when maintaining OrbitOS `99-归档`, migration records, deprecated systems, deprecated tools, completed projects, archived files, or historical trace.
 triggers:
   - "归档"
   - "迁移记录"

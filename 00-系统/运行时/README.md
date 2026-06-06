@@ -33,7 +33,7 @@ ls "$VAULT/.orbit"
 cat "$VAULT/.orbit/workspace-index.yaml"
 ```
 
-`{SKILLS}` = ThirdSpace skills 根目录（vault 内相对路径 `./00-系统/Skills`，即 `{VAULT}/00-系统/Skills`）。
+`{SKILLS}` = OrbitOS skills 根目录（vault 内相对路径 `./00-系统/Skills`，即 `{VAULT}/00-系统/Skills`）。
 
 ## Obsidian 插件
 

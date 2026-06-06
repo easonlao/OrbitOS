@@ -511,9 +511,9 @@ function initVault(vaultRoot, args = {}) {
   }
   ensureDir(path.join(vaultRoot, ".orbit", "events"));
   dirs += 1;
-  files += writeIfMissing(path.join(vaultRoot, "AGENTS.md"), "# ThirdSpace Agent 入口\n\n读取 `.orbit/workspace-index.yaml` 后按当前工作区规范执行。\n") ? 1 : 0;
-  files += writeIfMissing(path.join(vaultRoot, "CLAUDE.md"), "# ThirdSpace Claude Code 入口\n\n先读 `AGENTS.md`、`.orbit/workspace-index.yaml` 和 `.orbit/schema/workspace-taxonomy.yaml`，再读取当前工作区的 `WORKSPACE.md`。\n") ? 1 : 0;
-  files += writeIfMissing(path.join(vaultRoot, "README.md"), "# ThirdSpace 知识库\n\n中文管理、扁平工作区、Agent-native 的知识库。\n") ? 1 : 0;
+  files += writeIfMissing(path.join(vaultRoot, "AGENTS.md"), "# OrbitOS Agent 入口\n\n读取 `.orbit/workspace-index.yaml` 后按当前工作区规范执行。\n") ? 1 : 0;
+  files += writeIfMissing(path.join(vaultRoot, "CLAUDE.md"), "# OrbitOS Claude Code 入口\n\n先读 `AGENTS.md`、`.orbit/workspace-index.yaml` 和 `.orbit/schema/workspace-taxonomy.yaml`，再读取当前工作区的 `WORKSPACE.md`。\n") ? 1 : 0;
+  files += writeIfMissing(path.join(vaultRoot, "README.md"), "# OrbitOS 知识库\n\n中文管理、扁平工作区、Agent-native 的知识库。\n") ? 1 : 0;
   files += writeIfMissing(path.join(vaultRoot, ".orbit", "workspace-index.yaml"), renderWorkspaceIndex(vaultRoot)) ? 1 : 0;
   files += writeIfMissing(path.join(vaultRoot, ".orbit", "schema", "workspace-taxonomy.yaml"), renderWorkspaceTaxonomy()) ? 1 : 0;
   files += writeIfMissing(path.join(vaultRoot, ".orbit", "schema", "project-taxonomy.yaml"), renderProjectTaxonomy()) ? 1 : 0;
@@ -550,7 +550,7 @@ function renderWorkspaceIndex(vaultRoot) {
 function renderWorkspaceTaxonomy() {
   const lines = [
     'version: "2026-05-24"',
-    'description: "ThirdSpace 工作区一级目录分类表。"',
+    'description: "OrbitOS 工作区一级目录分类表。"',
     "workspaces:",
   ];
   for (const [, dir] of WORKSPACES) {
@@ -586,7 +586,7 @@ function renderProjectTaxonomy() {
 function renderWorkspaceToolsSchema() {
   return [
     'version: "2026-05-24"',
-    'description: "ThirdSpace 工作区工具框架。根 Skill 负责解析和路由，工作区 Skill 负责自治，领域 Skill 按需加载。"',
+    'description: "OrbitOS 工作区工具框架。根 Skill 负责解析和路由，工作区 Skill 负责自治，领域 Skill 按需加载。"',
     "root:",
     '  skill: "orbit-vault"',
     '  skill_root: "00-系统/Skills"',
@@ -610,7 +610,7 @@ function renderWorkspaceToolsSchema() {
 function renderSubsystemContracts() {
   const lines = [
     'version: "2026-05-24"',
-    'description: "ThirdSpace 自治子系统契约。"',
+    'description: "OrbitOS 自治子系统契约。"',
     "subsystems:",
   ];
   for (const [id, contract] of Object.entries(SUBSYSTEM_CONTRACTS)) {
@@ -634,7 +634,7 @@ function renderEventCaptureSchema() {
     'version: "2026-05-24"',
     'description: "全局路由、Git Hook、Agent Hook 和工作日志事件采集契约。"',
     "vault_resolver:",
-    '  order: ["walk_up:.orbit/workspace-index.yaml", "env:THIRDSPACE_VAULT", "file:~/.orbit/config.yaml", "fallback:error (no hardcoded fallback)"]',
+    '  order: ["walk_up:.orbit/workspace-index.yaml", "env:OrbitOS_VAULT", "file:~/.orbit/config.yaml", "fallback:error (no hardcoded fallback)"]',
     "worklog:",
     '  path_template: "02-日记/工作日志/YYYYMMDD_工作日志_周X.md"',
     '  sections: ["今日重点", "Git 提交", "Agent 产出", "关键决策", "问题与风险", "明日计划"]',
@@ -643,8 +643,8 @@ function renderEventCaptureSchema() {
     "  overwrite_existing_hook: false",
     '  vault_runtime_root: "00-系统/运行时"',
     '  hook_template: "00-系统/运行时/hooks/global-post-commit.sh"',
-    '  crontab_template: "00-系统/运行时/crontab/thirdspace-worklog.cron"',
-    '  automation_spec: "00-系统/运行时/automations/codex-thirdspace-worklog.yaml"',
+    '  crontab_template: "00-系统/运行时/crontab/OrbitOS-worklog.cron"',
+    '  automation_spec: "00-系统/运行时/automations/codex-OrbitOS-worklog.yaml"',
     "",
   ].join("\n");
 }
@@ -683,7 +683,7 @@ function renderGlobalPostCommitHook(vaultRoot) {
   const scriptPath = currentScriptPath(vaultRoot);
   return [
     "#!/bin/sh",
-    "# ThirdSpace portable global post-commit hook.",
+    "# OrbitOS portable global post-commit hook.",
     "# Source of truth: 00-系统/运行时/hooks/global-post-commit.sh",
     `VAULT="${vaultRoot}"`,
     `SCRIPT="${scriptPath}"`,
@@ -702,7 +702,7 @@ function renderRepoPostCommitHook(vaultRoot) {
   const scriptPath = currentScriptPath(vaultRoot);
   return [
     "#!/bin/sh",
-    "# ThirdSpace portable repo post-commit hook.",
+    "# OrbitOS portable repo post-commit hook.",
     "# Source of truth: 00-系统/运行时/hooks/repo-post-commit.sh",
     `VAULT="${vaultRoot}"`,
     `SCRIPT="${scriptPath}"`,
@@ -719,10 +719,10 @@ function renderRepoPostCommitHook(vaultRoot) {
 function renderCrontabTemplate(vaultRoot) {
   const scriptPath = currentScriptPath(vaultRoot);
   return [
-    "# ThirdSpace daily worklog bootstrap.",
-    "# Source of truth: 00-系统/运行时/crontab/thirdspace-worklog.cron",
+    "# OrbitOS daily worklog bootstrap.",
+    "# Source of truth: 00-系统/运行时/crontab/OrbitOS-worklog.cron",
     "# Installed by: orbit-vault install-runtime --crontab",
-    `0 8 * * * /bin/zsh -lc 'node "${scriptPath}" ensure-worklog --vault "${vaultRoot}" >/tmp/thirdspace-worklog.log 2>&1'`,
+    `0 8 * * * /bin/zsh -lc 'node "${scriptPath}" ensure-worklog --vault "${vaultRoot}" >/tmp/OrbitOS-worklog.log 2>&1'`,
     "",
   ].join("\n");
 }
@@ -730,7 +730,7 @@ function renderCrontabTemplate(vaultRoot) {
 function renderCodexAutomationSpec(vaultRoot) {
   const scriptPath = currentScriptPath(vaultRoot);
   return [
-    'name: "ThirdSpace 每日工作日志初始化"',
+    'name: "OrbitOS 每日工作日志初始化"',
     'kind: "cron"',
     'status: "ACTIVE"',
     'schedule: "daily 08:00 Asia/Shanghai"',
@@ -754,7 +754,7 @@ function renderRuntimeReadme(vaultRoot) {
     'source: "agent"',
     "---",
     "",
-    "# ThirdSpace 运行时资产",
+    "# OrbitOS 运行时资产",
     "",
     "这里保存跨电脑迁移需要的运行时规格。Agent 应该把这里当成 hook、crontab、自动化任务的源头，而不是只依赖本机散落配置。",
     "",
@@ -781,19 +781,19 @@ function renderRuntimeReadme(vaultRoot) {
 function renderRuntimeManifest(vaultRoot) {
   return [
     'version: "2026-05-26"',
-    'description: "ThirdSpace 可迁移运行时资产索引。"',
+    'description: "OrbitOS 可迁移运行时资产索引。"',
     `vault_root: "${vaultRoot}"`,
     'skill_root: "00-系统/Skills"',
     'runtime_root: "00-系统/运行时"',
     "assets:",
     '  global_git_hook: "00-系统/运行时/hooks/global-post-commit.sh"',
     '  repo_git_hook: "00-系统/运行时/hooks/repo-post-commit.sh"',
-    '  crontab: "00-系统/运行时/crontab/thirdspace-worklog.cron"',
-    '  codex_automation: "00-系统/运行时/automations/codex-thirdspace-worklog.yaml"',
+    '  crontab: "00-系统/运行时/crontab/OrbitOS-worklog.cron"',
+    '  codex_automation: "00-系统/运行时/automations/codex-OrbitOS-worklog.yaml"',
     "install:",
     '  command: "orbit-vault install-runtime --all"',
     '  global_git_hooks_path: "~/.config/git/hooks"',
-    '  crontab_marker: "THIRDSPACE DAILY WORKLOG"',
+    '  crontab_marker: "OrbitOS DAILY WORKLOG"',
     "",
   ].join("\n");
 }
@@ -806,8 +806,8 @@ function ensureRuntimeAssets(args = {}) {
     [path.join(root, "manifest.yaml"), renderRuntimeManifest(vaultRoot), null],
     [path.join(root, "hooks", "global-post-commit.sh"), renderGlobalPostCommitHook(vaultRoot), 0o755],
     [path.join(root, "hooks", "repo-post-commit.sh"), renderRepoPostCommitHook(vaultRoot), 0o755],
-    [path.join(root, "crontab", "thirdspace-worklog.cron"), renderCrontabTemplate(vaultRoot), null],
-    [path.join(root, "automations", "codex-thirdspace-worklog.yaml"), renderCodexAutomationSpec(vaultRoot), null],
+    [path.join(root, "crontab", "OrbitOS-worklog.cron"), renderCrontabTemplate(vaultRoot), null],
+    [path.join(root, "automations", "codex-OrbitOS-worklog.yaml"), renderCodexAutomationSpec(vaultRoot), null],
   ];
   let changed = 0;
   for (const [file, content, mode] of files) {
@@ -825,7 +825,7 @@ function installGlobalGitHook(vaultRoot, args = {}) {
   ensureDir(hookDir);
   if (fs.existsSync(hookPath)) {
     const existing = fs.readFileSync(hookPath, "utf8");
-    const owned = existing.includes("ThirdSpace portable global post-commit hook") || existing.includes("Global Git post-commit hook for ThirdSpace");
+    const owned = existing.includes("OrbitOS portable global post-commit hook") || existing.includes("Global Git post-commit hook for OrbitOS");
     if (!owned && !args.force) {
       const sidecar = path.join(hookDir, "post-commit.orbit-vault");
       writeIfChanged(sidecar, content, 0o755);
@@ -839,8 +839,8 @@ function installGlobalGitHook(vaultRoot, args = {}) {
 
 function installCrontab(vaultRoot) {
   const body = renderCrontabTemplate(vaultRoot).trim();
-  const begin = "# BEGIN THIRDSPACE DAILY WORKLOG";
-  const end = "# END THIRDSPACE DAILY WORKLOG";
+  const begin = "# BEGIN OrbitOS DAILY WORKLOG";
+  const end = "# END OrbitOS DAILY WORKLOG";
   let current = "";
   try {
     current = execFileSync("crontab", ["-l"], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
@@ -853,7 +853,7 @@ function installCrontab(vaultRoot) {
     ? current.replace(pattern, `${block}\n`)
     : `${current.trim() ? `${current.trim()}\n\n` : ""}${block}\n`;
   execFileSync("crontab", ["-"], { input: next, encoding: "utf8" });
-  return { status: pattern.test(current) ? "updated" : "installed", marker: "THIRDSPACE DAILY WORKLOG" };
+  return { status: pattern.test(current) ? "updated" : "installed", marker: "OrbitOS DAILY WORKLOG" };
 }
 
 function installRuntime(args = {}) {
@@ -951,7 +951,7 @@ function resolveVault(args = {}) {
   }
   const configured = readConfiguredVault();
   if (configured) return { vaultRoot: path.resolve(configured), source: "config", cwd };
-  throw new Error("Cannot resolve vault root. Run from within a vault directory or set THIRDSPACE_VAULT.");
+  throw new Error("Cannot resolve vault root. Run from within a vault directory or set OrbitOS_VAULT.");
 }
 
 function routeIntent(intent = "") {

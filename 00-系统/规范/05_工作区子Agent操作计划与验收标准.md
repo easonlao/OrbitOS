@@ -2,7 +2,7 @@
 
 > **路径约定（所有人适用）**
 > - `{VAULT}` = vault 根目录，即包含 `.orbit/workspace-index.yaml` 的目录
-> - `{SKILLS}` = ThirdSpace skills 根目录（可选，未安装时跳过 CLI 脚本步骤）
+> - `{SKILLS}` = OrbitOS skills 根目录（可选，未安装时跳过 CLI 脚本步骤）
 > - bash 代码块中已替换为 `$VAULT` / `$SKILLS` 变量
 > - 在 vault 根目录执行命令时：`VAULT="."` 即可；跨目录时向上遍历找到 `.orbit/workspace-index.yaml` 所在位置
 

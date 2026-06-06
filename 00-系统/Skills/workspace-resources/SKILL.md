@@ -1,6 +1,6 @@
 ---
 name: workspace-resources
-description: Use when maintaining ThirdSpace `05-资源`, reusable materials, internal tool notes, workflows, templates, attachments, images, people profiles, or resource indexes.
+description: Use when maintaining OrbitOS `05-资源`, reusable materials, internal tool notes, workflows, templates, attachments, images, people profiles, or resource indexes.
 triggers:
   - "资源"
   - "课程"

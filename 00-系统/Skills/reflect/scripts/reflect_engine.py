@@ -27,7 +27,7 @@ class ReflectEngine:
         """
         self.context_dir = Path(context_dir)
         self.reflections_dir = self.context_dir / "crafted" / "reflections"
-        # Vault 根目录是 context_dir 的父目录（即 ThirdSpace/）
+        # Vault 根目录是 context_dir 的父目录（即 OrbitOS/）
         self.vault_root = self.context_dir.parent
 
     def _to_vault_relative_path(self, path: str) -> str:

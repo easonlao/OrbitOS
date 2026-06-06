@@ -1,6 +1,6 @@
 ---
 name: workspace-outputs
-description: Use when maintaining ThirdSpace `06-输出`, articles, voiceovers, video scripts, decks, publishing drafts, publish-ready assets, or output lifecycle states.
+description: Use when maintaining OrbitOS `06-输出`, articles, voiceovers, video scripts, decks, publishing drafts, publish-ready assets, or output lifecycle states.
 triggers:
   - "文章"
   - "口播稿"

@@ -1,6 +1,6 @@
 ---
 name: workspace-system
-description: Use when maintaining ThirdSpace `00-系统`, changing workspace rules, schemas, Agent entrypoints, Skills, runtime assets, audits, migration traces, or subsystem contracts.
+description: Use when maintaining OrbitOS `00-系统`, changing workspace rules, schemas, Agent entrypoints, Skills, runtime assets, audits, migration traces, or subsystem contracts.
 triggers:
   - "系统规范"
   - "更新工作区规则"

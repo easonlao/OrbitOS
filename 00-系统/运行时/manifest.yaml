@@ -9,8 +9,8 @@ assets:
   global_git_hook: "00-系统/运行时/hooks/global-post-commit.sh"
   repo_git_hook: "00-系统/运行时/hooks/repo-post-commit.sh"
   claude_stop_hook: "00-系统/运行时/hooks/claude-stop-hook.sh"
-  crontab: "00-系统/运行时/crontab/thirdspace-worklog.cron"
-  codex_automation: "00-系统/运行时/automations/codex-thirdspace-worklog.yaml"
+  crontab: "00-系统/运行时/crontab/OrbitOS-worklog.cron"
+  codex_automation: "00-系统/运行时/automations/codex-OrbitOS-worklog.yaml"
 
 # Obsidian 插件（随 vault 版本控制，init 时自动启用）
 obsidian_plugins:
@@ -24,7 +24,7 @@ install:
   # 在 vault 根目录执行（VAULT="."）：
   command: "node {SKILLS}/orbit-vault/scripts/orbit-vault.mjs install-runtime --vault . --all"
   global_git_hooks_path: "~/.config/git/hooks"
-  crontab_marker: "THIRDSPACE DAILY WORKLOG"
+  crontab_marker: "OrbitOS DAILY WORKLOG"
 
 # 新机器初始化步骤（resolve-vault 成功后自动执行）：
 # 1. install-runtime --all  → 注册 git hook + crontab

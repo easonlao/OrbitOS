@@ -1,5 +1,5 @@
 #!/bin/sh
-# ThirdSpace repo-level post-commit hook（可选，放在单个 repo 的 .git/hooks/post-commit）
+# OrbitOS repo-level post-commit hook（可选，放在单个 repo 的 .git/hooks/post-commit）
 # Source of truth: vault/00-系统/运行时/hooks/repo-post-commit.sh
 #
 # vault 通过向上遍历 .orbit/workspace-index.yaml 自动定位，不硬编码路径。
@@ -15,7 +15,7 @@ find_vault() {
         fi
         dir=$(dirname "$dir")
     done
-    [ -n "${THIRDSPACE_VAULT:-}" ] && echo "$THIRDSPACE_VAULT" && return 0
+    [ -n "${OrbitOS_VAULT:-}" ] && echo "$OrbitOS_VAULT" && return 0
     return 1
 }
 

@@ -1,5 +1,5 @@
 ---
-title: "ThirdSpace Vault Skill 全局分发方案"
+title: "OrbitOS Vault Skill 全局分发方案"
 type: "spec"
 topic: "system"
 workspace: "00-系统"
@@ -10,7 +10,7 @@ source: "manual"
 status: "active"
 ---
 
-# ThirdSpace Vault Skill 全局分发方案
+# OrbitOS Vault Skill 全局分发方案
 
 > 目标：在任何目录、任何 Agent 平台说"知识库"，都能激活 `orbit-vault` skill。
 

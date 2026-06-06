@@ -1,6 +1,6 @@
 ---
 name: workspace-journal
-description: Use when maintaining ThirdSpace `02-日记`, daily notes, worklogs, reflections, reviews, interpersonal events, LifeOS records, timeline cleanup, or extracting reusable knowledge from personal records.
+description: Use when maintaining OrbitOS `02-日记`, daily notes, worklogs, reflections, reviews, interpersonal events, LifeOS records, timeline cleanup, or extracting reusable knowledge from personal records.
 triggers:
   - "写日记"
   - "工作日志"

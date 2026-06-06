@@ -1,6 +1,6 @@
 ---
 name: workspace-knowledge
-description: Use when maintaining ThirdSpace `03-知识`, knowledge cards, topic notes, concept pages, study notes, processed clippings, or long-term knowledge memory.
+description: Use when maintaining OrbitOS `03-知识`, knowledge cards, topic notes, concept pages, study notes, processed clippings, or long-term knowledge memory.
 triggers:
   - "知识卡片"
   - "主题笔记"
