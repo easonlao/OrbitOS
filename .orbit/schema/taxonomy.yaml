@@ -5,6 +5,7 @@
 topic_values:
   - ai            # AI 相关知识、工程
   - dev           # 软件开发、技术
+  - finance       # 金融交易与分析、做市与仓位管理
   - reading       # 阅读、书籍笔记
   - work          # 工作日志、职场
   - project       # 项目管理、产品
