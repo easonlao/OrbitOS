@@ -24,7 +24,7 @@
 - 不直接批量删除历史内容。
 - 大规模迁移先写入 `.orbit/manifests/`。
 - 每个工作区都是自治子系统，必须遵守输入、输出、状态、审计和修复边界。
-- 任意目录触发知识库操作时，先 resolve vault，再按意图 route-create。
+- 任意目录触发知识库操作时，先 resolve vault，再按意图 create-routed-note。
 - 写入文件前必须同时确认 workspace 与 managed path；不命中 managed path 时继承当前 `WORKSPACE.md`。
 
 ## 生命周期管理

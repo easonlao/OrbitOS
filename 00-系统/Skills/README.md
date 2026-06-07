@@ -74,16 +74,16 @@ orbit-vault
 常用能力：
 
 - `resolve-vault`
-- `detect`
+- `locate-workspace`
 - `init`
 - `create`
-- `route-create`
-- `ensure-worklog`
-- `record-agent-event`
-- `capture-git-commit`
+- `create-routed-note`
+- `ensure-daily-worklog`
+- `record-agent-work-event`
+- `record-git-commit-event`
 - `register-hooks`
-- `ensure-runtime-assets`
-- `install-runtime`
+- `sync-runtime-templates`
+- `install-machine-runtime`
 - `update-frontmatter`
 - `audit-system`
 - `audit-projects`

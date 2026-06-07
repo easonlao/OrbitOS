@@ -43,17 +43,17 @@ triggers:
 
 ```bash
 node {SKILLS}/orbit-vault/scripts/orbit-vault.mjs resolve-vault --cwd "$PWD"
-node {SKILLS}/orbit-vault/scripts/orbit-vault.mjs detect --vault {VAULT} --cwd "$PWD"
+node {SKILLS}/orbit-vault/scripts/orbit-vault.mjs locate-workspace --vault {VAULT} --cwd "$PWD"
 node {SKILLS}/orbit-vault/scripts/orbit-vault.mjs init --vault /path/to/new-vault
-node {SKILLS}/orbit-vault/scripts/orbit-vault.mjs init --vault /path/to/new-vault --install-runtime
-node {SKILLS}/orbit-vault/scripts/orbit-vault.mjs route-create --cwd "$PWD" --intent "写一篇开发文档" --title "项目部署流程"
+node {SKILLS}/orbit-vault/scripts/orbit-vault.mjs init --vault /path/to/new-vault --install-machine-runtime
+node {SKILLS}/orbit-vault/scripts/orbit-vault.mjs create-routed-note --cwd "$PWD" --intent "写一篇开发文档" --title "项目部署流程"
 node {SKILLS}/orbit-vault/scripts/orbit-vault.mjs migrate-flux-intake --vault {VAULT} --dry-run
 node {SKILLS}/orbit-vault/scripts/orbit-vault.mjs create --vault {VAULT} --workspace 03-知识 --subdir AI工程 --title "Agent工作流" --topic ai --type note
-node {SKILLS}/orbit-vault/scripts/orbit-vault.mjs ensure-worklog
-node {SKILLS}/orbit-vault/scripts/orbit-vault.mjs record-agent-event --cwd "$PWD" --summary "完成重要产出" --decision "采用当前方案" --reason "更符合知识库自治目标"
+node {SKILLS}/orbit-vault/scripts/orbit-vault.mjs ensure-daily-worklog
+node {SKILLS}/orbit-vault/scripts/orbit-vault.mjs record-agent-work-event --cwd "$PWD" --summary "完成重要产出" --decision "采用当前方案" --reason "更符合知识库自治目标"
 node {SKILLS}/orbit-vault/scripts/orbit-vault.mjs register-hooks --repo "$PWD"
-node {SKILLS}/orbit-vault/scripts/orbit-vault.mjs ensure-runtime-assets --vault {VAULT}
-node {SKILLS}/orbit-vault/scripts/orbit-vault.mjs install-runtime --vault {VAULT} --all
+node {SKILLS}/orbit-vault/scripts/orbit-vault.mjs sync-runtime-templates --vault {VAULT}
+node {SKILLS}/orbit-vault/scripts/orbit-vault.mjs install-machine-runtime --vault {VAULT} --all
 node {SKILLS}/orbit-vault/scripts/orbit-vault.mjs update-frontmatter --file /path/to/file.md --topic ai --type note
 node {SKILLS}/orbit-vault/scripts/orbit-vault.mjs audit-system --vault {VAULT}
 node {SKILLS}/orbit-vault/scripts/orbit-vault.mjs audit-projects --vault {VAULT} --write-report
@@ -65,7 +65,7 @@ node {SKILLS}/orbit-vault/scripts/orbit-vault.mjs audit-skill-locations --vault 
 ## Create File Policy
 
 - Agent 必须优先用 `create` 创建新 Markdown。
-- 当前工作区可由 `detect` 推断；不确定时写入 `01-收件箱/待整理`。
+- 当前工作区可由 `locate-workspace` 推断；不确定时写入 `01-收件箱/待整理`。
 - `create` 会自动生成 `YYYYMMDD_主题.md` 和标准 Frontmatter。
 - 更新旧文件 Frontmatter 时用 `update-frontmatter`，保留正文。
 
@@ -77,11 +77,11 @@ node {SKILLS}/orbit-vault/scripts/orbit-vault.mjs audit-skill-locations --vault 
 - Prompt 能力统一转成 Skill，不写入全局 prompts 目录。
 - 结构异常、缺失目录和深层嵌套用 `audit-workspaces` 检查。
 - 子系统契约漂移、Skill 缺失、Frontmatter 缺失用 `audit-subsystems` 检查，并写入 `subsystem-maintenance.yaml`。
-- 任意目录写入知识库时先 `resolve-vault`，再 `route-create`。
+- 任意目录写入知识库时先 `resolve-vault`，再 `create-routed-note`。
 - Git Hook 只记录 commit 级事实；Agent Hook 只记录重大产出、关键决策和理由。
 - CLI 不是用户入口；旧 CLI 能力必须被包装成 Skill。
 - 所有 Skill scripts 的 canonical 根目录是 `00-系统/Skills`；不得再把可维护脚本散落到 Workbase、`.codex/skills` 或项目子目录的 Skill 中。
-- Hook、crontab 和 Agent 自动化规格必须在 `00-系统/运行时` 留存；跨电脑迁移时由 Agent 调用 `install-runtime --all` 自动注册。
+- Hook、crontab 和 Agent 自动化规格必须在 `00-系统/运行时` 留存；跨电脑迁移时由 Agent 调用 `install-machine-runtime --all` 自动注册。
 
 
 ## Project Classification Policy

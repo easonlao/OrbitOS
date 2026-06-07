@@ -72,7 +72,7 @@
 ## 明日计划
 ```
 
-定时任务每天只需要调用 `ensure-worklog`，存在则不重复创建。
+定时任务每天只需要调用 `ensure-daily-worklog`，存在则不重复创建。
 
 定时任务规格必须在 vault 内留存：
 
@@ -122,9 +122,9 @@ Agent Hook 记录语义产出，不记录每一步操作：
 - `.orbit/schema/event-capture.yaml`
 - `.orbit/events/`
 - `02-日记/工作日志/`
-- `orbit-vault.mjs ensure-worklog`
-- `orbit-vault.mjs record-agent-event`
-- `orbit-vault.mjs capture-git-commit`
+- `orbit-vault.mjs ensure-daily-worklog`
+- `orbit-vault.mjs record-agent-work-event`
+- `orbit-vault.mjs record-git-commit-event`
 - `orbit-vault.mjs register-hooks`
 
 任意 Git 仓库执行 `register-hooks --repo <repo>` 后，会安装 post-commit hook。注册时必须尊重 Git 实际使用的 `core.hooksPath`；若未配置则写入仓库 `.git/hooks`。若目标位置已有自定义 hook，不覆盖，只生成待人工合并的 hook 文件。
@@ -138,7 +138,7 @@ Agent Hook 记录语义产出，不记录每一步操作：
 换电脑时，Agent 应调用：
 
 ```bash
-node 00-系统/Skills/orbit-vault/scripts/orbit-vault.mjs install-runtime --vault <vault> --all
+node 00-系统/Skills/orbit-vault/scripts/orbit-vault.mjs install-machine-runtime --vault <vault> --all
 ```
 
 该命令从 vault 内模板恢复本机 `core.hooksPath` 和每日工作日志 crontab。

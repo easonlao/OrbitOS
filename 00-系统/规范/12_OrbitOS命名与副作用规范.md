@@ -35,18 +35,18 @@ status: active
 - 命令名包含 `locate`、`classify`、`render`、`audit` 时，默认只读；例外必须在帮助文本和 Skill 中声明。
 - 旧命令可以保留 alias，但文档必须指向新的标准命名。
 
-## 推荐迁移
+## 标准命名清单
 
-| 旧名 | 标准名 | 理由 |
+| 名称 | 副作用 | 说明 |
 |---|---|---|
-| `detectWorkspace` | `locateWorkspaceByPath` | 明确是按路径定位，不是按意图分类 |
-| `routeIntent` | `classifyIntentRoute` | 明确只分类，不落盘 |
-| `routeCreate` | `createRoutedNote` | 明确会创建文件 |
-| `ensureWorklog` | `ensureDailyWorklog` | 明确目标是每日工作日志 |
-| `ensureRuntimeAssets` | `syncRuntimeTemplates` | 区分 vault 内模板同步和机器安装 |
-| `installRuntime` | `installMachineRuntime` | 明确会写机器级配置 |
-| `captureGitCommit` | `recordGitCommitEvent` | 统一事件记录语义 |
-| `recordAgentEvent` | `recordAgentWorkEvent` | 区分 Agent 工作事件和通用事件 |
+| `locateWorkspaceByPath` | 只读 | 按路径定位工作区 |
+| `classifyIntentRoute` | 只读 | 按意图分类目标路由 |
+| `createRoutedNote` | 写用户内容 | 按路由创建 Markdown |
+| `ensureDailyWorklog` | 写用户内容 | 确保当天工作日志存在 |
+| `syncRuntimeTemplates` | 写系统资产 | 同步 vault 内运行时模板 |
+| `installMachineRuntime` | 写机器配置 | 安装 Git Hook、crontab 等机器级配置 |
+| `recordGitCommitEvent` | 写事件 | 记录 Git commit 事件 |
+| `recordAgentWorkEvent` | 写事件 | 记录 Agent 工作产出或决策 |
 
 ## Agent 要求
 

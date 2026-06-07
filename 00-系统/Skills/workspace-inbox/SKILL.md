@@ -26,7 +26,7 @@ triggers:
 
 ## 工具动作
 
-- `route-create`：按意图创建收件箱文件。
+- `create-routed-note`：按意图创建收件箱文件。
 - `migrate-flux-intake`：迁移旧 `flux/intake`，重写图片链接，并生成 manifest。
 
 ## 规范化动作

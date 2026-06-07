@@ -284,7 +284,7 @@ function normalizeTitle(title) {
   return normalized;
 }
 
-function detectWorkspace(cwd, vaultRoot) {
+function locateWorkspaceByPath(cwd, vaultRoot) {
   const resolvedCwd = path.resolve(cwd);
   const resolvedRoot = path.resolve(vaultRoot);
   for (const [id, dir, skill] of WORKSPACES) {
@@ -523,13 +523,13 @@ function initVault(vaultRoot, args = {}) {
   files += writeIfMissing(path.join(vaultRoot, ".orbit", "schema", "event-capture.yaml"), renderEventCaptureSchema()) ? 1 : 0;
   files += writeIfMissing(path.join(vaultRoot, ".orbit", "schema", "workspace-tools.yaml"), renderWorkspaceToolsSchema()) ? 1 : 0;
   const skills = ensureCanonicalSkills(vaultRoot, args);
-  const runtime = ensureRuntimeAssets({ vault: vaultRoot });
+  const runtime = syncRuntimeTemplates({ vault: vaultRoot });
   for (const [, dir, skill] of WORKSPACES) {
     files += writeIfMissing(path.join(vaultRoot, dir, "WORKSPACE.md"), `# ${dir} 工作区规范\n\n## 子 Skill\n\n使用 \`${skill}\`。\n`) ? 1 : 0;
   }
   const result = { vaultRoot, dirsTouched: dirs, filesCreated: files, skills, runtime };
-  if (args.installRuntime || args.install_runtime || args.all) {
-    result.installedRuntime = installRuntime({ ...args, vault: vaultRoot, all: true });
+  if (args.installMachineRuntime || args.install_machine_runtime || args["install-machine-runtime"] || args.all) {
+    result.installedRuntime = installMachineRuntime({ ...args, vault: vaultRoot, all: true });
   }
   return result;
 }
@@ -680,13 +680,13 @@ function renderWorkspaceToolsSchema() {
     "root:",
     '  skill: "orbit-vault"',
     '  skill_root: "00-系统/Skills"',
-    '  tools: ["resolve-vault", "detect", "route-create", "ensure-worklog", "record-agent-event", "ensure-runtime-assets", "install-runtime", "audit-workspaces", "audit-subsystems", "audit-skill-locations"]',
+    '  tools: ["resolve-vault", "locate-workspace", "create-routed-note", "ensure-daily-worklog", "record-agent-work-event", "record-git-commit-event", "sync-runtime-templates", "install-machine-runtime", "audit-workspaces", "audit-subsystems", "audit-skill-locations"]',
     "progressive_loading:",
     '  level_0_global: ["AGENTS.md", ".orbit/workspace-index.yaml", ".orbit/schema/taxonomy.yaml", ".orbit/schema/managed-paths.yaml", ".orbit/schema/subsystems.yaml", ".orbit/schema/event-capture.yaml", ".orbit/schema/event-log.yaml", ".orbit/schema/workspace-tools.yaml"]',
     '  level_1_workspace: ["<workspace>/WORKSPACE.md", "<workspace-skill>/SKILL.md"]',
     '  level_2_domain: "Only load domain skills when the intent or file type requires them."',
     "workspaces:",
-    '  "01-收件箱": { workspace_skill: "workspace-inbox", domain_skills: ["knowledge", "video-collector"], tools: ["route-create", "migrate-flux-intake", "build-intake-queue"], archived_legacy_sources: ["flux/intake", "flux/videos"] }',
+    '  "01-收件箱": { workspace_skill: "workspace-inbox", domain_skills: ["knowledge", "video-collector"], tools: ["create-routed-note", "migrate-flux-intake", "build-intake-queue"], archived_legacy_sources: ["flux/intake", "flux/videos"] }',
     '  "02-日记": { workspace_skill: "workspace-journal", domain_skills: ["worklog", "reflect", "review", "lifeos"], legacy_sources: ["space/crafted/work"], archived_legacy_sources: ["space/crafted/lifeos"] }',
     '  "03-知识": { workspace_skill: "workspace-knowledge", domain_skills: ["knowledge", "harness-architect", "obsidian-canvas"] }',
     '  "04-项目": { workspace_skill: "workspace-projects", domain_skills: ["mvp-project", "ship-learn-next", "creation-tracking"] }',
@@ -733,8 +733,8 @@ function renderEventCaptureSchema() {
     "  overwrite_existing_hook: false",
     '  vault_runtime_root: "00-系统/运行时"',
     '  hook_template: "00-系统/运行时/hooks/global-post-commit.sh"',
-    '  crontab_template: "00-系统/运行时/crontab/OrbitOS-worklog.cron"',
-    '  automation_spec: "00-系统/运行时/automations/codex-OrbitOS-worklog.yaml"',
+    '  crontab_template: "00-系统/运行时/crontab/orbit-worklog.cron"',
+    '  automation_spec: "00-系统/运行时/automations/codex-orbit-worklog.yaml"',
     "",
   ].join("\n");
 }
@@ -782,7 +782,7 @@ function renderGlobalPostCommitHook(vaultRoot) {
     '[ -f "$SCRIPT" ] || exit 0',
     '[ -d "$VAULT" ] || exit 0',
     'REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"',
-    '"$NODE_BIN" "$SCRIPT" capture-git-commit --vault "$VAULT" --repo "$REPO_ROOT" >/dev/null 2>&1 || true',
+    '"$NODE_BIN" "$SCRIPT" record-git-commit-event --vault "$VAULT" --repo "$REPO_ROOT" >/dev/null 2>&1 || true',
     "exit 0",
     "",
   ].join("\n");
@@ -800,7 +800,7 @@ function renderRepoPostCommitHook(vaultRoot) {
     '[ -n "$NODE_BIN" ] || exit 0',
     '[ -f "$SCRIPT" ] || exit 0',
     'REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"',
-    '"$NODE_BIN" "$SCRIPT" capture-git-commit --vault "$VAULT" --repo "$REPO_ROOT" >/dev/null 2>&1 || true',
+    '"$NODE_BIN" "$SCRIPT" record-git-commit-event --vault "$VAULT" --repo "$REPO_ROOT" >/dev/null 2>&1 || true',
     "exit 0",
     "",
   ].join("\n");
@@ -811,8 +811,8 @@ function renderCrontabTemplate(vaultRoot) {
   return [
     "# OrbitOS daily worklog bootstrap.",
     "# Source of truth: 00-系统/运行时/crontab/OrbitOS-worklog.cron",
-    "# Installed by: orbit-vault install-runtime --crontab",
-    `0 8 * * * /bin/zsh -lc 'node "${scriptPath}" ensure-worklog --vault "${vaultRoot}" >/tmp/OrbitOS-worklog.log 2>&1'`,
+    "# Installed by: orbit-vault install-machine-runtime --crontab",
+    `0 8 * * * /bin/zsh -lc 'node "${scriptPath}" ensure-daily-worklog --vault "${vaultRoot}" >/tmp/OrbitOS-worklog.log 2>&1'`,
     "",
   ].join("\n");
 }
@@ -829,7 +829,7 @@ function renderCodexAutomationSpec(vaultRoot) {
     'model: "gpt-5.2"',
     'reasoning_effort: "low"',
     "prompt: >-",
-    `  Run node ${scriptPath} ensure-worklog --vault ${vaultRoot}.`,
+    `  Run node ${scriptPath} ensure-daily-worklog --vault ${vaultRoot}.`,
     "",
   ].join("\n");
 }
@@ -860,7 +860,7 @@ function renderRuntimeReadme(vaultRoot) {
     "Agent 在新机器上应调用：",
     "",
     "```bash",
-    `node ${currentScriptPath(vaultRoot)} install-runtime --vault ${vaultRoot} --all`,
+    `node ${currentScriptPath(vaultRoot)} install-machine-runtime --vault ${vaultRoot} --all`,
     "```",
     "",
     "这会从 vault 内模板安装全局 Git hook，并注册每日工作日志 crontab。",
@@ -878,17 +878,17 @@ function renderRuntimeManifest(vaultRoot) {
     "assets:",
     '  global_git_hook: "00-系统/运行时/hooks/global-post-commit.sh"',
     '  repo_git_hook: "00-系统/运行时/hooks/repo-post-commit.sh"',
-    '  crontab: "00-系统/运行时/crontab/OrbitOS-worklog.cron"',
-    '  codex_automation: "00-系统/运行时/automations/codex-OrbitOS-worklog.yaml"',
+    '  crontab: "00-系统/运行时/crontab/orbit-worklog.cron"',
+    '  codex_automation: "00-系统/运行时/automations/codex-orbit-worklog.yaml"',
     "install:",
-    '  command: "orbit-vault install-runtime --all"',
+    '  command: "orbit-vault install-machine-runtime --all"',
     '  global_git_hooks_path: "~/.config/git/hooks"',
     '  crontab_marker: "OrbitOS DAILY WORKLOG"',
     "",
   ].join("\n");
 }
 
-function ensureRuntimeAssets(args = {}) {
+function syncRuntimeTemplates(args = {}) {
   const vaultRoot = path.resolve(args.vault || resolveVault(args).vaultRoot);
   const root = runtimeRoot(vaultRoot);
   const files = [
@@ -896,8 +896,8 @@ function ensureRuntimeAssets(args = {}) {
     [path.join(root, "manifest.yaml"), renderRuntimeManifest(vaultRoot), null],
     [path.join(root, "hooks", "global-post-commit.sh"), renderGlobalPostCommitHook(vaultRoot), 0o755],
     [path.join(root, "hooks", "repo-post-commit.sh"), renderRepoPostCommitHook(vaultRoot), 0o755],
-    [path.join(root, "crontab", "OrbitOS-worklog.cron"), renderCrontabTemplate(vaultRoot), null],
-    [path.join(root, "automations", "codex-OrbitOS-worklog.yaml"), renderCodexAutomationSpec(vaultRoot), null],
+    [path.join(root, "crontab", "orbit-worklog.cron"), renderCrontabTemplate(vaultRoot), null],
+    [path.join(root, "automations", "codex-orbit-worklog.yaml"), renderCodexAutomationSpec(vaultRoot), null],
   ];
   let changed = 0;
   for (const [file, content, mode] of files) {
@@ -946,12 +946,12 @@ function installCrontab(vaultRoot) {
   return { status: pattern.test(current) ? "updated" : "installed", marker: "OrbitOS DAILY WORKLOG" };
 }
 
-function installRuntime(args = {}) {
+function installMachineRuntime(args = {}) {
   const vaultRoot = path.resolve(args.vault || resolveVault(args).vaultRoot);
-  const assets = ensureRuntimeAssets({ vault: vaultRoot });
-  const installAll = args.all || (!args.globalHook && !args.global_hook && !args.crontab);
+  const assets = syncRuntimeTemplates({ vault: vaultRoot });
+  const installAll = args.all || (!args.globalHook && !args.global_hook && !args["global-hook"] && !args.crontab);
   const result = { vaultRoot, assets, installed: {} };
-  if (installAll || args.globalHook || args.global_hook) {
+  if (installAll || args.globalHook || args.global_hook || args["global-hook"]) {
     result.installed.globalGitHook = installGlobalGitHook(vaultRoot, args);
   }
   if (installAll || args.crontab) {
@@ -962,7 +962,7 @@ function installRuntime(args = {}) {
 
 function createFile(args) {
   const vaultRoot = path.resolve(args.vault || resolveVault(process.cwd()).vaultRoot);
-  const workspace = args.workspace || detectWorkspace(args.cwd || process.cwd(), vaultRoot).dir || "01-收件箱";
+  const workspace = args.workspace || locateWorkspaceByPath(args.cwd || process.cwd(), vaultRoot).dir || "01-收件箱";
   const defaults = TYPE_DEFAULTS[workspace] || TYPE_DEFAULTS["01-收件箱"];
   const title = args.title || args._[1];
   const topic = args.topic || "system";
@@ -989,7 +989,7 @@ function updateFrontmatter(args) {
   const vaultRoot = path.resolve(args.vault || resolveVault(process.cwd()).vaultRoot);
   const current = fs.existsSync(file) ? fs.readFileSync(file, "utf8") : "";
   if (!current) throw new Error(`file not found or empty: ${file}`);
-  const detected = detectWorkspace(path.dirname(file), vaultRoot);
+  const detected = locateWorkspaceByPath(path.dirname(file), vaultRoot);
   const title = args.title || path.basename(file, ".md").replace(/^\d{8}_/, "");
   const workspace = args.workspace || detected.dir || "01-收件箱";
   const defaults = TYPE_DEFAULTS[workspace] || TYPE_DEFAULTS["01-收件箱"];
@@ -1045,7 +1045,7 @@ function resolveVault(args = {}) {
   throw new Error("Cannot resolve vault root. Run from within a vault directory or set ORBIT_VAULT.");
 }
 
-function routeIntent(intent = "") {
+function classifyIntentRoute(intent = "") {
   const normalized = String(intent || "");
   for (const route of INTENT_ROUTES) {
     if (route.patterns.some((pattern) => normalized.toLowerCase().includes(pattern.toLowerCase()))) {
@@ -1063,12 +1063,12 @@ function routeIntent(intent = "") {
   };
 }
 
-function routeCreate(args) {
+function createRoutedNote(args) {
   const resolved = resolveVault(args);
   const vaultRoot = resolved.vaultRoot;
   const cwd = path.resolve(args.cwd || process.cwd());
   const intent = args.intent || args._[1] || "";
-  const route = routeIntent(intent);
+  const route = classifyIntentRoute(intent);
   const title = args.title || intent || "未命名记录";
   const created = args.created || nowString();
   const filename = args.filename || `${dateString()}_${normalizeTitle(title)}.md`;
@@ -1084,7 +1084,7 @@ function routeCreate(args) {
     created,
     modified: created,
     tags: args.tags ? args.tags.split(",") : [route.topic, route.type, route.id],
-    source: args.source || "agent-route",
+    source: args.source || "agent",
     status: args.status || route.status,
     extra: {
       origin_cwd: cwd,
@@ -1121,7 +1121,7 @@ function worklogPath(vaultRoot, parts = todayParts()) {
   return path.join(vaultRoot, "02-日记", "工作日志", `${parts.compact}_工作日志_${parts.weekday}.md`);
 }
 
-function ensureWorklog(args = {}) {
+function ensureDailyWorklog(args = {}) {
   const resolved = resolveVault(args);
   const vaultRoot = resolved.vaultRoot;
   const parts = todayParts();
@@ -1172,7 +1172,7 @@ function appendToSection(markdown, section, content, eventId = "") {
 }
 
 function appendEventToWorklog(vaultRoot, event) {
-  const ensured = ensureWorklog({ vault: vaultRoot });
+  const ensured = ensureDailyWorklog({ vault: vaultRoot });
   const file = ensured.path;
   let markdown = fs.readFileSync(file, "utf8");
   const section = event.section || (event.type === "git_commit" ? "Git 提交" : event.type === "decision" ? "关键决策" : "Agent 产出");
@@ -1239,7 +1239,7 @@ function gitOptional(repo, args) {
   }
 }
 
-function captureGitCommit(args = {}) {
+function recordGitCommitEvent(args = {}) {
   const resolved = resolveVault(args);
   const repo = path.resolve(args.repo || args.cwd || process.cwd());
   const commit = args.commit || git(repo, ["rev-parse", "HEAD"]);
@@ -1260,7 +1260,7 @@ function captureGitCommit(args = {}) {
   return { vaultRoot: resolved.vaultRoot, ...appendEventToWorklog(resolved.vaultRoot, event), event };
 }
 
-function recordAgentEvent(args = {}) {
+function recordAgentWorkEvent(args = {}) {
   const resolved = resolveVault(args);
   const event = {
     type: args.decision ? "decision" : "agent_work",
@@ -1290,7 +1290,7 @@ function registerHooks(args = {}) {
     "#!/bin/sh",
     "# orbit-vault post-commit hook",
     'REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"',
-    `"${nodePath}" "${scriptPath}" capture-git-commit --vault "${vaultRoot}" --repo "$REPO_ROOT" >/dev/null 2>&1 || true`,
+    `"${nodePath}" "${scriptPath}" record-git-commit-event --vault "${vaultRoot}" --repo "$REPO_ROOT" >/dev/null 2>&1 || true`,
     "",
   ].join("\n");
   ensureDir(hookDir);
@@ -1767,18 +1767,18 @@ function auditSubsystems(vaultRoot, args = {}) {
 function printHelp() {
   console.log(`orbit-vault commands:
   resolve-vault --cwd <path>
-  detect --vault <path> --cwd <path>
+  locate-workspace --vault <path> --cwd <path>
   init --vault <path> [--refresh-skills]
-  init --vault <path> --install-runtime [--refresh-skills]
+  init --vault <path> --install-machine-runtime [--refresh-skills]
   create --vault <path> --workspace <dir> --title <title> [--topic ai] [--type note] [--subdir AI工程]
-  route-create --intent <text> --title <title> [--cwd <path>] [--content <markdown>]
+  create-routed-note --intent <text> --title <title> [--cwd <path>] [--content <markdown>]
   migrate-flux-intake [--vault <path>] [--dry-run]
-  ensure-worklog [--vault <path>]
-  record-agent-event --summary <text> [--decision <text>] [--reason <text>] [--artifact <path>] [--cwd <path>]
-  capture-git-commit --repo <path> [--vault <path>]
+  ensure-daily-worklog [--vault <path>]
+  record-agent-work-event --summary <text> [--decision <text>] [--reason <text>] [--artifact <path>] [--cwd <path>]
+  record-git-commit-event --repo <path> [--vault <path>]
   register-hooks --repo <path> [--vault <path>]
-  ensure-runtime-assets [--vault <path>]
-  install-runtime [--vault <path>] [--all] [--global-hook] [--crontab]
+  sync-runtime-templates [--vault <path>]
+  install-machine-runtime [--vault <path>] [--all] [--global-hook] [--crontab]
   update-frontmatter --file <path> [--vault <path>] [--topic ai] [--type note]
   audit-system --vault <path>
   audit-projects --vault <path> [--write-report]
@@ -1798,17 +1798,17 @@ function main() {
     return;
   }
   if (command === "resolve-vault") result = resolveVault(args);
-  else if (command === "detect") result = detectWorkspace(args.cwd || process.cwd(), vaultRoot);
+  else if (command === "locate-workspace") result = locateWorkspaceByPath(args.cwd || process.cwd(), vaultRoot);
   else if (command === "init") result = initVault(vaultRoot, args);
   else if (command === "create") result = createFile(args);
-  else if (command === "route-create") result = routeCreate(args);
+  else if (command === "create-routed-note") result = createRoutedNote(args);
   else if (command === "migrate-flux-intake") result = migrateFluxIntake(args);
-  else if (command === "ensure-worklog") result = ensureWorklog(args);
-  else if (command === "record-agent-event") result = recordAgentEvent(args);
-  else if (command === "capture-git-commit") result = captureGitCommit(args);
+  else if (command === "ensure-daily-worklog") result = ensureDailyWorklog(args);
+  else if (command === "record-agent-work-event") result = recordAgentWorkEvent(args);
+  else if (command === "record-git-commit-event") result = recordGitCommitEvent(args);
   else if (command === "register-hooks") result = registerHooks(args);
-  else if (command === "ensure-runtime-assets") result = ensureRuntimeAssets(args);
-  else if (command === "install-runtime") result = installRuntime(args);
+  else if (command === "sync-runtime-templates") result = syncRuntimeTemplates(args);
+  else if (command === "install-machine-runtime") result = installMachineRuntime(args);
   else if (command === "update-frontmatter") result = updateFrontmatter(args);
   else if (command === "audit-system") result = auditSystem(vaultRoot);
   else if (command === "audit-projects") result = auditProjects(vaultRoot, args);

@@ -22,7 +22,7 @@ source: "agent"
 Agent 在新机器上应调用：
 
 ```bash
-node /home/lyx/orbit/00-系统/Skills/orbit-vault/scripts/orbit-vault.mjs install-runtime --vault /home/lyx/orbit --all
+node E:\SynologyDrive\OrbitOS\00-系统\Skills\orbit-vault\scripts\orbit-vault.mjs install-machine-runtime --vault E:\SynologyDrive\OrbitOS --all
 ```
 
 这会从 vault 内模板安装全局 Git hook，并注册每日工作日志 crontab。
