@@ -64,6 +64,7 @@ obsidian_plugins:
 # ── 工具激活优先级规则
 routing_rules:
   - 先按用户意图匹配 workspace（semantic routing）
+  - 创建或整理文件前先用 explain-route 合并意图、当前路径和 managed path
   - 匹配到 workspace 后加载 primary skill
   - 只有意图命中 domain.triggers 时才加载 domain skill
   - 不确定工作区时路由到 01-收件箱

@@ -32,18 +32,20 @@ triggers:
 3. 读取 `{VAULT}/.orbit/schema/taxonomy.yaml`。
 4. 读取 `{VAULT}/.orbit/schema/subsystems.yaml`。
 5. 读取 `{VAULT}/.orbit/schema/event-capture.yaml`。
-6. 读取 `{VAULT}/.orbit/schema/workspace-tools.yaml`。
-7. 先根据用户意图匹配工作区、允许的一层目录、自治子系统契约、事件采集策略和工具 Skill；如果当前 `pwd` 在 vault 内，再用 `pwd` 校准。
-8. 读取 `<workspace>/WORKSPACE.md`。
-9. 加载 workspace 对应子 Skill。
-10. 只有意图命中时加载领域 Skill，例如 `lifeos`、`worklog`、`article`。
-11. 执行文件创建、更新、标签、Frontmatter、流转、审计、修复和高价值事件记录。
+6. 读取 `{VAULT}/.orbit/schema/managed-paths.yaml`。
+7. 读取 `{VAULT}/.orbit/schema/workspace-tools.yaml`。
+8. 先用 `explain-route` 根据用户意图、当前路径和 managed path 解释有效落点；如果当前 `pwd` 在 vault 内，再用 `pwd` 校准。
+9. 读取 `<workspace>/WORKSPACE.md`。
+10. 加载 workspace 对应子 Skill。
+11. 只有意图命中时加载领域 Skill，例如 `lifeos`、`worklog`、`article`。
+12. 执行文件创建、更新、标签、Frontmatter、流转、审计、修复和高价值事件记录。
 
 ## Script Interface
 
 ```bash
 node {SKILLS}/orbit-vault/scripts/orbit-vault.mjs resolve-vault --cwd "$PWD"
 node {SKILLS}/orbit-vault/scripts/orbit-vault.mjs locate-workspace --vault {VAULT} --cwd "$PWD"
+node {SKILLS}/orbit-vault/scripts/orbit-vault.mjs explain-route --vault {VAULT} --cwd "$PWD" --intent "写一篇开发文档"
 node {SKILLS}/orbit-vault/scripts/orbit-vault.mjs init --vault /path/to/new-vault
 node {SKILLS}/orbit-vault/scripts/orbit-vault.mjs init --vault /path/to/new-vault --install-machine-runtime
 node {SKILLS}/orbit-vault/scripts/orbit-vault.mjs create-routed-note --cwd "$PWD" --intent "写一篇开发文档" --title "项目部署流程"
@@ -65,7 +67,7 @@ node {SKILLS}/orbit-vault/scripts/orbit-vault.mjs audit-skill-locations --vault 
 ## Create File Policy
 
 - Agent 必须优先用 `create` 创建新 Markdown。
-- 当前工作区可由 `locate-workspace` 推断；不确定时写入 `01-收件箱/待整理`。
+- 当前工作区可由 `locate-workspace` 推断；目标落点用 `explain-route` 校验；不确定时写入 `01-收件箱/待整理`。
 - `create` 会自动生成 `YYYYMMDD_主题.md` 和标准 Frontmatter。
 - 更新旧文件 Frontmatter 时用 `update-frontmatter`，保留正文。
 
@@ -77,7 +79,7 @@ node {SKILLS}/orbit-vault/scripts/orbit-vault.mjs audit-skill-locations --vault 
 - Prompt 能力统一转成 Skill，不写入全局 prompts 目录。
 - 结构异常、缺失目录和深层嵌套用 `audit-workspaces` 检查。
 - 子系统契约漂移、Skill 缺失、Frontmatter 缺失用 `audit-subsystems` 检查，并写入 `subsystem-maintenance.yaml`。
-- 任意目录写入知识库时先 `resolve-vault`，再 `create-routed-note`。
+- 任意目录写入知识库时先 `resolve-vault`，再 `explain-route`，最后 `create-routed-note`。
 - Git Hook 只记录 commit 级事实；Agent Hook 只记录重大产出、关键决策和理由。
 - CLI 不是用户入口；旧 CLI 能力必须被包装成 Skill。
 - 所有 Skill scripts 的 canonical 根目录是 `00-系统/Skills`；不得再把可维护脚本散落到 Workbase、`.codex/skills` 或项目子目录的 Skill 中。

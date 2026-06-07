@@ -45,14 +45,14 @@ Event documents use:
 
 ```yaml
 type: "event"
-topic: "lifeos"
+topic: "life"
 workspace: "02-日记"
 source: "lifeos"
 status: "active"
 tags: ["lifeos", "event", "relationship"]
 ```
 
-Raw records use `type: "event-raw"` and tags `["lifeos", "raw", "event"]`.
+Raw records use `type: "event"` and tags `["lifeos", "raw", "event"]`.
 
 ## Maintenance
 

@@ -26,6 +26,20 @@ managed_paths:
     status: active
     skill: review
 
+  "02-日记/人际事件/事件":
+    reason: "LifeOS 人际事件记录，和普通日记、反思分开管理。"
+    type: event
+    topic: life
+    status: active
+    skill: lifeos
+
+  "02-日记/人际事件/原始记录":
+    reason: "LifeOS 原始事件素材，保留事实记录，不直接沉淀为知识。"
+    type: event
+    topic: life
+    status: active
+    skill: lifeos
+
   "04-项目/内容创作":
     reason: "内容生产项目，有发布、素材和复盘链路。"
     type: board

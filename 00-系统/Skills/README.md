@@ -75,6 +75,7 @@ orbit-vault
 
 - `resolve-vault`
 - `locate-workspace`
+- `explain-route`
 - `init`
 - `create`
 - `create-routed-note`

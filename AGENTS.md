@@ -13,7 +13,7 @@
 8. 读取当前工作区的 `WORKSPACE.md`。
 9. 按 `workspace-index.yaml` 中的 `skill` 加载对应子 Skill。
 10. 仅在意图命中时加载领域 Skill。
-11. 创建、更新或整理文件前，检查 `.orbit/schema/`。
+11. 创建、更新或整理文件前，检查 `.orbit/schema/`，并用 `explain-route` 确认有效 workspace、managed path、type、topic、status 和目标目录。
 
 ## 全局规则
 
@@ -24,7 +24,7 @@
 - 不直接批量删除历史内容。
 - 大规模迁移先写入 `.orbit/manifests/`。
 - 每个工作区都是自治子系统，必须遵守输入、输出、状态、审计和修复边界。
-- 任意目录触发知识库操作时，先 resolve vault，再按意图 create-routed-note。
+- 任意目录触发知识库操作时，先 resolve vault，再用 `explain-route` 校验落点，最后按意图 `create-routed-note`。
 - 写入文件前必须同时确认 workspace 与 managed path；不命中 managed path 时继承当前 `WORKSPACE.md`。
 
 ## 生命周期管理

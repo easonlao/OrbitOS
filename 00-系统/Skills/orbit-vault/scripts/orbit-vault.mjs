@@ -174,7 +174,7 @@ const INTENT_ROUTES = [
     workspace: "06-输出",
     subdir: "口播稿",
     type: "voiceover",
-    topic: "creation",
+    topic: "writing",
     status: "draft",
     reason: "意图包含口播/短视频文案语义，路由到口播稿。",
   },
@@ -186,6 +186,7 @@ const INTENT_ROUTES = [
     type: "worklog",
     topic: "work",
     status: "active",
+    skill: "worklog",
     reason: "意图包含工作日志语义，路由到日记工作区。",
   },
   {
@@ -194,8 +195,9 @@ const INTENT_ROUTES = [
     workspace: "02-日记",
     subdir: "人际事件/事件",
     type: "event",
-    topic: "lifeos",
+    topic: "life",
     status: "active",
+    skill: "lifeos",
     reason: "意图包含人际关系、人物或事件复盘语义，路由到 LifeOS 人际事件。",
   },
 ];
@@ -294,6 +296,85 @@ function locateWorkspaceByPath(cwd, vaultRoot) {
     }
   }
   return { id: "unknown", dir: "", skill: "orbit-vault", path: resolvedRoot, workspaceDoc: path.join(resolvedRoot, "AGENTS.md") };
+}
+
+function toVaultRelativePath(vaultRoot, targetPath) {
+  const relativePath = path.relative(path.resolve(vaultRoot), path.resolve(targetPath));
+  if (!relativePath || relativePath.startsWith("..") || path.isAbsolute(relativePath)) return "";
+  return relativePath.split(path.sep).join("/");
+}
+
+function parseSimpleYamlScalar(value) {
+  const trimmed = String(value || "").trim();
+  if (!trimmed) return "";
+  if ((trimmed.startsWith('"') && trimmed.endsWith('"')) || (trimmed.startsWith("'") && trimmed.endsWith("'"))) {
+    return trimmed.slice(1, -1);
+  }
+  if (trimmed === "true") return true;
+  if (trimmed === "false") return false;
+  return trimmed;
+}
+
+function readManagedPaths(vaultRoot) {
+  const schemaPath = path.join(vaultRoot, ".orbit", "schema", "managed-paths.yaml");
+  const result = { schemaPath, managedPaths: {}, fallback: {} };
+  if (!fs.existsSync(schemaPath)) return result;
+  const lines = fs.readFileSync(schemaPath, "utf8").split(/\r?\n/);
+  let section = "";
+  let currentPath = "";
+  let currentListKey = "";
+  for (const rawLine of lines) {
+    const line = rawLine.replace(/\s+#.*$/, "");
+    if (!line.trim() || line.trim().startsWith("#")) continue;
+    const topMatch = line.match(/^([A-Za-z0-9_-]+):\s*$/);
+    if (topMatch) {
+      section = topMatch[1];
+      currentPath = "";
+      currentListKey = "";
+      continue;
+    }
+    if (section === "managed_paths") {
+      const pathMatch = line.match(/^  ["']?([^"':]+(?:\/[^"':]+)*)["']?:\s*$/);
+      if (pathMatch) {
+        currentPath = pathMatch[1];
+        result.managedPaths[currentPath] = { path: currentPath };
+        currentListKey = "";
+        continue;
+      }
+      const keyMatch = line.match(/^    ([A-Za-z0-9_-]+):\s*(.*)$/);
+      if (currentPath && keyMatch) {
+        const key = keyMatch[1];
+        const value = keyMatch[2];
+        if (!value) {
+          result.managedPaths[currentPath][key] = [];
+          currentListKey = key;
+        } else {
+          result.managedPaths[currentPath][key] = parseSimpleYamlScalar(value);
+          currentListKey = "";
+        }
+        continue;
+      }
+      const itemMatch = line.match(/^      -\s*(.*)$/);
+      if (currentPath && currentListKey && itemMatch) {
+        result.managedPaths[currentPath][currentListKey].push(parseSimpleYamlScalar(itemMatch[1]));
+      }
+    } else if (section === "fallback") {
+      const fallbackMatch = line.match(/^  ([A-Za-z0-9_-]+):\s*(.*)$/);
+      if (fallbackMatch) result.fallback[fallbackMatch[1]] = parseSimpleYamlScalar(fallbackMatch[2]);
+    }
+  }
+  return result;
+}
+
+function locateManagedPath(vaultRoot, cwd, managedPaths) {
+  const relativeCwd = toVaultRelativePath(vaultRoot, cwd);
+  let best = null;
+  for (const [managedPath, rule] of Object.entries(managedPaths || {})) {
+    if (relativeCwd === managedPath || relativeCwd.startsWith(`${managedPath}/`)) {
+      if (!best || managedPath.length > best.path.length) best = rule;
+    }
+  }
+  return best;
 }
 
 function yamlList(items) {
@@ -680,7 +761,7 @@ function renderWorkspaceToolsSchema() {
     "root:",
     '  skill: "orbit-vault"',
     '  skill_root: "00-系统/Skills"',
-    '  tools: ["resolve-vault", "locate-workspace", "create-routed-note", "ensure-daily-worklog", "record-agent-work-event", "record-git-commit-event", "sync-runtime-templates", "install-machine-runtime", "audit-workspaces", "audit-subsystems", "audit-skill-locations"]',
+    '  tools: ["resolve-vault", "locate-workspace", "explain-route", "create-routed-note", "ensure-daily-worklog", "record-agent-work-event", "record-git-commit-event", "sync-runtime-templates", "install-machine-runtime", "audit-workspaces", "audit-subsystems", "audit-skill-locations"]',
     "progressive_loading:",
     '  level_0_global: ["AGENTS.md", ".orbit/workspace-index.yaml", ".orbit/schema/taxonomy.yaml", ".orbit/schema/managed-paths.yaml", ".orbit/schema/subsystems.yaml", ".orbit/schema/event-capture.yaml", ".orbit/schema/event-log.yaml", ".orbit/schema/workspace-tools.yaml"]',
     '  level_1_workspace: ["<workspace>/WORKSPACE.md", "<workspace-skill>/SKILL.md"]',
@@ -1060,6 +1141,115 @@ function classifyIntentRoute(intent = "") {
     topic: "system",
     status: "draft",
     reason: "未匹配到高置信度意图，保守路由到收件箱待整理。",
+  };
+}
+
+function workspaceByDir(dir) {
+  const found = WORKSPACES.find(([, workspaceDir]) => workspaceDir === dir);
+  if (!found) return null;
+  const [id, workspaceDir, skill] = found;
+  return {
+    id,
+    dir: workspaceDir,
+    skill,
+  };
+}
+
+function explainRoute(args) {
+  const resolved = resolveVault(args);
+  const vaultRoot = resolved.vaultRoot;
+  const cwd = path.resolve(args.cwd || process.cwd());
+  const intent = args.intent || args._[1] || "";
+  const pathContext = locateWorkspaceByPath(cwd, vaultRoot);
+  const managedSchema = readManagedPaths(vaultRoot);
+  const managedPath = locateManagedPath(vaultRoot, cwd, managedSchema.managedPaths);
+  const intentRoute = intent ? classifyIntentRoute(intent) : null;
+  const highConfidenceIntent = Boolean(intentRoute && intentRoute.id !== "fallback");
+  const managedWorkspace = managedPath ? workspaceByDir(managedPath.path.split("/")[0]) : null;
+  const managedSubdir = managedPath ? managedPath.path.split("/").slice(1).join("/") : "";
+  const workspaceDefaults = TYPE_DEFAULTS[pathContext.dir] || TYPE_DEFAULTS["01-收件箱"];
+  const fallbackWorkspace = workspaceByDir("01-收件箱");
+  let targetSource = "workspace";
+  let targetWorkspace = pathContext.id === "unknown" ? fallbackWorkspace : workspaceByDir(pathContext.dir);
+  let targetSubdir = workspaceDefaults.subdir;
+  let targetType = workspaceDefaults.type;
+  let targetTopic = "system";
+  let targetStatus = workspaceDefaults.status;
+  let targetSkill = targetWorkspace?.skill || "orbit-vault";
+
+  if (managedPath && managedWorkspace) {
+    targetSource = "managed-path";
+    targetWorkspace = managedWorkspace;
+    targetSubdir = managedSubdir;
+    targetType = managedPath.type || targetType;
+    targetTopic = managedPath.topic || targetTopic;
+    targetStatus = managedPath.status || targetStatus;
+    targetSkill = managedPath.skill || managedWorkspace.skill;
+  }
+
+  if (highConfidenceIntent) {
+    const routeWorkspace = workspaceByDir(intentRoute.workspace);
+    targetSource = "intent";
+    targetWorkspace = routeWorkspace || targetWorkspace;
+    targetSubdir = intentRoute.subdir;
+    targetType = intentRoute.type;
+    targetTopic = intentRoute.topic;
+    targetStatus = intentRoute.status;
+    targetSkill = intentRoute.skill || routeWorkspace?.skill || targetSkill;
+  } else if (intentRoute && pathContext.id === "unknown" && !managedPath) {
+    targetSource = "fallback";
+    targetWorkspace = fallbackWorkspace;
+    targetSubdir = intentRoute.subdir;
+    targetType = intentRoute.type;
+    targetTopic = intentRoute.topic;
+    targetStatus = intentRoute.status;
+    targetSkill = fallbackWorkspace.skill;
+  }
+
+  const explicit = {
+    type: args.type,
+    topic: args.topic,
+    status: args.status,
+    subdir: args.subdir,
+  };
+  if (explicit.subdir) targetSubdir = explicit.subdir;
+  if (explicit.type) targetType = explicit.type;
+  if (explicit.topic) targetTopic = explicit.topic;
+  if (explicit.status) targetStatus = explicit.status;
+
+  const matchedBy = ["vault"];
+  if (pathContext.id !== "unknown") matchedBy.push("cwd-workspace");
+  if (managedPath) matchedBy.push("managed-path");
+  if (intent) matchedBy.push(highConfidenceIntent ? "intent" : "intent-fallback");
+  if (Object.values(explicit).some(Boolean)) matchedBy.push("explicit-args");
+
+  return {
+    vaultRoot,
+    resolver: resolved.source,
+    cwd,
+    relativeCwd: toVaultRelativePath(vaultRoot, cwd),
+    workspace: pathContext,
+    managedPath,
+    intentRoute,
+    effective: {
+      source: targetSource,
+      workspace: targetWorkspace?.dir || "01-收件箱",
+      subdir: targetSubdir,
+      type: targetType,
+      topic: targetTopic,
+      status: targetStatus,
+      skill: targetSkill,
+      targetDir: path.join(vaultRoot, targetWorkspace?.dir || "01-收件箱", targetSubdir || ""),
+    },
+    matchedBy,
+    fallback: {
+      intent: intentRoute?.id === "fallback",
+      effective: targetSource === "fallback",
+    },
+    schema: {
+      managedPaths: managedSchema.schemaPath,
+      fallback: managedSchema.fallback,
+    },
   };
 }
 
@@ -1768,6 +1958,7 @@ function printHelp() {
   console.log(`orbit-vault commands:
   resolve-vault --cwd <path>
   locate-workspace --vault <path> --cwd <path>
+  explain-route --vault <path> [--cwd <path>] [--intent <text>]
   init --vault <path> [--refresh-skills]
   init --vault <path> --install-machine-runtime [--refresh-skills]
   create --vault <path> --workspace <dir> --title <title> [--topic ai] [--type note] [--subdir AI工程]
@@ -1799,6 +1990,7 @@ function main() {
   }
   if (command === "resolve-vault") result = resolveVault(args);
   else if (command === "locate-workspace") result = locateWorkspaceByPath(args.cwd || process.cwd(), vaultRoot);
+  else if (command === "explain-route") result = explainRoute(args);
   else if (command === "init") result = initVault(vaultRoot, args);
   else if (command === "create") result = createFile(args);
   else if (command === "create-routed-note") result = createRoutedNote(args);

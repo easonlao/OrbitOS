@@ -19,6 +19,7 @@ status: active
 ## 命名前缀
 
 - `locate*`：只定位路径，不写文件。
+- `explain*`：解释有效规则、落点和来源，不写文件。
 - `classify*`：只做分类或路由判断，不写文件。
 - `build*`：构造对象或数据结构，不写文件。
 - `render*`：生成文本内容，不写文件。
@@ -32,14 +33,15 @@ status: active
 ## CLI 副作用边界
 
 - 命令名包含 `create`、`sync`、`install`、`record`、`append` 时，Agent 必须视为写操作。
-- 命令名包含 `locate`、`classify`、`render`、`audit` 时，默认只读；例外必须在帮助文本和 Skill 中声明。
-- 旧命令可以保留 alias，但文档必须指向新的标准命名。
+- 命令名包含 `locate`、`explain`、`classify`、`render`、`audit` 时，默认只读；例外必须在帮助文本和 Skill 中声明。
+- 标准命名不保留旧 alias；重命名时必须同步脚本、Skill、Schema、AGENTS/CLAUDE 入口文档和运行时模板。
 
 ## 标准命名清单
 
 | 名称 | 副作用 | 说明 |
 |---|---|---|
 | `locateWorkspaceByPath` | 只读 | 按路径定位工作区 |
+| `explainRoute` | 只读 | 解释意图、当前路径和 managed path 合并后的有效落点 |
 | `classifyIntentRoute` | 只读 | 按意图分类目标路由 |
 | `createRoutedNote` | 写用户内容 | 按路由创建 Markdown |
 | `ensureDailyWorklog` | 写用户内容 | 确保当天工作日志存在 |
