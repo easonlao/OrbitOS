@@ -1,6 +1,14 @@
 ---
 name: kickoff
-description: Converts an idea into a structured project, with built-in pressure-test to validate before building
+description: >-
+  想法转项目工作流。当用户说"启动项目"、"新项目"、"kickoff"、"立项"、"把这个想法做成项目"时触发。
+  内置压力测试，通过后再立项，避免在错误方向浪费精力。
+triggers:
+  - 启动项目
+  - 新项目
+  - kickoff
+  - 立项
+  - 做成项目
 ---
 
 # OBJECTIVE
@@ -20,6 +28,16 @@ description: Converts an idea into a structured project, with built-in pressure-
 3. 无输入 → 列出 `01-收件箱/` 中 `status: draft` 的文件
 
 如果缺少关键信息（项目是什么、目标受众、期望结果），先追问再继续。
+
+## Step 1.5: 匹配领域 Persona
+
+根据项目所属领域，读取 `references/personas/` 下对应文件，为压力测试和项目规划提供领域视角：
+
+- 金融/投资/交易 → `Finance_Crypto.md` / `Finance_Portfolio.md` / `Finance_StockMarket.md`
+- 软件/技术项目 → `SE_Architect.md` / `SE_CodeBase.md`
+- 健康/医疗项目 → `Health_General.md`
+- 通用决策 → `General_FirstPrinciples.md` / `General_SecondOrderThinking.md`
+- 无匹配领域 → 跳过，使用通用视角
 
 ## Step 2: 压力测试
 
@@ -53,10 +71,11 @@ description: Converts an idea into a structured project, with built-in pressure-
 最多 3 个。按严重度排序。每个缺陷必须针对这个想法，不说"任何项目都有的问题"。
 
 ### 断言
-
-- **通过**（≥ 18 分，无高危缺陷）→ Step 3 创建项目
+- **通过**（≥ 18 分，无高危缺陷）→ 展示结果，等用户确认后进入 Step 3
 - **调整**（12-17 分或有中危缺陷）→ 指出方向问题，用户决定
 - **放弃**（< 12 分或有致命缺陷）→ 直接说为什么，建议归档
+
+**断言后必须等用户确认再创建项目。** 用户说"继续"、"同意"、"没问题"后才执行 Step 3。
 
 ---
 
@@ -100,30 +119,10 @@ description: Converts an idea into a structured project, with built-in pressure-
 
 ---
 
-## Step 3: 创建项目（断言通过后）
+## Step 3: 生成PRD + 创建项目（断言通过后）
 
-1. **判断项目意图** → 一级分类：内容创作 / 产品系统 / 运营增长 / 研究验证 / 实验原型
-2. **确定规模** → 单文件 / 目录项目
-3. **创建文件**，使用 9 字段 Frontmatter：
-
-```yaml
----
-title: "项目名称"
-type: roadmap
-topic: project
-workspace: "04-项目"
-created: "YYYY-MM-DD HH:MM:SS"
-modified: "YYYY-MM-DD HH:MM:SS"
-tags: ["project", ...]
-source: agent
-status: active
-project_type: content      # content|product|operations|research|experiment
-project_category: "内容创作"
-stage: planning
----
-```
-
-4. 项目首页必须包含"核心假设"和"首要风险"，来自压力测试结果
+1. **生成PRD** → 调用 `prd` Skill，从压力测试结果生成需求文档到 `04-项目/<分类>/<项目名称>.md`
+2. **项目首页**必须包含"核心假设"和"首要风险"，来自压力测试结果
 
 ## Step 4: 清理收件箱
 
@@ -143,3 +142,13 @@ stage: planning
 **核心假设:** ...
 **首要风险:** ...
 ```
+
+## 边界条件
+
+| 场景 | 处理方式 |
+|------|---------|
+| 用户拒绝压力测试结果 | 记录原因，建议归档或调整方向后重新kickoff |
+| 项目已存在于 `04-项目/` | 检测到同名项目时，询问用户：更新现有项目 or 新建？ |
+| 收件箱文件格式异常 | 尽力提取有效信息；无法解析时追问用户补充 |
+| 压力测试分数边界（12-17分） | 展示具体扣分项，让用户决定继续还是放弃 |
+| 无输入且收件箱为空 | 命先去 `01-收件箱/` 记录想法，再回来kickoff |

@@ -1,6 +1,13 @@
 ---
 name: ask
-description: Quick answers to questions without heavy note-taking overhead
+description: >-
+  快问快答。当用户说"问一下"、"ask"、"快问快答"时触发。
+  直接回答问题，不生成笔记。只在答案包含可复用知识时主动询问是否保存。
+triggers:
+  - 问一下
+  - ask
+  - 快问快答
+  - 帮我查一下
 ---
 
 # OBJECTIVE

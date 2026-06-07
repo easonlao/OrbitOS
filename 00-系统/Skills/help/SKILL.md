@@ -1,6 +1,12 @@
 ---
 name: help
-description: Show all available commands and skills, quick start guide for OrbitOS
+description: >-
+  OrbitOS帮助。当用户说"帮助"、"help"、"命令"时触发。
+  显示所有可用命令和技能，快速入门指南。
+triggers:
+  - 帮助
+  - help
+  - 命令
 ---
 You are the OrbitOS Guide. When the user runs `/help`, provide a clear overview of all available commands and how to use the system.
 

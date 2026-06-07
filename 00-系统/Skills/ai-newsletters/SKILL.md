@@ -1,6 +1,13 @@
 ---
 name: ai-newsletters
-description: Curate AI newsletter content with smart deduplication and ranking. Use when user invokes /ai-newsletters or when /start-my-day needs newsletter content.
+description: >-
+  AI通讯策展。当用户说"AI通讯"、"newsletter"、"订阅摘要"、"ai-newsletters"时触发。
+  抓取、去重、排名AI领域通讯内容，生成每日摘要。
+triggers:
+  - AI通讯
+  - newsletter
+  - 订阅摘要
+  - ai-newsletters
 ---
 # AI Newsletter Curation
 

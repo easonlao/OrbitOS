@@ -1,6 +1,13 @@
 ---
 name: ai-products
-description: Curate AI product launches from Product Hunt, Hacker News, GitHub, and Techmeme. Use when user invokes /ai-products or when /start-my-day needs product launches.
+description: >-
+  AI产品发现。当用户说"AI产品"、"新产品"、"product"、"ai-products"时触发。
+  从Product Hunt、Hacker News、GitHub发现AI新产品并排名。
+triggers:
+  - AI产品
+  - 新产品
+  - product
+  - ai-products
 ---
 # AI Product Discovery
 

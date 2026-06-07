@@ -1,6 +1,15 @@
 ---
 name: research
-description: Deep research workflow — 深度调研，整理到 03-知识/
+description: >-
+  深度调研工作流。当用户说"研究一下"、"帮我调研"、"深入了解"、"research"时触发。
+  输出结构化研究笔记和原子概念到 03-知识/。
+  支持领域persona自动匹配（金融/技术/健康/认知）。
+triggers:
+  - 研究
+  - 调研
+  - 深入了解
+  - research
+  - 帮我查一下
 ---
 
 # OBJECTIVE
@@ -17,16 +26,56 @@ description: Deep research workflow — 深度调研，整理到 03-知识/
 
 1. 检查 `04-项目/` 中是否有相关活跃项目
 2. 搜索 `03-知识/` 避免重复研究
-3. 确定输出结构：
+3. **匹配 Persona**：根据话题领域，读取 `references/personas/` 下对应文件作为思维框架：
+   - 加密货币/区块链 → `Finance_Crypto.md`
+   - 投资组合/资产配置 → `Finance_Portfolio.md`
+   - 股票/技术分析 → `Finance_StockMarket.md`
+   - 债务/财务规划 → `Finance_Debt.md`
+   - 税务 → `Finance_Tax.md`
+   - 软件架构 → `SE_Architect.md`
+   - 代码质量/工程实践 → `SE_CodeBase.md`
+   - 技术面试 → `SE_Interview.md`
+   - 健康/医疗 → `Health_General.md` / `Health_Medication.md` / `Health_Nutrition.md`
+   - 认知/决策 → `General_FirstPrinciples.md` / `General_Latticework.md` / `General_SecondOrderThinking.md`
+   - 无匹配领域 → 跳过，使用通用研究视角
+4. 确定输出结构：
    - 主研究笔记：`03-知识/<主题>/<主题>.md`（type: study）
    - 原子概念：`03-知识/<主题>/<概念>.md`（type: card）
    - 示例代码（如适用）：`03-知识/<主题>/` 下以独立 .md 存放
 
+## Step 1.5: 确认研究方向（必须）
+
+向用户展示研究计划，等确认后再执行：
+
+```
+## 研究计划
+
+**主题:** [研究话题]
+**领域:** [匹配的persona或"通用"]
+**避免重复:** [已在03-知识/中存在的相关笔记]
+
+### 输出结构
+- 主笔记: `03-知识/<主题>/<主题>.md`
+- 原子概念:
+  - [[概念1]] — 简要说明
+  - [[概念2]] — 简要说明
+
+### 研究方向
+1. [方向1]
+2. [方向2]
+3. [方向3]
+
+确认后开始调研，或告诉我调整方向。
+```
+
+用户确认后再进入Step 2。如果用户要求调整，回到Step 1修改计划。
+
 ## Step 2: 调研
 
-1. 使用 web_search 搜索最新信息
-2. 使用 web_fetch 阅读关键文档
-3. 提取可复用的原子概念
+1. 带着 persona 的领域视角进行研究
+2. 使用 web_search 搜索最新信息
+3. 使用 web_fetch 阅读关键文档
+4. 提取可复用的原子概念
 
 ## Step 3: 输出
 
@@ -86,3 +135,13 @@ status: active
 - 不保存原始网页全文到知识区
 - 不确定归属时放 `01-收件箱/待整理/`
 - 所有文件使用 9 字段 Frontmatter
+
+## 边界条件
+
+| 场景 | 处理方式 |
+|------|---------|
+| 话题太宽泛 | Step 1.5 中拆分为 2-3 个子话题，让用户选择聚焦哪个 |
+| 搜索无结果 | 换关键词重试一次；仍无则告知用户，建议缩小范围 |
+| web_fetch 失败 | 跳过该来源，用其他搜索结果补充；记录到笔记的「参考资源」中标注「访问失败」 |
+| 已有相关研究 | Step 1 检测到 `03-知识/` 有同主题笔记时，询问用户：更新现有笔记 or 新建？ |
+| persona 无匹配 | 跳过 persona 加载，使用通用研究视角，不影响流程 |

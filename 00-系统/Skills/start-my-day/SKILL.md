@@ -1,6 +1,14 @@
 ---
 name: start-my-day
-description: Daily planning workflow — 按 ThirdSpace 渐进式加载协议，读取 schema 和工作区规范后执行每日规划
+description: >-
+  每日规划工作流。当用户说"开始一天"、"今日规划"、"早上好"、"start-my-day"时触发。
+  回顾昨日进展，创建今日工作日志，连接活跃项目。
+triggers:
+  - 开始一天
+  - 今日规划
+  - 早上好
+  - start-my-day
+  - 今日安排
 ---
 
 # OBJECTIVE

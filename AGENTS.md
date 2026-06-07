@@ -8,11 +8,10 @@
 3. 读取 `.orbit/schema/subsystems.yaml`，确认当前工作区的自治子系统契约。
 4. 读取 `.orbit/schema/event-capture.yaml`，确认全局路由和 Hook 事件采集规则。
 5. 读取 `.orbit/schema/workspace-tools.yaml`，确认当前工作区可用工具 Skill 和领域 Skill。
-6. 读取 `00-系统/Skills/` 下的 HanaAgent Skills（daotrace, start-my-day, kickoff, research 等）。
-7. 读取当前工作区的 `WORKSPACE.md`。
-8. 按 `workspace-index.yaml` 中的 `skill` 加载对应子 Skill。
-9. 仅在意图命中时加载领域 Skill。
-10. 创建、更新或整理文件前，检查 `.orbit/schema/`。
+6. 读取当前工作区的 `WORKSPACE.md`。
+7. 按 `workspace-index.yaml` 中的 `skill` 加载对应子 Skill。
+8. 仅在意图命中时加载领域 Skill。
+9. 创建、更新或整理文件前，检查 `.orbit/schema/`。
 
 ## 全局规则
 
@@ -24,6 +23,16 @@
 - 大规模迁移先写入 `.orbit/manifests/`。
 - 每个工作区都是自治子系统，必须遵守输入、输出、状态、审计和修复边界。
 - 任意目录触发知识库操作时，先 resolve vault，再按意图 route-create。
+
+## 生命周期管理
+
+**新增、修改、删除 Skill 或 Schema 时，必须先读取 `00-系统/规范/11_Skill生命周期管理规范.md`，按规范操作。** 该规范定义了：
+- Skill 的创建、注册、修改、删除流程
+- Persona 的管理和命名规范
+- Schema 文件的修改规则
+- 路径规范（禁止使用的旧路径）
+- Agent 接入流程
+- Git 提交规范
 
 ## 工作区切换
 

@@ -1,6 +1,14 @@
 ---
 name: brainstorm
-description: Interactive brainstorming session, then optionally create a Project or capture knowledge
+description: >-
+  互动式头脑风暴。当用户说"头脑风暴"、"brainstorm"、"帮我想想"、"打磨想法"时触发。
+  帮助用户打磨和完善想法，可选择转为项目或沉淀到知识库。
+triggers:
+  - 头脑风暴
+  - brainstorm
+  - 帮我想想
+  - 打磨想法
+  - 想法讨论
 ---
 
 # OBJECTIVE

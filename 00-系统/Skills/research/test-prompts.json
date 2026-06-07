@@ -1,0 +1,5 @@
+[
+  {"id": 1, "prompt": "帮我研究一下 MCP（Model Context Protocol）的工作原理和最佳实践", "expected": "生成结构化研究笔记到03-知识，包含核心概念、工作原理、示例，提取原子概念卡片"},
+  {"id": 2, "prompt": "研究一下Python的asyncio事件循环机制，我最近写异步代码总是遇到死锁", "expected": "带SE_CodeBase视角研究，输出到03-知识/开发/，包含常见陷阱和解决方案"},
+  {"id": 3, "prompt": "帮我研究一下以太坊Layer2的rollup技术对比", "expected": "匹配Finance_Crypto persona，带区块链领域视角进行研究"}
+]

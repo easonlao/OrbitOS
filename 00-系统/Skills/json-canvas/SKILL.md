@@ -1,6 +1,13 @@
 ---
 name: json-canvas
-description: Create and edit JSON Canvas files (.canvas) with nodes, edges, groups, and connections. Use when working with .canvas files, creating visual canvases, mind maps, flowcharts, or when the user mentions Canvas files in Obsidian.
+description: >-
+  JSON Canvas文件操作。当用户说"画布"、"canvas"、"思维导图"时触发。
+  创建和编辑Obsidian Canvas文件（.canvas），支持节点、边、分组。
+triggers:
+  - 画布
+  - canvas
+  - 思维导图
+  - json-canvas
 ---
 # JSON Canvas Skill
 
