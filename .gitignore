@@ -22,6 +22,10 @@
 # ── OrbitOS 机器级配置（不 commit）──────────────────────
 # Codex 项目级本机配置与 Skill 注册
 .codex/
+.obsidian/
+.claude/
+.claudian/
+OH-Works/
 .orbit/config.yaml         # 本机 vault 路径配置（可选）
 .orbit/reports/            # 审计报告（本机生成，不共享）
 .orbit/manifests/          # 迁移 manifest（本机临时）
