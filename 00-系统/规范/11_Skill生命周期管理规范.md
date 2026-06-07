@@ -1,3 +1,14 @@
+---
+title: "11_Skill生命周期管理规范"
+type: "spec"
+topic: "system"
+workspace: "00-系统"
+created: "2026-06-07 13:42:24"
+modified: "2026-06-07 13:42:24"
+tags: ["system", "spec", "active"]
+source: "agent"
+status: "active"
+---
 # Skill 生命周期管理规范
 
 > 当你或任何 Agent 需要对 OrbitOS 的 skill 进行增删改时，必须遵循本规范。

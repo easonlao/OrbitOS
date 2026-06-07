@@ -1,3 +1,14 @@
+---
+title: "04_文档规范化GoalLoop"
+type: "spec"
+topic: "system"
+workspace: "00-系统"
+created: "2026-06-07 13:42:23"
+modified: "2026-06-07 13:42:23"
+tags: ["system", "spec", "active"]
+source: "agent"
+status: "active"
+---
 # 文档规范化 Goal Loop
 
 ## 目标

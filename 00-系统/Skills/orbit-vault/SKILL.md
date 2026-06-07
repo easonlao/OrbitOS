@@ -48,6 +48,7 @@ node {SKILLS}/orbit-vault/scripts/orbit-vault.mjs locate-workspace --vault {VAUL
 node {SKILLS}/orbit-vault/scripts/orbit-vault.mjs explain-route --vault {VAULT} --cwd "$PWD" --intent "写一篇开发文档"
 node {SKILLS}/orbit-vault/scripts/orbit-vault.mjs init --vault /path/to/new-vault
 node {SKILLS}/orbit-vault/scripts/orbit-vault.mjs init --vault /path/to/new-vault --install-machine-runtime
+node {SKILLS}/orbit-vault/scripts/orbit-vault.mjs create-routed-note --cwd "$PWD" --intent "写一篇开发文档" --title "项目部署流程" --dry-run
 node {SKILLS}/orbit-vault/scripts/orbit-vault.mjs create-routed-note --cwd "$PWD" --intent "写一篇开发文档" --title "项目部署流程"
 node {SKILLS}/orbit-vault/scripts/orbit-vault.mjs migrate-flux-intake --vault {VAULT} --dry-run
 node {SKILLS}/orbit-vault/scripts/orbit-vault.mjs create --vault {VAULT} --workspace 03-知识 --subdir AI工程 --title "Agent工作流" --topic ai --type note

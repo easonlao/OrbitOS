@@ -55,3 +55,9 @@ OH-Works/
 05-资源/**/*.md
 06-输出/**/*.md
 99-归档/**/*.md
+!01-收件箱/WORKSPACE.md
+!03-知识/WORKSPACE.md
+!04-项目/WORKSPACE.md
+!05-资源/WORKSPACE.md
+!06-输出/WORKSPACE.md
+!99-归档/WORKSPACE.md

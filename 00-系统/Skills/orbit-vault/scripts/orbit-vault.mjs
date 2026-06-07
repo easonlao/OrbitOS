@@ -1254,46 +1254,61 @@ function explainRoute(args) {
 }
 
 function createRoutedNote(args) {
-  const resolved = resolveVault(args);
-  const vaultRoot = resolved.vaultRoot;
-  const cwd = path.resolve(args.cwd || process.cwd());
+  const explanation = explainRoute(args);
+  const vaultRoot = explanation.vaultRoot;
+  const cwd = explanation.cwd;
   const intent = args.intent || args._[1] || "";
-  const route = classifyIntentRoute(intent);
+  const route = explanation.intentRoute || {
+    id: explanation.effective.source,
+    reason: `使用 ${explanation.effective.source} 规则确定落点。`,
+  };
   const title = args.title || intent || "未命名记录";
   const created = args.created || nowString();
   const filename = args.filename || `${dateString()}_${normalizeTitle(title)}.md`;
-  const targetDir = path.join(vaultRoot, route.workspace, route.subdir);
+  const targetDir = explanation.effective.targetDir;
   const target = path.join(targetDir, filename);
   if (fs.existsSync(target) && !args.force) throw new Error(`target exists: ${target}`);
+  const result = {
+    vaultRoot,
+    resolver: explanation.resolver,
+    route: route.id,
+    reason: route.reason,
+    routeSource: explanation.effective.source,
+    matchedBy: explanation.matchedBy,
+    path: target,
+    workspace: explanation.effective.workspace,
+    subdir: explanation.effective.subdir,
+    type: explanation.effective.type,
+    topic: explanation.effective.topic,
+    status: explanation.effective.status,
+    skill: explanation.effective.skill,
+    dryRun: Boolean(args["dry-run"]),
+  };
+  if (args["dry-run"]) return result;
   const body = args.content || `# ${title}\n\n`;
   const frontmatter = buildFrontmatter({
     title,
-    type: args.type || route.type,
-    topic: args.topic || route.topic,
-    workspace: route.workspace,
+    type: explanation.effective.type,
+    topic: explanation.effective.topic,
+    workspace: explanation.effective.workspace,
     created,
     modified: created,
-    tags: args.tags ? args.tags.split(",") : [route.topic, route.type, route.id],
+    tags: args.tags ? args.tags.split(",") : [explanation.effective.topic, explanation.effective.type, route.id].filter(Boolean),
     source: args.source || "agent",
-    status: args.status || route.status,
+    status: explanation.effective.status,
     extra: {
       origin_cwd: cwd,
       route_intent: intent,
       route_reason: route.reason,
       route_id: route.id,
+      route_source: explanation.effective.source,
+      route_matched_by: explanation.matchedBy,
+      route_skill: explanation.effective.skill,
     },
   });
   ensureDir(targetDir);
   fs.writeFileSync(target, `${frontmatter}${stripFrontmatter(body)}`, "utf8");
-  return {
-    vaultRoot,
-    resolver: resolved.source,
-    route: route.id,
-    reason: route.reason,
-    path: target,
-    workspace: route.workspace,
-    subdir: route.subdir,
-  };
+  return result;
 }
 
 function todayParts() {
@@ -1962,7 +1977,7 @@ function printHelp() {
   init --vault <path> [--refresh-skills]
   init --vault <path> --install-machine-runtime [--refresh-skills]
   create --vault <path> --workspace <dir> --title <title> [--topic ai] [--type note] [--subdir AI工程]
-  create-routed-note --intent <text> --title <title> [--cwd <path>] [--content <markdown>]
+  create-routed-note --intent <text> --title <title> [--cwd <path>] [--content <markdown>] [--dry-run]
   migrate-flux-intake [--vault <path>] [--dry-run]
   ensure-daily-worklog [--vault <path>]
   record-agent-work-event --summary <text> [--decision <text>] [--reason <text>] [--artifact <path>] [--cwd <path>]

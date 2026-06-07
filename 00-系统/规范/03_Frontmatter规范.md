@@ -1,3 +1,14 @@
+---
+title: "03_Frontmatter规范"
+type: "spec"
+topic: "system"
+workspace: "00-系统"
+created: "2026-06-07 13:42:23"
+modified: "2026-06-07 13:42:23"
+tags: ["system", "spec", "active"]
+source: "agent"
+status: "active"
+---
 # Frontmatter 规范
 
 ## 必填字段

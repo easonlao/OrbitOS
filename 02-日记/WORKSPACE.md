@@ -1,3 +1,14 @@
+---
+title: "WORKSPACE"
+type: "spec"
+topic: "system"
+workspace: "02-日记"
+created: "2026-06-07 13:42:22"
+modified: "2026-06-07 13:42:22"
+tags: ["system", "spec", "active"]
+source: "agent"
+status: "active"
+---
 # 02-日记 工作区规范
 
 ## 用途

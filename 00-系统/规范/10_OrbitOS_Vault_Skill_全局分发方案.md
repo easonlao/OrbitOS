@@ -1,4 +1,15 @@
 ---
+title: "10_OrbitOS_Vault_Skill_全局分发方案"
+type: "spec"
+topic: "system"
+workspace: "00-系统"
+created: "2026-06-07 13:44:38"
+modified: "2026-06-07 13:44:38"
+tags: ["system", "spec", "active"]
+source: "agent"
+status: "active"
+---
+---
 title: "OrbitOS Vault Skill 全局分发方案"
 type: "spec"
 topic: "system"
