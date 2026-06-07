@@ -26,7 +26,7 @@
 知识库路径查找顺序：
 
 1. 从当前 `pwd` 向上查找 `.orbit/workspace-index.yaml`。
-2. 读取环境变量 `OrbitOS_VAULT`。
+2. 读取环境变量 `ORBIT_VAULT`（兼容旧名 `orbit_VAULT`）。
 3. 读取 `~/.orbit/config.yaml`。
 4. 无可用配置时报错退出（不设硬编码 fallback，避免在错误路径写入）。
 

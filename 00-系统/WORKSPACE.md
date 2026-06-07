@@ -48,6 +48,8 @@
 - `00-系统/规范/08_全局路由与Hook事件采集规范.md` 是任意目录路由、Git Hook、Agent Hook 和工作日志的上位协议。
 - `.orbit/schema/subsystems.yaml` 是机器可读契约。
 - `.orbit/schema/event-capture.yaml` 是事件采集、意图路由和工作日志结构的机器可读契约。
+- `.orbit/schema/event-log.yaml` 是 `.orbit/events/*.ndjson` raw event log 的机器可读契约。
+- `.orbit/schema/managed-paths.yaml` 是高价值子目录特殊规则的机器可读契约。
 - `00-系统/运行时` 是跨电脑迁移时恢复本机 hook、crontab、自动化任务的源规格目录。
 - 修改任何工作区边界、流转规则、状态机、审计策略或事件采集策略时，必须同步更新规范、Schema、对应 workspace Skill 和 README。
 - 完成修改后运行 `audit-subsystems --write-report`。

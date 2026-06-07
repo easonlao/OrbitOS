@@ -31,9 +31,10 @@ find_vault() {
         fi
         dir=$(dirname "$dir")
     done
-    # 兜底：$orbit_VAULT 环境变量
-    if [ -n "${orbit_VAULT:-}" ] && [ -f "$orbit_VAULT/.orbit/workspace-index.yaml" ]; then
-        echo "$orbit_VAULT"
+    # 兜底：$ORBIT_VAULT 环境变量（兼容旧名 $orbit_VAULT）
+    local env_vault="${ORBIT_VAULT:-${orbit_VAULT:-}}"
+    if [ -n "$env_vault" ] && [ -f "$env_vault/.orbit/workspace-index.yaml" ]; then
+        echo "$env_vault"
         return 0
     fi
     # 兜底：~/.orbit/config.yaml

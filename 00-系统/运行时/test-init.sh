@@ -72,7 +72,7 @@ check "node 可用"                test -n "$(node --version 2>/dev/null)"
 check "resolve-vault（从 vault 目录）" \
   bash -c "cd $VAULT && node $SCRIPT resolve-vault --cwd . 2>&1 | grep -q vaultRoot"
 check "resolve-vault（无 vault 时报错，不 fallback）" \
-  bash -c "cd /tmp && OrbitOS_VAULT= node $SCRIPT resolve-vault --cwd . 2>&1 | grep -qiE 'error|Cannot resolve'"
+  bash -c "cd /tmp && ORBIT_VAULT= node $SCRIPT resolve-vault --cwd . 2>&1 | grep -qiE 'error|Cannot resolve'"
 
 echo ""
 
@@ -94,7 +94,7 @@ git config user.email "sandbox@test.local"
 git config user.name  "Sandbox"
 echo "# test" > file.md && git add file.md
 
-OrbitOS_VAULT="$VAULT" git commit -m "test: verify hook creates worklog" -q
+ORBIT_VAULT="$VAULT" git commit -m "test: verify hook creates worklog" -q
 
 LOGFILE=$(ls "$VAULT/02-日记/工作日志/"*.md 2>/dev/null | head -1 || echo "")
 

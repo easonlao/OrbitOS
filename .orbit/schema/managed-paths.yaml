@@ -1,0 +1,59 @@
+# OrbitOS managed path rules
+# Only paths that change Agent behavior belong here. Ordinary subdirectories inherit WORKSPACE.md.
+
+version: "1.0"
+
+managed_paths:
+  "02-日记/工作日志":
+    reason: "Hook 和 Agent 事件写入目标，有固定章节。"
+    type: worklog
+    topic: work
+    status: active
+    skill: worklog
+    required_sections:
+      - 今日重点
+      - 今日Todo
+      - Git 提交
+      - 重点记录
+      - 关键决策
+      - 问题与风险
+      - 明日计划
+
+  "02-日记/复盘":
+    reason: "周期性回顾内容，结构和普通日记不同。"
+    type: review
+    topic: work
+    status: active
+    skill: review
+
+  "04-项目/内容创作":
+    reason: "内容生产项目，有发布、素材和复盘链路。"
+    type: board
+    topic: writing
+    status: active
+    skill: workspace-projects
+
+  "04-项目/产品系统":
+    reason: "产品和系统项目，默认承载规格、roadmap 和项目文档。"
+    type: roadmap
+    topic: project
+    status: active
+    skill: workspace-projects
+
+  "06-输出/文章":
+    reason: "可发布文章成品。"
+    type: article
+    topic: writing
+    status: draft
+    skill: workspace-outputs
+
+  "06-输出/口播稿":
+    reason: "可发布口播稿成品。"
+    type: voiceover
+    topic: writing
+    status: draft
+    skill: workspace-outputs
+
+fallback:
+  unknown_path: inherit_workspace
+  uncertain_route: "01-收件箱/待整理"

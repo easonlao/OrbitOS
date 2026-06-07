@@ -144,7 +144,9 @@ Persona 文件放在使用它的 skill 的 `references/personas/` 下：
 | `taxonomy.yaml` | 新增 type 或 topic 枚举值 |
 | `subsystems.yaml` | 新增工作区、修改工作区约束 |
 | `workspace-tools.yaml` | 新增/删除 skill 注册 |
-| `event-capture.yaml` | 修改事件采集规则 |
+| `managed-paths.yaml` | 新增或修改高价值子目录的特殊规则 |
+| `event-capture.yaml` | 修改工作日志事件采集规则 |
+| `event-log.yaml` | 修改 `.orbit/events/*.ndjson` raw event 字段规则 |
 | `frontmatter.yaml` | 修改必填字段或枚举值 |
 
 ### 5.2 修改规则
@@ -191,8 +193,9 @@ Persona 文件放在使用它的 skill 的 `references/personas/` 下：
 
 ### 6.3 环境变量
 
-- 正确：`orbit_VAULT`（小写 o）
-- 错误：`OrbitOS_VAULT`（大写 O，代码不认）
+- 正确：`ORBIT_VAULT`
+- 兼容但不推荐：`orbit_VAULT`
+- 错误：`OrbitOS_VAULT`
 
 ---
 
@@ -219,7 +222,7 @@ Hermes 需要在 `~/.hermes/skills/productivity/orbit-vault` 创建 symlink：
 ```bash
 ln -s ~/orbit/00-系统/Skills/orbit-vault ~/.hermes/skills/productivity/orbit-vault
 ```
-并在 `~/.hermes/.env` 中设置：`orbit_VAULT=/home/lyx/orbit`
+并在 `~/.hermes/.env` 中设置：`ORBIT_VAULT=/home/lyx/orbit`
 
 ---
 

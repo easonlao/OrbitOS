@@ -29,8 +29,8 @@ const TYPE_DEFAULTS = {
   "01-收件箱": { type: "clipping", status: "draft", source: "obsidian-clipper", subdir: "待整理" },
   "02-日记": { type: "worklog", status: "active", source: "manual", subdir: "每日" },
   "03-知识": { type: "note", status: "active", source: "manual", subdir: "AI工程" },
-  "04-项目": { type: "project", status: "active", source: "manual", subdir: "产品系统" },
-  "05-资源": { type: "resource", status: "active", source: "manual", subdir: "模板" },
+  "04-项目": { type: "roadmap", status: "active", source: "manual", subdir: "产品系统" },
+  "05-资源": { type: "note", status: "active", source: "manual", subdir: "模板" },
   "06-输出": { type: "article", status: "draft", source: "manual", subdir: "文章" },
   "99-归档": { type: "note", status: "archived", source: "manual", subdir: "迁移记录" },
 };
@@ -512,10 +512,12 @@ function initVault(vaultRoot, args = {}) {
   ensureDir(path.join(vaultRoot, ".orbit", "events"));
   dirs += 1;
   files += writeIfMissing(path.join(vaultRoot, "AGENTS.md"), "# OrbitOS Agent 入口\n\n读取 `.orbit/workspace-index.yaml` 后按当前工作区规范执行。\n") ? 1 : 0;
-  files += writeIfMissing(path.join(vaultRoot, "CLAUDE.md"), "# OrbitOS Claude Code 入口\n\n先读 `AGENTS.md`、`.orbit/workspace-index.yaml` 和 `.orbit/schema/workspace-taxonomy.yaml`，再读取当前工作区的 `WORKSPACE.md`。\n") ? 1 : 0;
+  files += writeIfMissing(path.join(vaultRoot, "CLAUDE.md"), "# OrbitOS Claude Code 入口\n\n先读 `AGENTS.md`、`.orbit/workspace-index.yaml`、`.orbit/schema/taxonomy.yaml` 和 `.orbit/schema/managed-paths.yaml`，再读取当前工作区的 `WORKSPACE.md`。\n") ? 1 : 0;
   files += writeIfMissing(path.join(vaultRoot, "README.md"), "# OrbitOS 知识库\n\n中文管理、扁平工作区、Agent-native 的知识库。\n") ? 1 : 0;
   files += writeIfMissing(path.join(vaultRoot, ".orbit", "workspace-index.yaml"), renderWorkspaceIndex(vaultRoot)) ? 1 : 0;
-  files += writeIfMissing(path.join(vaultRoot, ".orbit", "schema", "workspace-taxonomy.yaml"), renderWorkspaceTaxonomy()) ? 1 : 0;
+  files += writeIfMissing(path.join(vaultRoot, ".orbit", "schema", "taxonomy.yaml"), renderTaxonomySchema()) ? 1 : 0;
+  files += writeIfMissing(path.join(vaultRoot, ".orbit", "schema", "managed-paths.yaml"), renderManagedPathsSchema()) ? 1 : 0;
+  files += writeIfMissing(path.join(vaultRoot, ".orbit", "schema", "event-log.yaml"), renderEventLogSchema()) ? 1 : 0;
   files += writeIfMissing(path.join(vaultRoot, ".orbit", "schema", "project-taxonomy.yaml"), renderProjectTaxonomy()) ? 1 : 0;
   files += writeIfMissing(path.join(vaultRoot, ".orbit", "schema", "subsystems.yaml"), renderSubsystemContracts()) ? 1 : 0;
   files += writeIfMissing(path.join(vaultRoot, ".orbit", "schema", "event-capture.yaml"), renderEventCaptureSchema()) ? 1 : 0;
@@ -547,23 +549,111 @@ function renderWorkspaceIndex(vaultRoot) {
   return `${lines.join("\n")}\n`;
 }
 
-function renderWorkspaceTaxonomy() {
-  const lines = [
-    'version: "2026-05-24"',
-    'description: "OrbitOS 工作区一级目录分类表。"',
-    "workspaces:",
-  ];
-  for (const [, dir] of WORKSPACES) {
-    const subdirs = WORKSPACE_SUBDIRS[dir] || [];
-    const defaults = TYPE_DEFAULTS[dir] || {};
-    lines.push(`  "${dir}":`);
-    lines.push(`    allowed_subdirs: ${yamlList(subdirs)}`);
-    lines.push(`    default_subdir: "${defaults.subdir || ""}"`);
-  }
-  lines.push("fallback:");
-  lines.push('  unknown_workspace: "01-收件箱/待整理"');
-  lines.push('  unknown_category: "01-收件箱/待整理"');
-  return `${lines.join("\n")}\n`;
+function renderTaxonomySchema() {
+  return [
+    "# 合法 topic / type 列表",
+    "# 供 Agent 校验 Frontmatter 时使用，路径无关。",
+    "",
+    "topic_values:",
+    "  - ai",
+    "  - dev",
+    "  - reading",
+    "  - work",
+    "  - project",
+    "  - tools",
+    "  - writing",
+    "  - life",
+    "  - system",
+    "",
+    "type_values:",
+    "  - note",
+    "  - card",
+    "  - article",
+    "  - voiceover",
+    "  - script",
+    "  - review",
+    "  - reflection",
+    "  - worklog",
+    "  - clipping",
+    "  - study",
+    "  - spec",
+    "  - skill",
+    "  - roadmap",
+    "  - board",
+    "  - event",
+    "",
+  ].join("\n");
+}
+
+function renderManagedPathsSchema() {
+  return [
+    'version: "1.0"',
+    'description: "OrbitOS 高价值路径规则。只管理会改变 Agent 行为的子目录，普通子目录继承 WORKSPACE.md。"',
+    "managed_paths:",
+    '  "02-日记/工作日志":',
+    '    reason: "Hook 和 Agent 事件写入目标，有固定章节。"',
+    '    type: "worklog"',
+    '    topic: "work"',
+    '    status: "active"',
+    '    skill: "worklog"',
+    '    required_sections: ["今日重点", "今日Todo", "Git 提交", "重点记录", "关键决策", "问题与风险", "明日计划"]',
+    '  "02-日记/复盘":',
+    '    reason: "周期性回顾内容，结构和普通日记不同。"',
+    '    type: "review"',
+    '    topic: "work"',
+    '    status: "active"',
+    '    skill: "review"',
+    '  "04-项目/内容创作":',
+    '    reason: "内容生产项目，有发布、素材和复盘链路。"',
+    '    type: "board"',
+    '    topic: "writing"',
+    '    status: "active"',
+    '    skill: "workspace-projects"',
+    '  "04-项目/产品系统":',
+    '    reason: "产品和系统项目，默认承载规格、roadmap 和项目文档。"',
+    '    type: "roadmap"',
+    '    topic: "project"',
+    '    status: "active"',
+    '    skill: "workspace-projects"',
+    '  "06-输出/文章":',
+    '    reason: "可发布文章成品。"',
+    '    type: "article"',
+    '    topic: "writing"',
+    '    status: "draft"',
+    '    skill: "workspace-outputs"',
+    '  "06-输出/口播稿":',
+    '    reason: "可发布口播稿成品。"',
+    '    type: "voiceover"',
+    '    topic: "writing"',
+    '    status: "draft"',
+    '    skill: "workspace-outputs"',
+    "fallback:",
+    '  unknown_path: "inherit_workspace"',
+    '  uncertain_route: "01-收件箱/待整理"',
+    "",
+  ].join("\n");
+}
+
+function renderEventLogSchema() {
+  return [
+    'version: "1.0"',
+    'description: "OrbitOS raw event log schema. Files live at .orbit/events/YYYYMMDD.ndjson, one JSON object per line."',
+    "common_required_fields:",
+    '  - "event_id"',
+    '  - "type"',
+    '  - "timestamp"',
+    "event_types:",
+    "  git_commit:",
+    '    required: ["repo", "repo_name", "branch", "commit", "commit_short", "subject", "files"]',
+    "  agent_work:",
+    '    required: ["summary", "origin_cwd"]',
+    "  decision:",
+    '    required: ["decision", "reason", "origin_cwd"]',
+    "storage:",
+    '  path_pattern: ".orbit/events/{YYYYMMDD}.ndjson"',
+    '  git_policy: "ignored_local_runtime"',
+    "",
+  ].join("\n");
 }
 
 function renderProjectTaxonomy() {
@@ -592,7 +682,7 @@ function renderWorkspaceToolsSchema() {
     '  skill_root: "00-系统/Skills"',
     '  tools: ["resolve-vault", "detect", "route-create", "ensure-worklog", "record-agent-event", "ensure-runtime-assets", "install-runtime", "audit-workspaces", "audit-subsystems", "audit-skill-locations"]',
     "progressive_loading:",
-    '  level_0_global: ["AGENTS.md", ".orbit/workspace-index.yaml", ".orbit/schema/workspace-taxonomy.yaml", ".orbit/schema/subsystems.yaml", ".orbit/schema/event-capture.yaml", ".orbit/schema/workspace-tools.yaml"]',
+    '  level_0_global: ["AGENTS.md", ".orbit/workspace-index.yaml", ".orbit/schema/taxonomy.yaml", ".orbit/schema/managed-paths.yaml", ".orbit/schema/subsystems.yaml", ".orbit/schema/event-capture.yaml", ".orbit/schema/event-log.yaml", ".orbit/schema/workspace-tools.yaml"]',
     '  level_1_workspace: ["<workspace>/WORKSPACE.md", "<workspace-skill>/SKILL.md"]',
     '  level_2_domain: "Only load domain skills when the intent or file type requires them."',
     "workspaces:",
@@ -634,7 +724,7 @@ function renderEventCaptureSchema() {
     'version: "2026-05-24"',
     'description: "全局路由、Git Hook、Agent Hook 和工作日志事件采集契约。"',
     "vault_resolver:",
-    '  order: ["walk_up:.orbit/workspace-index.yaml", "env:OrbitOS_VAULT", "file:~/.orbit/config.yaml", "fallback:error (no hardcoded fallback)"]',
+    '  order: ["walk_up:.orbit/workspace-index.yaml", "env:ORBIT_VAULT", "env:orbit_VAULT (deprecated)", "file:~/.orbit/config.yaml", "fallback:error (no hardcoded fallback)"]',
     "worklog:",
     '  path_template: "02-日记/工作日志/YYYYMMDD_工作日志_周X.md"',
     '  sections: ["今日重点", "Git 提交", "Agent 产出", "关键决策", "问题与风险", "明日计划"]',
@@ -875,7 +965,7 @@ function createFile(args) {
   const workspace = args.workspace || detectWorkspace(args.cwd || process.cwd(), vaultRoot).dir || "01-收件箱";
   const defaults = TYPE_DEFAULTS[workspace] || TYPE_DEFAULTS["01-收件箱"];
   const title = args.title || args._[1];
-  const topic = args.topic || "knowledge-vault";
+  const topic = args.topic || "system";
   const type = args.type || defaults.type;
   const status = args.status || defaults.status;
   const source = args.source || defaults.source;
@@ -907,7 +997,7 @@ function updateFrontmatter(args) {
   const frontmatter = buildFrontmatter({
     title,
     type: args.type || defaults.type,
-    topic: args.topic || "knowledge-vault",
+    topic: args.topic || "system",
     workspace,
     created,
     modified: nowString(),
@@ -943,15 +1033,16 @@ function resolveVault(args = {}) {
   const cwd = path.resolve(args.cwd || process.cwd());
   const upward = findVaultUpwards(cwd);
   if (upward) return { vaultRoot: upward, source: "walk_up", cwd };
-  if (process.env.orbit_VAULT) {
-    const envRoot = path.resolve(process.env.orbit_VAULT);
+  const envVault = process.env.ORBIT_VAULT || process.env.orbit_VAULT;
+  if (envVault) {
+    const envRoot = path.resolve(envVault);
     if (fs.existsSync(path.join(envRoot, ".orbit", "workspace-index.yaml"))) {
       return { vaultRoot: envRoot, source: "env", cwd };
     }
   }
   const configured = readConfiguredVault();
   if (configured) return { vaultRoot: path.resolve(configured), source: "config", cwd };
-  throw new Error("Cannot resolve vault root. Run from within a vault directory or set OrbitOS_VAULT.");
+  throw new Error("Cannot resolve vault root. Run from within a vault directory or set ORBIT_VAULT.");
 }
 
 function routeIntent(intent = "") {
@@ -966,7 +1057,7 @@ function routeIntent(intent = "") {
     workspace: "01-收件箱",
     subdir: "待整理",
     type: "note",
-    topic: "knowledge-vault",
+    topic: "system",
     status: "draft",
     reason: "未匹配到高置信度意图，保守路由到收件箱待整理。",
   };
@@ -1044,7 +1135,7 @@ function ensureWorklog(args = {}) {
     created: parts.timestamp,
     modified: parts.timestamp,
     tags: ["worklog", "work", "event-capture"],
-    source: "orbit-vault",
+    source: "agent",
     status: "active",
   });
   const body = [
@@ -1086,14 +1177,33 @@ function appendEventToWorklog(vaultRoot, event) {
   let markdown = fs.readFileSync(file, "utf8");
   const section = event.section || (event.type === "git_commit" ? "Git 提交" : event.type === "decision" ? "关键决策" : "Agent 产出");
   const eventId = event.event_id || `${event.type}:${event.commit || event.timestamp}`;
+  const eventRecord = { ...event, event_id: eventId };
+  validateEventLogRecord(eventRecord);
   const content = formatEvent(event, eventId);
   const result = appendToSection(markdown, section, content, eventId);
   if (result.appended) {
     markdown = result.markdown.replace(/modified: ".*?"/, `modified: "${nowString()}"`);
     fs.writeFileSync(file, markdown, "utf8");
   }
-  appendRawEvent(vaultRoot, { ...event, event_id: eventId });
+  appendRawEvent(vaultRoot, eventRecord);
   return { path: file, appended: result.appended, eventId };
+}
+
+function validateEventLogRecord(event) {
+  const common = ["event_id", "type", "timestamp"];
+  const requiredByType = {
+    git_commit: ["repo", "repo_name", "branch", "commit", "commit_short", "subject", "files"],
+    agent_work: ["summary", "origin_cwd"],
+    decision: ["decision", "reason", "origin_cwd"],
+  };
+  const required = [...common, ...(requiredByType[event.type] || [])];
+  const missing = required.filter((field) => event[field] === undefined || event[field] === "");
+  if (!requiredByType[event.type]) {
+    throw new Error(`Unsupported event log type: ${event.type}`);
+  }
+  if (missing.length) {
+    throw new Error(`Invalid event log record. Missing fields: ${missing.join(", ")}`);
+  }
 }
 
 function appendRawEvent(vaultRoot, event) {
@@ -1153,7 +1263,7 @@ function captureGitCommit(args = {}) {
 function recordAgentEvent(args = {}) {
   const resolved = resolveVault(args);
   const event = {
-    type: args.decision ? "decision" : "agent_event",
+    type: args.decision ? "decision" : "agent_work",
     timestamp: nowString(),
     summary: args.summary || args._[1] || "Agent 产出记录",
     decision: args.decision || "",
@@ -1552,10 +1662,12 @@ function auditSubsystems(vaultRoot, args = {}) {
   const maintenanceItems = [];
   const schemaFiles = [
     ".orbit/workspace-index.yaml",
-    ".orbit/schema/workspace-taxonomy.yaml",
+    ".orbit/schema/taxonomy.yaml",
+    ".orbit/schema/managed-paths.yaml",
     ".orbit/schema/subsystems.yaml",
     ".orbit/schema/frontmatter.yaml",
     ".orbit/schema/event-capture.yaml",
+    ".orbit/schema/event-log.yaml",
     ".orbit/schema/workspace-tools.yaml",
   ];
 

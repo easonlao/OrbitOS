@@ -4,11 +4,14 @@
 
 1. `./00-系统/Skills/orbit-vault/SKILL.md`（核心路由 Skill）
 2. .orbit/workspace-index.yaml（工作区索引）
-3. .orbit/schema/subsystems.yaml（工作区契约）
-4. .orbit/schema/event-capture.yaml（Agent 事件采集规格）
-5. .orbit/schema/workspace-tools.yaml（工作区→Skill 绑定）
-6. 当前工作区 WORKSPACE.md
-7. 仅在意图命中时加载领域 Skill
+3. .orbit/schema/taxonomy.yaml（type/topic 枚举）
+4. .orbit/schema/subsystems.yaml（工作区契约）
+5. .orbit/schema/managed-paths.yaml（高价值子目录规则）
+6. .orbit/schema/event-capture.yaml（Agent 事件采集规格）
+7. .orbit/schema/event-log.yaml（raw event log 字段规则）
+8. .orbit/schema/workspace-tools.yaml（工作区→Skill 绑定）
+9. 当前工作区 WORKSPACE.md
+10. 仅在意图命中时加载领域 Skill
 
 ## 渐进式加载
 

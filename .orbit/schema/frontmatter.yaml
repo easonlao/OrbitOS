@@ -14,6 +14,7 @@ required_fields:
 
 source_values:
   - mcp           # 通过 OrbitOS MCP 工具写入
+  - agent         # 通过 Agent 写入
   - manual        # 人工手写
   - obsidian-clipper  # Obsidian Web Clipper 剪藏
   - web           # 其他网页来源

@@ -7,11 +7,13 @@
 2. 读取 `.orbit/schema/taxonomy.yaml`，确认当前工作区允许的 type/topic 枚举。
 3. 读取 `.orbit/schema/subsystems.yaml`，确认当前工作区的自治子系统契约。
 4. 读取 `.orbit/schema/event-capture.yaml`，确认全局路由和 Hook 事件采集规则。
-5. 读取 `.orbit/schema/workspace-tools.yaml`，确认当前工作区可用工具 Skill 和领域 Skill。
-6. 读取当前工作区的 `WORKSPACE.md`。
-7. 按 `workspace-index.yaml` 中的 `skill` 加载对应子 Skill。
-8. 仅在意图命中时加载领域 Skill。
-9. 创建、更新或整理文件前，检查 `.orbit/schema/`。
+5. 读取 `.orbit/schema/event-log.yaml`，确认 raw event log 字段规则。
+6. 读取 `.orbit/schema/managed-paths.yaml`，确认高价值子目录的特殊规则。
+7. 读取 `.orbit/schema/workspace-tools.yaml`，确认当前工作区可用工具 Skill 和领域 Skill。
+8. 读取当前工作区的 `WORKSPACE.md`。
+9. 按 `workspace-index.yaml` 中的 `skill` 加载对应子 Skill。
+10. 仅在意图命中时加载领域 Skill。
+11. 创建、更新或整理文件前，检查 `.orbit/schema/`。
 
 ## 全局规则
 
@@ -23,6 +25,7 @@
 - 大规模迁移先写入 `.orbit/manifests/`。
 - 每个工作区都是自治子系统，必须遵守输入、输出、状态、审计和修复边界。
 - 任意目录触发知识库操作时，先 resolve vault，再按意图 route-create。
+- 写入文件前必须同时确认 workspace 与 managed path；不命中 managed path 时继承当前 `WORKSPACE.md`。
 
 ## 生命周期管理
 

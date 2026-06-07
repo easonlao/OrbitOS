@@ -9,7 +9,7 @@ workspaces:
   "00-系统":
     desc: "系统规范、Skills、运行时"
     input: [manual, agent]
-    allowed_types: [spec, skill, roadmap, note]
+    allowed_types: [spec, skill, roadmap, note, review]
     status_machine: [draft, active, archived]
     output_workspace: []
     agent_writable: false       # 不允许 Agent 在此创建用户内容文件

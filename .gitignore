@@ -26,11 +26,16 @@
 .claude/
 .claudian/
 OH-Works/
-.orbit/config.yaml         # 本机 vault 路径配置（可选）
-.orbit/reports/            # 审计报告（本机生成，不共享）
-.orbit/manifests/          # 迁移 manifest（本机临时）
-.orbit/queues/             # 处理队列（本机临时）
-.orbit/events/             # 运行时事件日志（含本机路径，不共享）
+# 本机 vault 路径配置（可选）
+.orbit/config.yaml
+# 审计报告（本机生成，不共享）
+.orbit/reports/
+# 迁移 manifest（本机临时）
+.orbit/manifests/
+# 处理队列（本机临时）
+.orbit/queues/
+# 运行时事件日志（含本机路径，不共享）
+.orbit/events/
 
 # ── 系统 ─────────────────────────────────────────────────────
 .DS_Store

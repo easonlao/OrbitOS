@@ -1,0 +1,35 @@
+# OrbitOS raw event log schema
+# Files live at .orbit/events/YYYYMMDD.ndjson, one JSON object per line.
+
+version: "1.0"
+
+common_required_fields:
+  - event_id
+  - type
+  - timestamp
+
+event_types:
+  git_commit:
+    required:
+      - repo
+      - repo_name
+      - branch
+      - commit
+      - commit_short
+      - subject
+      - files
+
+  agent_work:
+    required:
+      - summary
+      - origin_cwd
+
+  decision:
+    required:
+      - decision
+      - reason
+      - origin_cwd
+
+storage:
+  path_pattern: ".orbit/events/{YYYYMMDD}.ndjson"
+  git_policy: ignored_local_runtime
