@@ -9,6 +9,17 @@ from pathlib import Path
 from typing import Any
 
 
+"""工作日志管理器 - 生成、追加、索引重建."""
+
+from __future__ import annotations
+
+import re
+import subprocess
+from datetime import datetime
+from pathlib import Path
+from typing import Any
+
+
 # 星期映射
 WEEKDAY_MAP = {
     0: "周一", 1: "周二", 2: "周三", 3: "周四",
@@ -36,8 +47,6 @@ status: "active"
 
 ## 今日Todo
 
-## Git 提交
-
 ## 重点记录
 
 ## 关键决策
@@ -45,6 +54,8 @@ status: "active"
 ## 问题与风险
 
 ## 明日计划
+
+## Git 提交
 
 """
 
