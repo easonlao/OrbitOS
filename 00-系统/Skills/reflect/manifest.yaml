@@ -48,7 +48,7 @@ tools:
         type: string
         required: true
   - name: save_reflection_closure
-    description: Save closure review and auto-extract action items to todos.md
+    description: Save closure review to reflection file
     params:
       - name: file_path
         type: string
