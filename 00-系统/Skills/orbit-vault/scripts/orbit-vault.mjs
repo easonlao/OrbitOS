@@ -1499,7 +1499,7 @@ function recordGitCommitEvent(args = {}) {
   const commit = args.commit || git(repo, ["rev-parse", "HEAD"]);
   const subject = git(repo, ["log", "-1", "--pretty=%s", commit]);
   const branch = git(repo, ["rev-parse", "--abbrev-ref", "HEAD"]);
-  const files = git(repo, ["show", "--pretty=", "--name-only", commit]).split("\n").filter(Boolean).slice(0, 20);
+  const files = git(repo, ["show", "--pretty=", "--name-only", commit]).split("\n").filter(Boolean).slice(0, 20).map(decodeGitPath);
   const event = {
     type: "git_commit",
     timestamp: nowString(),
@@ -2083,6 +2083,50 @@ function main() {
   else if (command === "audit-skill-locations") result = auditSkillLocations(vaultRoot, args);
   else throw new Error(`unknown command: ${command}`);
   console.log(JSON.stringify(result, null, 2));
+}
+
+function decodeGitPath(p) {
+  if (p.startsWith('"') && p.endsWith('"')) {
+    p = p.slice(1, -1);
+    try {
+      const bytes = [];
+      for (let i = 0; i < p.length; i++) {
+        if (p[i] === '\\') {
+          i++;
+          if (i >= p.length) {
+            bytes.push(92); // trailing backslash
+            break;
+          }
+          const next = p[i];
+          if (/[0-7]/.test(next)) {
+            const octalStr = p.slice(i, i + 3);
+            if (/^[0-7]{3}$/.test(octalStr)) {
+              bytes.push(parseInt(octalStr, 8));
+              i += 2;
+            } else {
+              bytes.push(parseInt(next, 8));
+            }
+          } else {
+            const escapeMap = {
+              a: 7, b: 8, t: 9, n: 10, v: 11, f: 12, r: 13,
+              '"': 34, '\\': 92
+            };
+            if (next in escapeMap) {
+              bytes.push(escapeMap[next]);
+            } else {
+              bytes.push(92, next.charCodeAt(0));
+            }
+          }
+        } else {
+          bytes.push(p.charCodeAt(i));
+        }
+      }
+      return Buffer.from(bytes).toString("utf8");
+    } catch (e) {
+      return p;
+    }
+  }
+  return p;
 }
 
 main();
