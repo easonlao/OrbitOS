@@ -20,31 +20,29 @@ WORKLOG_TEMPLATE = """---
 title: "{date_str} {weekday} 工作日志"
 type: "worklog"
 topic: "work"
+workspace: "02-日记"
 created: "{created_time}"
 modified: "{created_time}"
-tags: ["worklog", "work", "crafted"]
-origin: "crafted"
-source: "mcp"
+tags: ["worklog", "work", "event-capture"]
+source: "agent"
 status: "active"
 ---
 
-# {date_str} {weekday}
+# {date_str} {weekday} 工作日志
 
-## 今日工作内容
+## 今日重点
 
 {initial_content}
 
-## 重点记录（可直接粘贴）
+## 今日Todo
 
--
+## Git 提交
 
-## 问题 & 解决方案
+## 重点记录
 
+## 关键决策
 
-
-## 参考 / 链接
-
--
+## 问题与风险
 
 ## 明日计划
 
@@ -52,19 +50,22 @@ status: "active"
 
 # 内容分类关键词
 SECTION_KEYWORDS: dict[str, list[str]] = {
-    "问题 & 解决方案": [
+    "问题与风险": [
         "问题", "bug", "报错", "异常", "错误", "error", "issue",
-        "解决", "修复", "fix", "处理", "排查",
+        "风险", "阻塞", "失败", "卡住",
     ],
-    "重点记录（可直接粘贴）": [
+    "重点记录": [
         "完成", "实现", "开发", "重点", "要点", "上线", "部署",
-        "联调", "评审", "需求", "设计", "优化",
+        "联调", "评审", "需求", "设计", "优化", "修复", "fix",
     ],
-    "参考 / 链接": [
-        "链接", "参考", "文档", "http://", "https://", "wiki",
+    "关键决策": [
+        "决策", "选择", "方案", "拍板", "决定",
+    ],
+    "今日Todo": [
+        "待办", "todo", "跟进", "下一步",
     ],
     "明日计划": [
-        "明天", "明日", "计划", "待办", "todo", "下一步",
+        "明天", "明日", "计划",
     ],
 }
 
@@ -116,15 +117,8 @@ class WorklogManager:
             (结果消息, 文件路径)
         """
         date_str, weekday = self.get_real_date()
-        year, month, _ = date_str.split("-")
-
-        # 创建目录
-        month_dir = self.worklog_dir / year / month
-        month_dir.mkdir(parents=True, exist_ok=True)
-
-        # 文件路径
-        filename = f"{date_str}-{weekday}.md"
-        filepath = month_dir / filename
+        compact = date_str.replace("-", "")
+        filepath = self.worklog_dir / f"{compact}_工作日志_{weekday}.md"
 
         # 检查是否已存在
         if filepath.exists():
@@ -155,10 +149,8 @@ class WorklogManager:
             (结果消息, 文件路径)
         """
         date_str, weekday = self.get_real_date()
-        year, month, _ = date_str.split("-")
-
-        filename = f"{date_str}-{weekday}.md"
-        filepath = self.worklog_dir / year / month / filename
+        compact = date_str.replace("-", "")
+        filepath = self.worklog_dir / f"{compact}_工作日志_{weekday}.md"
 
         if not filepath.exists():
             return (
@@ -190,10 +182,8 @@ class WorklogManager:
             (结果消息, 文件路径)
         """
         date_str, weekday = self.get_real_date()
-        year, month, _ = date_str.split("-")
-
-        filename = f"{date_str}-{weekday}.md"
-        filepath = self.worklog_dir / year / month / filename
+        compact = date_str.replace("-", "")
+        filepath = self.worklog_dir / f"{compact}_工作日志_{weekday}.md"
 
         if not filepath.exists():
             return (
@@ -243,12 +233,17 @@ class WorklogManager:
             if md_file.name == "INDEX.md":
                 continue
 
-            # 解析文件名: YYYY-MM-DD-周X.md
-            match = re.match(r"(\d{4}-\d{2}-\d{2})-(周.+)\.md", md_file.name)
-            if not match:
+            # 兼容新旧文件名
+            match_new = re.match(r"(\d{8})_工作日志_(周.)\.md", md_file.name)
+            match_old = re.match(r"(\d{4}-\d{2}-\d{2})-(周.+)\.md", md_file.name)
+            if match_new:
+                compact = match_new.group(1)
+                date_str = f"{compact[:4]}-{compact[4:6]}-{compact[6:8]}"
+            elif match_old:
+                date_str = match_old.group(1)
+            else:
                 continue
 
-            date_str = match.group(1)
             year_month = date_str[:7]  # YYYY-MM
 
             # 提取关键词
@@ -307,11 +302,12 @@ class WorklogManager:
 
         # 检查用户是否显式指定了章节
         explicit_map = {
-            "重点记录": "重点记录（可直接粘贴）",
-            "问题": "问题 & 解决方案",
-            "解决方案": "问题 & 解决方案",
-            "参考": "参考 / 链接",
-            "链接": "参考 / 链接",
+            "重点记录": "重点记录",
+            "问题": "问题与风险",
+            "风险": "问题与风险",
+            "决策": "关键决策",
+            "待办": "今日Todo",
+            "todo": "今日Todo",
             "明日计划": "明日计划",
             "计划": "明日计划",
         }
@@ -329,8 +325,8 @@ class WorklogManager:
         if scores:
             return max(scores, key=scores.get)
 
-        # 默认归到今日工作内容
-        return "今日工作内容"
+        # 默认归到重点记录
+        return "重点记录"
 
     def _append_to_section(self, existing: str, section: str, content: str) -> str:
         """将内容追加到指定章节."""
@@ -363,21 +359,19 @@ class WorklogManager:
         # 清理可能的前缀
         content = re.sub(r'^(补充到\S+[:：]\s*|重点记录[:：]\s*|问题[:：]\s*)', '', content).strip()
 
-        if section == "问题 & 解决方案":
-            # 尝试拆分问题和解决方案
-            if "解决" in content or "fix" in content.lower():
-                parts = re.split(r'[,，;；]?\s*(?:解决|修复|fix)[：:]\s*', content, maxsplit=1)
-                if len(parts) == 2:
-                    return f"问题：{parts[0].strip()}\n\n解决：{parts[1].strip()}\n"
-            return f"问题：{content}\n\n解决：\n"
-
-        if section == "参考 / 链接":
+        if section == "问题与风险":
             return self._format_list_items(content, prefix="- ")
+
+        if section == "关键决策":
+            return self._format_list_items(content, prefix="- ")
+
+        if section == "今日Todo":
+            return self._format_list_items(content, prefix="- [ ] ")
 
         if section == "明日计划":
             return self._format_list_items(content, prefix="- [ ] ")
 
-        # 重点记录 / 今日工作内容
+        # 重点记录 / 今日重点
         return self._format_list_items(content, prefix="- ")
 
     def _format_list_items(self, content: str, prefix: str = "- ") -> str:
@@ -431,12 +425,10 @@ class WorklogManager:
         # 定义要扫描的章节优先级（按重要性排序）
         sections_to_scan = [
             # (章节标题正则, 最大提取数)
-            (r"## 完成事项", 3),
             (r"## 今日重点", 3),
-            (r"## 今日工作内容", 3),
             (r"## 重点记录[^\n]*", 3),
-            (r"## 工作记录", 2),
-            (r"## 思考沉淀", 1),
+            (r"## 关键决策", 2),
+            (r"## 问题与风险", 2),
         ]
         
         for section_pattern, max_items in sections_to_scan:
@@ -465,7 +457,7 @@ class WorklogManager:
                 # 跳过空内容、占位符
                 if not clean or clean == "":
                     continue
-                if clean in ("（简要描述今天完成的主要工作）", ""):
+                if clean in ("（简要描述今天完成的主要工作）", "（填写今天最重要的 1-3 件事）", ""):
                     continue
                 
                 # 去掉内容中的链接部分（保留链接前的描述文字）
@@ -518,7 +510,13 @@ class WorklogManager:
         """更新前一个日志的索引关键词."""
         # 找到最近的日志文件
         all_logs = sorted(self.worklog_dir.rglob("*.md"))
-        logs = [f for f in all_logs if f.name != "INDEX.md" and re.match(r"\d{4}-\d{2}-\d{2}", f.name)]
+        logs = [
+            f for f in all_logs
+            if f.name != "INDEX.md" and (
+                re.match(r"\d{8}_工作日志_周.\.md", f.name)
+                or re.match(r"\d{4}-\d{2}-\d{2}", f.name)
+            )
+        ]
 
         if not logs:
             return
@@ -536,7 +534,11 @@ class WorklogManager:
                 return
 
             index_content = index_path.read_text(encoding="utf-8")
-            date_str = latest.name[:10]  # YYYY-MM-DD
+            if re.match(r"\d{8}_工作日志_周.\.md", latest.name):
+                compact = latest.name[:8]
+                date_str = f"{compact[:4]}-{compact[4:6]}-{compact[6:8]}"
+            else:
+                date_str = latest.name[:10]  # YYYY-MM-DD
 
             # 查找并更新该日期行
             pattern = rf"(\| {re.escape(date_str)} \|) [^|]* (\|)"

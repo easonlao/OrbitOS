@@ -206,7 +206,7 @@ class ReviewEngine:
         """从工作日志中提取重点记录文本."""
         highlights = []
 
-        for section_name in ("重点记录", "今日工作内容"):
+        for section_name in ("重点记录", "今日重点"):
             match = re.search(
                 rf"## {section_name}[^\n]*\n(.*?)(?=\n## |\Z)",
                 content, re.DOTALL,

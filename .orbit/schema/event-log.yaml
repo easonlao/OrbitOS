@@ -7,10 +7,15 @@ common_required_fields:
   - event_id
   - type
   - timestamp
+  - actor_type
+  - actor_id
+  - recorded_via
+  - session_id
 
 event_types:
   git_commit:
     required:
+      - origin_cwd
       - repo
       - repo_name
       - branch

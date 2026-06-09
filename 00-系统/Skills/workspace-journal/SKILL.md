@@ -38,7 +38,7 @@ triggers:
 ## 自治维护回路
 
 1. 判断内容是每日记录、工作日志、反思还是复盘。
-2. 写入一层主题目录，并补 `workspace=02-日记`、`type=worklog|reflection|review|event|event-raw`。
+2. 写入一层主题目录，并补 `workspace=02-日记`、`type=worklog|reflection|review|event|note`。`人际事件/原始记录/` 仍使用 `event`，靠目录边界区分 raw 与分析。
 3. 更新 `工作日志/INDEX.md` 或生成索引维护项。
 4. 识别可复用知识、技术指南、项目行动，将其建议流转到 `03-知识` 或 `04-项目`。
 5. 对迁出日记区的内容写入报告或 trace。

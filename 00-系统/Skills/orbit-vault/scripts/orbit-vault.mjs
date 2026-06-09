@@ -723,9 +723,13 @@ function renderEventLogSchema() {
     '  - "event_id"',
     '  - "type"',
     '  - "timestamp"',
+    '  - "actor_type"',
+    '  - "actor_id"',
+    '  - "recorded_via"',
+    '  - "session_id"',
     "event_types:",
     "  git_commit:",
-    '    required: ["repo", "repo_name", "branch", "commit", "commit_short", "subject", "files"]',
+    '    required: ["origin_cwd", "repo", "repo_name", "branch", "commit", "commit_short", "subject", "files"]',
     "  agent_work:",
     '    required: ["summary", "origin_cwd"]',
     "  decision:",
@@ -808,7 +812,7 @@ function renderEventCaptureSchema() {
     '  order: ["walk_up:.orbit/workspace-index.yaml", "env:ORBIT_VAULT", "env:orbit_VAULT (deprecated)", "file:~/.orbit/config.yaml", "fallback:error (no hardcoded fallback)"]',
     "worklog:",
     '  path_template: "02-日记/工作日志/YYYYMMDD_工作日志_周X.md"',
-    '  sections: ["今日重点", "Git 提交", "Agent 产出", "关键决策", "问题与风险", "明日计划"]',
+    '  sections: ["今日重点", "今日Todo", "Git 提交", "重点记录", "关键决策", "问题与风险", "明日计划"]',
     "hook_policy:",
     '  git_hook: "post-commit"',
     "  overwrite_existing_hook: false",
@@ -1348,9 +1352,11 @@ function ensureDailyWorklog(args = {}) {
     "",
     "## 今日重点",
     "",
+    "## 今日Todo",
+    "",
     "## Git 提交",
     "",
-    "## Agent 产出",
+    "## 重点记录",
     "",
     "## 关键决策",
     "",
@@ -1376,11 +1382,30 @@ function appendToSection(markdown, section, content, eventId = "") {
   return { markdown: `${before}\n\n${content}\n${after}`, appended: true };
 }
 
+function detectActorId(args = {}) {
+  return args.actor
+    || args.actor_id
+    || process.env.ORBIT_AGENT_ID
+    || process.env.AGENT_ID
+    || "unknown-agent";
+}
+
+function detectSessionId(args = {}) {
+  return args.session_id
+    || process.env.ORBIT_SESSION_ID
+    || process.env.SESSION_ID
+    || "unknown";
+}
+
+function detectRecordedVia(args = {}, fallback) {
+  return args.recorded_via || args.via || fallback;
+}
+
 function appendEventToWorklog(vaultRoot, event) {
   const ensured = ensureDailyWorklog({ vault: vaultRoot });
   const file = ensured.path;
   let markdown = fs.readFileSync(file, "utf8");
-  const section = event.section || (event.type === "git_commit" ? "Git 提交" : event.type === "decision" ? "关键决策" : "Agent 产出");
+  const section = event.section || (event.type === "git_commit" ? "Git 提交" : event.type === "decision" ? "关键决策" : "重点记录");
   const eventId = event.event_id || `${event.type}:${event.commit || event.timestamp}`;
   const eventRecord = { ...event, event_id: eventId };
   validateEventLogRecord(eventRecord);
@@ -1395,9 +1420,9 @@ function appendEventToWorklog(vaultRoot, event) {
 }
 
 function validateEventLogRecord(event) {
-  const common = ["event_id", "type", "timestamp"];
+  const common = ["event_id", "type", "timestamp", "actor_type", "actor_id", "recorded_via", "session_id"];
   const requiredByType = {
-    git_commit: ["repo", "repo_name", "branch", "commit", "commit_short", "subject", "files"],
+    git_commit: ["origin_cwd", "repo", "repo_name", "branch", "commit", "commit_short", "subject", "files"],
     agent_work: ["summary", "origin_cwd"],
     decision: ["decision", "reason", "origin_cwd"],
   };
@@ -1421,15 +1446,39 @@ function appendRawEvent(vaultRoot, event) {
 function formatEvent(event, eventId) {
   if (event.type === "git_commit") {
     const files = event.files?.length ? `；文件：${event.files.join(", ")}` : "";
-    return `- ${event.timestamp} [${eventId}] \`${event.repo_name || event.repo}\` ${event.branch} ${event.commit_short}：${event.subject}${files}`;
+    return `- ${event.timestamp} [${eventId}] \`${event.repo_name || event.repo}\` ${event.branch} ${event.commit_short}：${event.subject}${files}；记录方：\`${event.actor_id}\`；写入方式：\`${event.recorded_via}\``;
   }
   if (event.type === "decision") {
-    return `- ${event.timestamp} [${eventId}] 决策：${event.decision}；理由：${event.reason}；来源：\`${event.origin_cwd}\``;
+    const sessionId = event.session_id || "unknown";
+    return [
+      `### ${event.timestamp.slice(11, 16)} — ${event.decision}`,
+      "",
+      `- 记录ID：\`${eventId}\``,
+      `- 记录方：\`${event.actor_id}\` (${event.actor_type})`,
+      `- 写入方式：\`${event.recorded_via}\``,
+      `- 会话ID：\`${sessionId}\``,
+      `- 来源目录：\`${event.origin_cwd}\``,
+      "",
+      `**为什么做**：${event.reason}`,
+      `**怎么做的**：形成并确认关键决策。`,
+      `**改了什么**：记录决策结论。`,
+    ].join("\n");
   }
-  const decision = event.decision ? `；决策：${event.decision}` : "";
-  const reason = event.reason ? `；理由：${event.reason}` : "";
-  const artifact = event.artifact ? `；产物：${event.artifact}` : "";
-  return `- ${event.timestamp} [${eventId}] ${event.summary}${decision}${reason}${artifact}；来源：\`${event.origin_cwd}\``;
+  const sessionId = event.session_id || "unknown";
+  const artifact = event.artifact || "未显式记录";
+  return [
+    `### ${event.timestamp.slice(11, 16)} — ${event.summary}`,
+    "",
+    `- 记录ID：\`${eventId}\``,
+    `- 记录方：\`${event.actor_id}\` (${event.actor_type})`,
+    `- 写入方式：\`${event.recorded_via}\``,
+    `- 会话ID：\`${sessionId}\``,
+    `- 来源目录：\`${event.origin_cwd}\``,
+    "",
+    `**为什么做**：${event.reason || "记录本次 Agent 产出。"}`,
+    `**怎么做的**：${event.how || "基于当前会话与工作目录生成结构化记录。"}`,
+    `**改了什么**：${artifact}`,
+  ].join("\n");
 }
 
 function git(repo, args) {
@@ -1454,6 +1503,11 @@ function recordGitCommitEvent(args = {}) {
   const event = {
     type: "git_commit",
     timestamp: nowString(),
+    actor_type: "automation",
+    actor_id: detectActorId({ ...args, actor: args.actor || "git-hook" }),
+    recorded_via: detectRecordedVia(args, "git-hook"),
+    session_id: detectSessionId(args),
+    origin_cwd: repo,
     repo,
     repo_name: path.basename(repo),
     branch,
@@ -1470,10 +1524,15 @@ function recordAgentWorkEvent(args = {}) {
   const event = {
     type: args.decision ? "decision" : "agent_work",
     timestamp: nowString(),
+    actor_type: args.actor_type || "agent",
+    actor_id: detectActorId(args),
+    recorded_via: detectRecordedVia(args, "record-agent-work-event"),
+    session_id: detectSessionId(args),
     summary: args.summary || args._[1] || "Agent 产出记录",
     decision: args.decision || "",
     reason: args.reason || "",
     artifact: args.artifact || "",
+    how: args.how || "",
     origin_cwd: path.resolve(args.cwd || process.cwd()),
     importance: args.importance || "normal",
   };
@@ -2026,9 +2085,4 @@ function main() {
   console.log(JSON.stringify(result, null, 2));
 }
 
-try {
-  main();
-} catch (error) {
-  console.error(error.message);
-  process.exit(1);
-}
+main();

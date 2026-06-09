@@ -23,6 +23,11 @@ mandatory_fields:
   - why            # 为什么做（Why）
   - how            # 怎么做的（How）
   - changed_files  # 改了哪些文件/产出物（1-3 行）
+  - actor_id       # 谁写的
+  - actor_type     # agent / automation / user
+  - recorded_via   # 通过什么机制写的
+  - origin_cwd     # 来源工作目录
+  - session_id     # 会话 ID，取不到时写 unknown
 
 # ── 可选字段
 optional_fields:
@@ -49,6 +54,12 @@ destination:
 # ── 条目格式
 entry_format: |
   ### {HH:MM} — {summary}
+
+  - 记录ID：`{event_id}`
+  - 记录方：`{actor_id}` ({actor_type})
+  - 写入方式：`{recorded_via}`
+  - 会话ID：`{session_id}`
+  - 来源目录：`{origin_cwd}`
 
   **为什么做**：{why}
   **怎么做的**：{how}
