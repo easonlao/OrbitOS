@@ -1,59 +1,128 @@
----
-title: OrbitOS
-area: system
-purpose: record
-lifecycle: active
-created: 2026-06-11
-updated: 2026-06-11
-tags:
-  - orbitos
----
+# OrbitOS
 
-# OrbitOS 使用指南
+> A Markdown-native workspace for coordinating humans, agents, memory, and Obsidian-readable artifacts.
 
-OrbitOS 是我的多 agent 协作工作台。Obsidian 用来阅读和审查，agents 用来执行、整理、同步和留下可追踪记录。
+[中文](README.zh-CN.md) | English
 
-## 我每天从哪里开始
+OrbitOS is a multi-agent collaboration workspace built around one simple idea: agents should not just answer in chat. They should enter a shared workspace, understand the current state, do scoped work, leave traceable events, and produce Markdown that remains readable in Obsidian.
 
-- 看今天状态：[[02-时间线/今日]]
-- 看本周方向：[[02-时间线/本周]]
-- 看需要我判断的事项：[[02-时间线/待确认]]
-- 看接下来能推进什么：[[02-时间线/下一步]]
+This repository is both the working vault and the protocol surface for agents such as Codex, Hermes, HanaAgent, Claude Code, and future assistants.
 
-## 我怎么丢材料
+## What OrbitOS Is
 
-把网址、图片、PDF、摘录、想法或临时内容直接放进：
+OrbitOS is not a traditional personal knowledge base. It is a coordination layer for:
 
-- [[01-收件箱/粘贴]]
+- using Obsidian as the human-facing reading and review interface
+- giving agents a single entry contract through [`AGENTS.md`](AGENTS.md)
+- separating human-readable Markdown from machine/runtime state
+- keeping agent work traceable through event logs
+- turning raw input into reviewed projects, knowledge, resources, or outputs
 
-处理后会记录到：
+## Core Concepts
 
-- [[01-收件箱/处理记录]]
+| Concept | Meaning |
+| --- | --- |
+| `AGENTS.md` | The root usage contract every agent reads first. |
+| Startup Sync | The required first step: read current state and report a short status summary. |
+| Progress Sync | The required closeout/update step after meaningful work or when the user says "同步进度". |
+| Event log | The fact base under `.orbitos/logs/events/`. |
+| Human view | Obsidian-readable Markdown such as `今日.md`, `待确认.md`, or project `STATUS.md`. |
+| Hindsight | Optional memory layer; useful, but not required for OrbitOS to operate. |
 
-## 我怎么让 agent 接入
+## Repository Layout
 
-新对话或新 agent 进入时，让它先读：
+```text
+AGENTS.md              # Agent usage entry
+README.md              # GitHub-facing project guide
+00-系统/               # Human-readable runtime rules and system docs
+01-收件箱/             # Low-friction raw input
+02-时间线/             # Current timeline views
+03-项目/               # Project boundary layer
+04-知识/               # Confirmed reusable knowledge
+05-资源/               # Processed references and attachments
+06-输出/               # Markdown outputs produced in Obsidian
+99-归档/               # Archived inactive objects
+.orbitos/              # Runtime layer: schemas, logs, queues, workflows, design docs
+```
 
-- [[AGENTS]]
+## Quick Start
 
-可以直接说：
+### For Humans
 
-> 请进入 OrbitOS，读取根目录 AGENTS.md，并执行 Startup Sync。
+Open the repository as an Obsidian vault and start from:
 
-如果要让 agent 更新当前进度，可以说：
+- [`02-时间线/今日.md`](02-%E6%97%B6%E9%97%B4%E7%BA%BF/%E4%BB%8A%E6%97%A5.md) for today's state
+- [`02-时间线/本周.md`](02-%E6%97%B6%E9%97%B4%E7%BA%BF/%E6%9C%AC%E5%91%A8.md) for weekly insight
+- [`02-时间线/待确认.md`](02-%E6%97%B6%E9%97%B4%E7%BA%BF/%E5%BE%85%E7%A1%AE%E8%AE%A4.md) for decisions that need review
+- [`02-时间线/下一步.md`](02-%E6%97%B6%E9%97%B4%E7%BA%BF/%E4%B8%8B%E4%B8%80%E6%AD%A5.md) for the next actionable entry points
 
-> 同步进度。
+Drop unprocessed material into:
 
-## 主要区域
+- [`01-收件箱/粘贴.md`](01-%E6%94%B6%E4%BB%B6%E7%AE%B1/%E7%B2%98%E8%B4%B4.md)
 
-- [[00-系统/MAP]]：系统规则和说明入口
-- [[03-项目/MAP]]：项目入口
-- [[04-知识/MAP]]：已确认的长期知识
-- [[05-资源/链接]]：已处理、可引用的外部资料
-- [[06-输出]]：Obsidian 内产出的 Markdown 成品
+### For Agents
 
-## 关键原则
+Every agent should start with:
 
-- `AGENTS.md` 是 agent 使用 OrbitOS 的唯一入口。
-- `04-知识/` 只放确认过、可复用的知识卡片。
-- Hindsight 是可选记忆增强层，不是 OrbitOS 运行必需项。
+```text
+Read AGENTS.md and run Startup Sync.
+```
+
+When work is complete, or when the user says "同步", "同步进度", or "更新进度", run Progress Sync:
+
+```text
+Write an event, refresh relevant timeline/project views, and record candidates that need review.
+```
+
+Agents modifying OrbitOS internals must also read:
+
+- [`.orbitos/AGENTS.md`](.orbitos/AGENTS.md)
+
+## Current Protocol
+
+OrbitOS currently enforces a three-step agent lifecycle:
+
+```text
+Startup Sync -> Work Execution -> Progress Sync
+```
+
+The current fact base is:
+
+```text
+.orbitos/logs/events/
+```
+
+Human-facing Markdown is treated as a view, summary, or artifact. It should be readable, focused, and traceable back to events or source documents.
+
+## Design Docs
+
+Internal design records live under `.orbitos/docs/`:
+
+- [Requirements](.orbitos/docs/REQUIREMENTS.md)
+- [Architecture](.orbitos/docs/ARCHITECTURE.md)
+- [Design](.orbitos/docs/DESIGN.md)
+
+Runtime-facing system docs live under `00-系统/`:
+
+- [System Map](00-%E7%B3%BB%E7%BB%9F/MAP.md)
+- [Context](00-%E7%B3%BB%E7%BB%9F/CONTEXT.md)
+- [Principles](00-%E7%B3%BB%E7%BB%9F/PRINCIPLES.md)
+- [Data Lifecycle](00-%E7%B3%BB%E7%BB%9F/DATA-LIFECYCLE.md)
+- [Obsidian Standard](00-%E7%B3%BB%E7%BB%9F/OBSIDIAN-STANDARD.md)
+- [Changelog](00-%E7%B3%BB%E7%BB%9F/CHANGELOG.md)
+
+## Roadmap
+
+- Define event schema.
+- Define Startup Sync and Progress Sync workflow files.
+- Add agent profiles for the first real integrations.
+- Add role cards and thinking mode libraries.
+- Clarify Hindsight Bridge rules after the core workflow stabilizes.
+
+## Status
+
+OrbitOS is in early scaffold stage. The current repository already contains the initial workspace structure, runtime docs, timeline views, and event log convention. The next milestone is validating the protocol with real agents.
+
+## License
+
+MIT. See [LICENSE](LICENSE).

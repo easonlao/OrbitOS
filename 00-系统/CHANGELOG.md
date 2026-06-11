@@ -20,3 +20,10 @@ tags:
 - 建立 `.orbitos/AGENTS.md` 作为系统开发/扩展入口。
 - 建立 `.orbitos/docs/REQUIREMENTS.md`、`ARCHITECTURE.md`、`DESIGN.md`。
 - 建立首版时间线、收件箱、项目、知识、资源、输出区域。
+
+## 2026-06-12
+
+- 将根 `README.md` 改写为面向 GitHub 的项目说明。
+- 在 `00-系统/OBSIDIAN-STANDARD.md` 中将根 `README.md` 标记为 frontmatter 例外。
+- 新增 `README.zh-CN.md` 作为中文 GitHub 项目说明。
+- 新增 MIT `LICENSE`。
