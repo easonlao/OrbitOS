@@ -1,59 +1,80 @@
 # OrbitOS Agent 入口
 
-## 读取顺序
+OrbitOS 是一个多 agent 协作工作台。Obsidian 是人读界面，`.orbitos/` 是机器与运行时层。
 
-0. 如果当前目录不在知识库内，向上遍历父目录直到找到 `.orbit/workspace-index.yaml`，该目录即为 vault 根。
-1. 读取 `.orbit/workspace-index.yaml`，先根据用户意图判断目标工作区；如果当前 `pwd` 在 vault 内，再把 `pwd` 作为辅助信号校准。
-2. 读取 `.orbit/schema/taxonomy.yaml`，确认当前工作区允许的 type/topic 枚举。
-3. 读取 `.orbit/schema/subsystems.yaml`，确认当前工作区的自治子系统契约。
-4. 读取 `.orbit/schema/event-capture.yaml`，确认全局路由和 Hook 事件采集规则。
-5. 读取 `.orbit/schema/event-log.yaml`，确认 raw event log 字段规则。
-6. 读取 `.orbit/schema/managed-paths.yaml`，确认高价值子目录的特殊规则。
-7. 读取 `.orbit/schema/workspace-tools.yaml`，确认当前工作区可用工具 Skill 和领域 Skill。
-8. 读取当前工作区的 `WORKSPACE.md`。
-9. 按 `workspace-index.yaml` 中的 `skill` 加载对应子 Skill。
-10. 仅在意图命中时加载领域 Skill。
-11. 创建、更新或整理文件前，检查 `.orbit/schema/`，并用 `explain-route` 确认有效 workspace、managed path、type、topic、status 和目标目录。
+本文件是所有 agent 使用 OrbitOS 的唯一入口契约，必须保持在 200 行以内。
 
-## 全局规则
+## Startup Sync
 
-- 新 Markdown 文件默认使用 `YYYYMMDD_主题.md`。
-- 每个 Markdown 文件必须有 Frontmatter（9 字段：title, type, topic, workspace, created, modified, tags, source, status）。
-- `workspace` 字段必须等于当前工作区目录名。
-- 不确定归属时，写入 `01-收件箱/待整理/`。
-- 不直接批量删除历史内容。
-- 大规模迁移先写入 `.orbit/manifests/`。
-- 每个工作区都是自治子系统，必须遵守输入、输出、状态、审计和修复边界。
-- 任意目录触发知识库操作时，先 resolve vault，再用 `explain-route` 校验落点，最后按意图 `create-routed-note`。
-- 写入文件前必须同时确认 workspace 与 managed path；不命中 managed path 时继承当前 `WORKSPACE.md`。
+开始任何工作前，先执行 Startup Sync：
 
-## 生命周期管理
+1. 读取 `00-系统/MAP.md`、`00-系统/CONTEXT.md`、`00-系统/PRINCIPLES.md`。
+2. 读取 `02-时间线/今日.md`、`02-时间线/待确认.md`、`02-时间线/下一步.md`。
+3. 如果任务涉及具体项目，再读取目标项目的 `README.md` 和 `STATUS.md`。
+4. 输出 5-8 行短状态摘要：当前状态、待确认事项、下一步入口。
 
-**新增、修改、删除 Skill 或 Schema 时，必须先读取 `00-系统/规范/11_Skill生命周期管理规范.md`，按规范操作。** 该规范定义了：
-- Skill 的创建、注册、修改、删除流程
-- Persona 的管理和命名规范
-- Schema 文件的修改规则
-- 路径规范（禁止使用的旧路径）
-- Agent 接入流程
-- Git 提交规范
+Startup Sync 只同步状态，不推进任务，不做决策。
 
-## 知识区 (03-知识) 路由与操作规则
+## Work Execution
 
-- **严禁新建一级目录**：严禁因为任何主题细分新建一级目录。新知识卡片只能路由至六大长期领域目录（`AI与Agent`、`软件与系统`、`金融交易`、`认知与方法论`、`阅读与书籍`、`本地基础设施`）。
-- **兜底策略**：如果找不到匹配的合适长期领域，必须先写入 `01-收件箱/待整理/`，严禁新增临时目录。
-- **历史目录封存**：除非用户明确要求，不得向已失效或历史旧目录（如 `AI工程/`、`AI/`、`开发/`、`工具与工作流/` 等）新建任何文件。
-- **地图自动关联**：创建或迁移知识卡片后，必须检查对应长期领域的 `00_MAP_*.md` 索引地图，并在其中追加卡片引用（Wikilinks），确保卡片具备有效的上位导航，不成为孤立节点。
-- **原子卡片标准**：卡片必须遵循原子规范（单一概念、二级标题分块，尾部包含 up/related 关联区）。
+只加载当前任务必需的最小上下文。
 
-## 工作区切换
+使用渐进式披露：
 
-当前目录只在位于 vault 内时辅助决定工作状态；外部目录触发知识库操作时，以用户意图和工作区规范为准：
+- 写入可见 Markdown 前，先读取对应区域规则。
+- 只有处理具体项目时，才读取项目文件。
+- 只有修改 OrbitOS 内核时，才读取 `.orbitos/AGENTS.md`。
+- 没有明确需要时，不全量扫描或重写整个 vault。
 
-- `00-系统`：规范、Schema、Skills、Agent、审计。
-- `01-收件箱`：接收、粗分、生成整理队列。
-- `02-日记`：记录、反思、复盘。
-- `03-知识`：沉淀知识卡片和主题笔记。
-- `04-项目`：推进项目，项目内可有局部 `AGENTS.md` 或 `CLAUDE.md`。
-- `05-资源`：保存长期参考资料和附件。
-- `06-输出`：维护可发布成品。
-- `99-归档`：保存迁移记录、废弃系统、废弃工具、完结项目和非活跃内容。
+## Progress Sync
+
+完成实质性工作后，或用户说“同步”“同步进度”“更新进度”时，执行 Progress Sync。
+
+Progress Sync 必须：
+
+1. 至少在 `.orbitos/logs/events/` 写入一条 event。
+2. 刷新相关人读视图，例如 `02-时间线/今日.md`、`待确认.md`、`下一步.md`。
+3. 如果项目状态发生变化，更新项目 `STATUS.md`。
+4. 对长期影响候选事项做记录，不静默提升为正式规则。
+
+Progress Sync 不会自动写 ADR，不会自动提升规则，不会自动创建知识卡片。
+
+## Facts And Views
+
+`.orbitos/logs/events/` 是事实底座。
+
+可见 Markdown 是人读视图或产物，必须可读、聚焦、可追踪。
+
+## Visible Markdown
+
+可见 Markdown 默认需要 frontmatter：
+
+```yaml
+---
+title:
+area:
+purpose:
+lifecycle:
+created:
+updated:
+tags:
+---
+```
+
+例外：`01-收件箱/粘贴.md` 是自由输入入口，不要求 frontmatter。
+
+## Confirmation
+
+以下事项必须由用户确认：
+
+- rule candidate
+- ADR candidate
+- formal artifact candidate，包括知识卡片
+
+Hindsight 不是 OrbitOS 运行必需项。若使用 Hindsight，必须记录 recall 或 retain 了什么。
+
+## Development Boundary
+
+如果要修改 OrbitOS 内核、schema、workflow、目录协议或系统规则，先读取：
+
+`/.orbitos/AGENTS.md`
