@@ -1,0 +1,50 @@
+{
+  "id": "inbox_triage_20260612_095600",
+  "timestamp": "2026-06-12T09:56:00+08:00",
+  "actor": {
+    "type": "agent",
+    "name": "codex",
+    "agent_id": null,
+    "role": null,
+    "device": "desktop-win"
+  },
+  "scope": {
+    "path": "01-收件箱",
+    "mode": "selected",
+    "file_count": 1
+  },
+  "summary": "盘点 1 个收件箱文件并给出去向建议。",
+  "clusters": [
+    {
+      "name": "AI Agent / Obsidian",
+      "description": "与 OrbitOS 和 agent 协作有关的资料。",
+      "file_count": 1,
+      "confidence": "high"
+    }
+  ],
+  "items": [
+    {
+      "path": "01-收件箱/20260605_AI Agent 记忆架构与会话连续性.md",
+      "title": "AI Agent 记忆架构与会话连续性",
+      "detected_type": "project_material",
+      "suggested_route": "project_material",
+      "cluster": "AI Agent / Obsidian",
+      "reason": "内容直接服务 OrbitOS agent 协作设计，适合作为项目资料候选。",
+      "action": "needs_user_confirm",
+      "status": "pending"
+    }
+  ],
+  "review_required": true,
+  "review_items": [],
+  "next_steps": [
+    {
+      "title": "等待用户确认收件箱去向建议",
+      "owner": "user",
+      "priority": "high",
+      "status": "pending",
+      "note": null
+    }
+  ],
+  "outputs": [],
+  "related_event": "evt_20260612_095600_codex_inbox_triage"
+}

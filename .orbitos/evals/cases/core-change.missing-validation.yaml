@@ -1,0 +1,31 @@
+{
+  "id": "core_change_20260612_112001_invalid",
+  "timestamp": "2026-06-12T11:20:01+08:00",
+  "actor": {
+    "type": "agent",
+    "name": "codex"
+  },
+  "change_type": "schema",
+  "scope": {
+    "layer": "internal_runtime",
+    "paths": [
+      ".orbitos/schemas/example.schema.yaml"
+    ]
+  },
+  "summary": "缺少 validation 的核心变更应失败。",
+  "reason": "核心变更必须说明如何验证。",
+  "affected_files": [
+    {
+      "path": ".orbitos/schemas/example.schema.yaml",
+      "change_type": "created",
+      "purpose": "测试"
+    }
+  ],
+  "user_visible_change": false,
+  "promotion": {
+    "needed": false,
+    "target": null,
+    "reason": "仅用于失败样例。"
+  },
+  "related_event": null
+}

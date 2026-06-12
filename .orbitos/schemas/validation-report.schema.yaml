@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "orbitos/validation-report.schema.yaml",
+  "title": "OrbitOS Validation Report",
+  "description": "结构校验报告。用于 validate-sync 失败时进入审核回退。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "timestamp",
+    "target",
+    "schema",
+    "valid",
+    "errors"
+  ],
+  "properties": {
+    "id": {
+      "type": "string"
+    },
+    "timestamp": {
+      "type": "string"
+    },
+    "target": {
+      "type": "string",
+      "description": "被校验的文件或对象。"
+    },
+    "schema": {
+      "type": "string",
+      "description": "使用的 schema。"
+    },
+    "valid": {
+      "type": "boolean"
+    },
+    "errors": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "path",
+          "message"
+        ],
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "fallback_event": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "如果生成了 validation_failed event，在这里记录 event id 或路径。"
+    }
+  }
+}

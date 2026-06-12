@@ -1,0 +1,14 @@
+{
+  "object_id": "obj_20260612_example",
+  "path": "01-收件箱/example.md",
+  "object_type": "inbox_item",
+  "status": "triaged",
+  "previous_status": "raw",
+  "source": "manual",
+  "updated": "2026-06-12T09:57:00+08:00",
+  "related_events": [
+    "evt_20260612_095700_codex_inbox_triage"
+  ],
+  "route": "knowledge_candidate",
+  "notes": "完成方向性盘点，等待确认。"
+}

@@ -1,0 +1,42 @@
+{
+  "id": "core_change_20260612_112000_core_change_schema",
+  "timestamp": "2026-06-12T11:20:00+08:00",
+  "actor": {
+    "type": "agent",
+    "name": "codex",
+    "agent_id": null,
+    "role": null,
+    "device": "desktop-win"
+  },
+  "change_type": "schema",
+  "scope": {
+    "layer": "internal_runtime",
+    "paths": [
+      ".orbitos/schemas/core-change.schema.yaml",
+      ".orbitos/workflows/core-change.md"
+    ]
+  },
+  "summary": "新增 OrbitOS 内核变更 schema 和 workflow。",
+  "reason": "内核文件修改需要统一记录 reason、影响范围、验证方式和用户可见提升关系。",
+  "affected_files": [
+    {
+      "path": ".orbitos/schemas/core-change.schema.yaml",
+      "change_type": "created",
+      "purpose": "定义核心变更结构"
+    }
+  ],
+  "validation": {
+    "required": true,
+    "method": "run_validation_eval",
+    "command": "pwsh -ExecutionPolicy Bypass -File .orbitos/scripts/run-validation.ps1",
+    "status": "pending",
+    "note": null
+  },
+  "user_visible_change": true,
+  "promotion": {
+    "needed": true,
+    "target": "00-系统/CHANGELOG.md",
+    "reason": "这是系统级规则新增，需要用户能在变更记录中看到。"
+  },
+  "related_event": null
+}

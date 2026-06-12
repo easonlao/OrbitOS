@@ -1,0 +1,14 @@
+{
+  "id": "evt_20260612_095501_codex_schema",
+  "timestamp": "2026-06-12T09:55:01+08:00",
+  "actor": {
+    "type": "agent",
+    "name": "codex"
+  },
+  "event_type": "system_change",
+  "summary": "缺少 reason 的 event 应失败。",
+  "actions": [],
+  "files_changed": [],
+  "review_required": false,
+  "next_steps": []
+}

@@ -1,0 +1,14 @@
+{
+  "object_id": "obj_20260612_example",
+  "path": "04-知识/example.md",
+  "object_type": "knowledge_card",
+  "status": "processed",
+  "previous_status": "raw",
+  "source": "manual",
+  "updated": "2026-06-12T09:57:01+08:00",
+  "related_events": [
+    "evt_20260612_095701_codex_processing"
+  ],
+  "route": "knowledge_candidate",
+  "notes": "raw 不能直接跳到 processed。"
+}

@@ -1,4 +1,46 @@
+# Local app state
 .obsidian/
+.claude/
+.codex/
+
+# OrbitOS runtime state
 .orbitos/cache/
+.orbitos/indexes/*
+!.orbitos/indexes/.gitkeep
+.orbitos/logs/events/*
+!.orbitos/logs/events/.gitkeep
+.orbitos/logs/runs/*
+!.orbitos/logs/runs/.gitkeep
+.orbitos/logs/sessions/*
+!.orbitos/logs/sessions/.gitkeep
+.orbitos/manifests/*
+!.orbitos/manifests/.gitkeep
+.orbitos/queues/*
+!.orbitos/queues/review/
+!.orbitos/queues/review/.gitkeep
+.orbitos/state/*
+!.orbitos/state/.gitkeep
+
+# User content and local workspace data
+01-收件箱/**
+!01-收件箱/.gitkeep
+03-项目/**
+!03-项目/
+!03-项目/MAP.md
+04-知识/**
+!04-知识/
+!04-知识/MAP.md
+05-资源/**
+!05-资源/.gitkeep
+!05-资源/附件/
+!05-资源/附件/.gitkeep
+06-输出/**
+!06-输出/.gitkeep
+99-归档/**
+!99-归档/.gitkeep
+OH-Works/
+jian.md
+
+# OS noise
 .DS_Store
 Thumbs.db

@@ -4,7 +4,7 @@ area: system
 purpose: rule
 lifecycle: active
 created: 2026-06-11
-updated: 2026-06-11
+updated: 2026-06-12
 tags:
   - orbitos
   - rules
@@ -22,4 +22,4 @@ tags:
 8. 知识区只收 confirmed / reviewed 内容，宁精不宜多。
 9. Hindsight 是可选记忆增强层，不是核心依赖。
 10. 修改系统内核前读取 `.orbitos/AGENTS.md`。
-
+11. 讨论、设计和实现细节先进入 `.orbitos/docs/`；只有经过确认并改写成用户视角后，才进入 `00-系统/`。

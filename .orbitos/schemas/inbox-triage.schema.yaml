@@ -1,0 +1,290 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "orbitos/inbox-triage.schema.yaml",
+  "title": "OrbitOS Inbox Triage",
+  "description": "收件箱盘点结果。只做方向性粗分、去向建议和待确认提取，不移动文件、不创建知识卡片、不删除内容。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "timestamp",
+    "actor",
+    "scope",
+    "summary",
+    "clusters",
+    "items",
+    "review_required",
+    "next_steps"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "本次收件箱盘点 ID。建议格式：inbox_triage_YYYYMMDD_HHMMSS。"
+    },
+    "timestamp": {
+      "type": "string",
+      "description": "盘点时间。使用 ISO 8601。"
+    },
+    "actor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "name"
+      ],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "user",
+            "agent",
+            "system"
+          ]
+        },
+        "name": {
+          "type": "string"
+        },
+        "agent_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "role": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "device": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "scope": {
+      "type": "object",
+      "description": "本次盘点范围。",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "mode",
+        "file_count"
+      ],
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "mode": {
+          "type": "string",
+          "enum": [
+            "full",
+            "incremental",
+            "selected"
+          ],
+          "description": "full=全量收件箱；incremental=新增/未处理；selected=用户指定文件。"
+        },
+        "file_count": {
+          "type": "integer"
+        }
+      }
+    },
+    "summary": {
+      "type": "string",
+      "description": "本次盘点一句话总结。"
+    },
+    "clusters": {
+      "type": "array",
+      "description": "主题簇。只代表方向性归类，不代表最终知识分类。",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "description",
+          "file_count",
+          "confidence"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "file_count": {
+            "type": "integer"
+          },
+          "confidence": {
+            "type": "string",
+            "enum": [
+              "high",
+              "medium",
+              "low"
+            ]
+          }
+        }
+      }
+    },
+    "items": {
+      "type": "array",
+      "description": "每个文件的去向建议。这里只是建议，不直接搬运。",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "path",
+          "title",
+          "detected_type",
+          "suggested_route",
+          "reason",
+          "action",
+          "status"
+        ],
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "detected_type": {
+            "type": "string",
+            "enum": [
+              "note",
+              "clipping",
+              "worklog",
+              "project_material",
+              "reference",
+              "artifact_candidate",
+              "unknown"
+            ]
+          },
+          "suggested_route": {
+            "type": "string",
+            "enum": [
+              "knowledge_candidate",
+              "project_material",
+              "resource_material",
+              "output_candidate",
+              "timeline_log_candidate",
+              "archive_candidate",
+              "keep_in_inbox",
+              "unclear"
+            ]
+          },
+          "cluster": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "description": "为什么建议这个去向。必填，用于审核回退。"
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "no_action",
+              "needs_user_confirm",
+              "extract_summary",
+              "create_knowledge_candidate",
+              "move_to_project",
+              "move_to_resource",
+              "move_to_output",
+              "archive"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "confirmed",
+              "rejected",
+              "processed",
+              "skipped"
+            ]
+          }
+        }
+      }
+    },
+    "review_required": {
+      "type": "boolean",
+      "description": "是否需要用户确认。第一轮盘点通常为 true。"
+    },
+    "review_items": {
+      "type": "array",
+      "description": "需要用户确认的问题。",
+      "items": {
+        "type": "object"
+      }
+    },
+    "next_steps": {
+      "type": "array",
+      "description": "后续动作。",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "title",
+          "owner",
+          "priority",
+          "status"
+        ],
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "owner": {
+            "type": "string",
+            "enum": [
+              "user",
+              "agent",
+              "any"
+            ]
+          },
+          "priority": {
+            "type": "string",
+            "enum": [
+              "high",
+              "medium",
+              "low"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "in_progress",
+              "blocked",
+              "done"
+            ]
+          },
+          "note": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      }
+    },
+    "outputs": {
+      "type": "array",
+      "description": "本次盘点产生的结果文件。",
+      "items": {
+        "type": "object"
+      }
+    },
+    "related_event": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "对应 event id。"
+    }
+  }
+}

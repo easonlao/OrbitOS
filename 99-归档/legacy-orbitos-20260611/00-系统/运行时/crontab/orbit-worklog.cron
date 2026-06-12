@@ -1,4 +1,0 @@
-# OrbitOS daily worklog bootstrap.
-# Source of truth: 00-系统/运行时/crontab/OrbitOS-worklog.cron
-# Installed by: orbit-vault install-machine-runtime --crontab
-0 8 * * * /bin/zsh -lc 'node "E:\SynologyDrive\OrbitOS\00-系统\Skills\orbit-vault\scripts\orbit-vault.mjs" ensure-daily-worklog --vault "E:\SynologyDrive\OrbitOS" >/tmp/OrbitOS-worklog.log 2>&1'

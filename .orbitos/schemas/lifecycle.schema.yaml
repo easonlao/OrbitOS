@@ -1,0 +1,139 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "orbitos/lifecycle.schema.yaml",
+  "title": "OrbitOS Lifecycle Item",
+  "description": "内容对象生命周期索引项。定义内容从进入 OrbitOS 到确认、处理、归档的状态。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "object_id",
+    "path",
+    "object_type",
+    "status",
+    "source",
+    "updated",
+    "related_events"
+  ],
+  "properties": {
+    "object_id": {
+      "type": "string",
+      "description": "内容对象稳定 ID。建议格式：obj_YYYYMMDD_slug。"
+    },
+    "path": {
+      "type": "string",
+      "description": "当前文件路径或对象位置。"
+    },
+    "object_type": {
+      "type": "string",
+      "enum": [
+        "inbox_item",
+        "project_file",
+        "knowledge_card",
+        "resource",
+        "output",
+        "archive_item"
+      ],
+      "description": "对象类型。首版主要用于 inbox_item。"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "raw",
+        "triaged",
+        "confirmed",
+        "processed",
+        "archived"
+      ],
+      "description": "当前生命周期状态。"
+    },
+    "previous_status": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "enum": [
+        "raw",
+        "triaged",
+        "confirmed",
+        "processed",
+        "archived",
+        null
+      ],
+      "description": "上一个状态。用于检测非法跳转。新对象填 null。"
+    },
+    "source": {
+      "type": "string",
+      "enum": [
+        "manual",
+        "agent",
+        "import",
+        "web",
+        "legacy",
+        "unknown"
+      ],
+      "description": "对象来源。"
+    },
+    "updated": {
+      "type": "string",
+      "description": "最近更新时间。使用 ISO 8601。"
+    },
+    "related_events": {
+      "type": "array",
+      "description": "关联 event id。至少包含造成当前状态的事件。",
+      "items": {
+        "type": "string"
+      }
+    },
+    "route": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "enum": [
+        "knowledge_candidate",
+        "project_material",
+        "resource_material",
+        "output_candidate",
+        "timeline_log_candidate",
+        "archive_candidate",
+        "keep_in_inbox",
+        "unclear",
+        null
+      ],
+      "description": "建议或确认后的去向。"
+    },
+    "notes": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "简短备注。"
+    }
+  },
+  "x_orbitos_allowed_transitions": [
+    {
+      "from": null,
+      "to": "raw"
+    },
+    {
+      "from": "raw",
+      "to": "triaged"
+    },
+    {
+      "from": "triaged",
+      "to": "confirmed"
+    },
+    {
+      "from": "confirmed",
+      "to": "processed"
+    },
+    {
+      "from": "processed",
+      "to": "archived"
+    },
+    {
+      "from": "raw",
+      "to": "archived"
+    }
+  ]
+}

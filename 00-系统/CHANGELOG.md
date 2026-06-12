@@ -4,7 +4,7 @@ area: system
 purpose: record
 lifecycle: active
 created: 2026-06-11
-updated: 2026-06-11
+updated: 2026-06-12
 tags:
   - orbitos
   - changelog
@@ -12,18 +12,19 @@ tags:
 
 # 系统变更记录
 
-## 2026-06-11
+## 当前版本：v0.1.0
 
-- 创建 OrbitOS 骨架。
-- 将旧 OrbitOS 内容收纳到 `99-归档/legacy-orbitos-20260611/`。
-- 建立根 `AGENTS.md` 作为使用入口。
-- 建立 `.orbitos/AGENTS.md` 作为系统开发/扩展入口。
-- 建立 `.orbitos/docs/REQUIREMENTS.md`、`ARCHITECTURE.md`、`DESIGN.md`。
-- 建立首版时间线、收件箱、项目、知识、资源、输出区域。
+> 完整版本历史保存在 `.orbitos/CHANGELOG.md`。本页只展示当前 release 中用户需要知道的内容。
 
-## 2026-06-12
+## 你需要知道的变化
 
-- 将根 `README.md` 改写为面向 GitHub 的项目说明。
-- 在 `00-系统/OBSIDIAN-STANDARD.md` 中将根 `README.md` 标记为 frontmatter 例外。
-- 新增 `README.zh-CN.md` 作为中文 GitHub 项目说明。
-- 新增 MIT `LICENSE`。
+- OrbitOS 已完成首个可运行系统基线。
+- `02-时间线/今日.md` 是每天优先查看的当前 Dashboard。
+- `00-系统/` 是用户需要阅读的系统说明书。
+- `.orbitos/` 是内部运行和二次开发层，普通使用时不需要主动阅读。
+- README 已改为用户上手入口，而不是内部协议说明书。
+- 收件箱第一轮处理方式是 triage：只盘点、粗分、给建议，不直接移动或沉淀。
+
+## 完整历史
+
+- `.orbitos/CHANGELOG.md`

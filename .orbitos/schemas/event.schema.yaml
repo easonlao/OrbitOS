@@ -1,0 +1,377 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "orbitos/event.schema.yaml",
+  "title": "OrbitOS Event",
+  "description": "单条事实日志。记录谁在什么时候、因为什么、做了什么、产生了什么结果。event 是事实底座，不是日记、复盘或长篇推理。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "timestamp",
+    "actor",
+    "event_type",
+    "summary",
+    "reason",
+    "actions",
+    "files_changed",
+    "review_required",
+    "next_steps"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "事件唯一 ID。建议格式：evt_YYYYMMDD_HHMMSS_agent_topic。用于 related_events 串联。"
+    },
+    "timestamp": {
+      "type": "string",
+      "description": "事件发生时间。使用 ISO 8601，例如 2026-06-12T09:30:00+08:00。"
+    },
+    "actor": {
+      "type": "object",
+      "description": "谁触发或执行了这件事。记录 OrbitOS 层的执行者，不记录底层 LLM 型号。",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "name"
+      ],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "user",
+            "agent",
+            "system"
+          ],
+          "description": "执行者类型。"
+        },
+        "name": {
+          "type": "string",
+          "description": "执行者显示名，例如 eason、codex、hanaAgent、hermes。"
+        },
+        "agent_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "agent 的稳定 ID。没有就填 null。"
+        },
+        "role": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "本次加载的 OrbitOS 角色或身份卡。没有就填 null。"
+        },
+        "device": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "执行环境或设备，例如 desktop-win、nas、server-01。未知填 null。"
+        }
+      }
+    },
+    "event_type": {
+      "type": "string",
+      "enum": [
+        "startup_sync",
+        "progress_sync",
+        "file_change",
+        "decision_candidate",
+        "artifact_candidate",
+        "project_update",
+        "system_change",
+        "inbox_triage",
+        "validation_failed"
+      ],
+      "description": "事件类型。首版保持少量枚举，避免 agent 分类过度。"
+    },
+    "project": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "关联项目名。没有具体项目就填 null。"
+    },
+    "summary": {
+      "type": "string",
+      "description": "一句话说明发生了什么。用于 Dashboard 快速扫读。"
+    },
+    "reason": {
+      "type": "string",
+      "description": "为什么发生这件事。记录触发来源或决策依据，不写长篇推理。"
+    },
+    "thinking_modes": {
+      "type": "array",
+      "description": "本次使用的 OrbitOS 思考模型，例如 金字塔原理、SWOT、苏格拉底提问。没有明确使用就填空数组。",
+      "items": {
+        "type": "string"
+      }
+    },
+    "inputs": {
+      "type": "array",
+      "description": "本次工作参考了什么输入。用于追溯，不默认投影到 Dashboard。",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "kind",
+          "ref"
+        ],
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "user_request",
+              "file",
+              "url",
+              "hindsight",
+              "system_doc",
+              "previous_event",
+              "other"
+            ]
+          },
+          "ref": {
+            "type": "string"
+          },
+          "note": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      }
+    },
+    "actions": {
+      "type": "array",
+      "description": "本次实际做了哪些动作。只记动作和结果，不写完整过程。",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "action"
+        ],
+        "properties": {
+          "action": {
+            "type": "string",
+            "description": "动作名，例如 read_file、update_markdown、create_event、run_validation。"
+          },
+          "target": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "result": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      }
+    },
+    "outputs": {
+      "type": "array",
+      "description": "本次产生或更新了什么结果。正式内容只放引用，不放全文。",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "kind",
+          "ref",
+          "status"
+        ],
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "event",
+              "markdown",
+              "project_file",
+              "artifact",
+              "review_item",
+              "knowledge_candidate",
+              "schema",
+              "workflow",
+              "eval",
+              "script",
+              "other"
+            ]
+          },
+          "ref": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "created",
+              "updated",
+              "unchanged",
+              "skipped",
+              "failed"
+            ]
+          },
+          "note": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      }
+    },
+    "files_changed": {
+      "type": "array",
+      "description": "本次具体改动过哪些文件。没有文件改动就填空数组。",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "path",
+          "change_type"
+        ],
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "change_type": {
+            "type": "string",
+            "enum": [
+              "created",
+              "updated",
+              "deleted",
+              "moved",
+              "renamed"
+            ]
+          },
+          "purpose": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      }
+    },
+    "review_required": {
+      "type": "boolean",
+      "description": "是否需要用户确认。产生 rule candidate、ADR candidate、formal artifact candidate、knowledge card candidate 时必须为 true。"
+    },
+    "review_items": {
+      "type": "array",
+      "description": "需要用户确认或注意的事项。"
+    },
+    "next_steps": {
+      "type": "array",
+      "description": "这件事之后可以继续做什么。用于刷新下一步视图。",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "title",
+          "owner",
+          "priority",
+          "status"
+        ],
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "owner": {
+            "type": "string",
+            "enum": [
+              "user",
+              "agent",
+              "any"
+            ]
+          },
+          "priority": {
+            "type": "string",
+            "enum": [
+              "high",
+              "medium",
+              "low"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "in_progress",
+              "blocked",
+              "done"
+            ]
+          },
+          "note": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      }
+    },
+    "hindsight": {
+      "type": "object",
+      "description": "本次是否使用 Hindsight。Hindsight 不是必需项，但用了就必须记录。",
+      "additionalProperties": false,
+      "required": [
+        "used",
+        "recall",
+        "retain"
+      ],
+      "properties": {
+        "used": {
+          "type": "boolean"
+        },
+        "recall": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "retain": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "note": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "related_events": {
+      "type": "array",
+      "description": "相关 event id，用于串联长期任务。",
+      "items": {
+        "type": "string"
+      }
+    },
+    "confidence": {
+      "type": "string",
+      "enum": [
+        "high",
+        "medium",
+        "low"
+      ],
+      "description": "这条 event 的可靠程度。high=实际执行或文件变更，medium=对话确认但未执行，low=推测或待复核。"
+    },
+    "errors": {
+      "type": "array",
+      "description": "仅 validation_failed/fallback event 使用。",
+      "items": {
+        "type": "object"
+      }
+    },
+    "fallback": {
+      "type": "boolean",
+      "description": "是否为校验失败后的最小回退事件。"
+    }
+  }
+}
