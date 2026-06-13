@@ -30,13 +30,25 @@
     }
   ],
   "files_changed": [
-    {
-      "path": ".orbitos/schemas/event.schema.yaml",
-      "change_type": "created",
-      "purpose": "定义事实日志格式"
-    }
-  ],
-  "review_required": false,
+  {
+    "path": ".orbitos/schemas/event.schema.yaml",
+    "change_type": "created",
+    "purpose": "定义事实日志格式"
+  }
+],
+"checklist": [
+  {
+    "item": "已确认 workflow 适用",
+    "status": "done",
+    "note": "schema creation event"
+  },
+  {
+    "item": "已刷新相关人读视图",
+    "status": "skipped",
+    "note": "fixture does not write dashboard"
+  }
+],
+"review_required": false,
   "review_items": [],
   "next_steps": [
     {

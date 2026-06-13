@@ -1,0 +1,43 @@
+{
+  "id": "evt_20260613_120000_codex_bad_checklist",
+  "timestamp": "2026-06-13T12:00:00+08:00",
+  "actor": {
+    "type": "agent",
+    "name": "codex",
+    "agent_id": "codex",
+    "role": null,
+    "device": "desktop-win"
+  },
+  "event_type": "progress_sync",
+  "project": "OrbitOS",
+  "summary": "Invalid checklist status fixture.",
+  "reason": "Checklist status must be constrained.",
+  "thinking_modes": [],
+  "inputs": [],
+  "actions": [
+    {
+      "action": "test",
+      "target": null,
+      "result": null
+    }
+  ],
+  "files_changed": [],
+  "checklist": [
+    {
+      "item": "已运行 validation",
+      "status": "maybe",
+      "note": "invalid status"
+    }
+  ],
+  "review_required": false,
+  "review_items": [],
+  "next_steps": [],
+  "hindsight": {
+    "used": false,
+    "recall": [],
+    "retain": [],
+    "note": null
+  },
+  "related_events": [],
+  "confidence": "high"
+}

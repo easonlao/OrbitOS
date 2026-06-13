@@ -1,21 +1,19 @@
 ---
-title: Obsidian Markdown Standard
+title: Markdown Writing Rule
 area: internal
 purpose: rule
 lifecycle: active
 created: 2026-06-11
-updated: 2026-06-12
+updated: 2026-06-13
 tags:
   - orbitos
   - obsidian
   - agent-rule
 ---
 
-# Obsidian Markdown Standard
+# Markdown Writing Rule
 
-This document constrains how agents write visible Markdown in OrbitOS.
-
-It is not a user manual page. Users should read `00-系统/` for system concepts and use Obsidian normally.
+This rule constrains how agents write visible Markdown in OrbitOS.
 
 ## Frontmatter
 
@@ -81,6 +79,8 @@ Do not create MAP files by default. Create them only when an area has enough sta
 ## STATUS
 
 STATUS files describe the current state of a lifecycle object. They are not navigation files.
+
+For projects, `03-项目/{project}/STATUS.md` is the project state source. Daily timeline files may summarize it, but should not become the authoritative project status.
 
 Recommended structure:
 

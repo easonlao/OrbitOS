@@ -1,0 +1,93 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "orbitos/agent-registry.schema.yaml",
+  "title": "OrbitOS Agent Registry",
+  "description": "机器可读的 agent 注册表。用于确认 agent_id、部署位置、接入方式和人读档案路径。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "updated",
+    "agents"
+  ],
+  "properties": {
+    "version": {
+      "type": "integer",
+      "description": "注册表结构版本。"
+    },
+    "updated": {
+      "type": "string",
+      "description": "注册表更新时间，使用 YYYY-MM-DD。"
+    },
+    "agents": {
+      "type": "array",
+      "description": "已确认接入 OrbitOS 的 agent 列表。未知 agent 不允许自动注册，必须先向用户确认 agent_id。",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "agent_id",
+          "deployment",
+          "profile_ref",
+          "last_seen"
+        ],
+        "properties": {
+          "agent_id": {
+            "type": "string",
+            "description": "稳定 agent ID，例如 codex、hermes、hanaagent、claude-code。"
+          },
+          "deployment": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "location",
+              "lan_ip",
+              "access",
+              "orbitos_path"
+            ],
+            "properties": {
+              "location": {
+                "type": "string",
+                "description": "agent 工作时需要知道的位置，例如本机、NAS、IP、某台设备或服务名。"
+              },
+              "lan_ip": {
+                "type": "string",
+                "description": "agent 所在设备或服务在局域网中的 IP。未知时填 unknown，并在待确认中提示用户补齐。"
+              },
+              "access": {
+                "type": "string",
+                "description": "接入方式，例如 local filesystem、SSH、SynologyDrive、Git clone、MCP、API。"
+              },
+              "orbitos_path": {
+                "type": "string",
+                "description": "该 agent 访问 OrbitOS 的路径。"
+              },
+              "notes": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "必要提醒，例如是否需要 SSH、是否只读、路径映射差异。"
+              }
+            }
+          },
+          "profile_ref": {
+            "type": "string",
+            "description": "对应人读 agent 档案路径。"
+          },
+          "last_seen": {
+            "type": "string",
+            "description": "最后接入或确认日期，使用 YYYY-MM-DD。"
+          },
+          "notes": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "简短备注。"
+          }
+        }
+      }
+    }
+  }
+}

@@ -14,7 +14,7 @@ tags:
 
 ## 当前项目
 
-- 暂无正式项目。
+- [[OrbitOS/README|OrbitOS 改造项目]]：OrbitOS 自身的重构、验证和迭代。
 
 ## 项目规则
 
@@ -25,4 +25,3 @@ tags:
 - `main/`
 
 `main/` 内部遵守项目自己的结构，不强制套用 OrbitOS 架构。
-

@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "updated": "2026-06-13",
+  "agents": [
+    {
+      "agent_id": "codex",
+      "deployment": {
+        "location": "Eason Windows desktop / Codex desktop session",
+        "lan_ip": "10.10.10.70",
+        "access": "local filesystem",
+        "orbitos_path": "E:\\SynologyDrive\\OrbitOS",
+        "notes": "当前通过 Codex desktop 在本地工作区接入 OrbitOS。"
+      },
+      "profile_ref": "00-系统/agents/codex.md",
+      "last_seen": "2026-06-12",
+      "notes": "首个 Agent Profile 样例，用于验证单 agent 接入和经验沉淀。"
+    },
+    {
+      "agent_id": "nova",
+      "deployment": {
+        "location": "Eason Windows desktop / HanaAgent 平台",
+        "lan_ip": "10.10.10.70",
+        "access": "local filesystem (HanaAgent sandbox)",
+        "orbitos_path": "E:\\SynologyDrive\\OrbitOS",
+        "notes": "通过 HanaAgent sandbox 在本地工作区接入 OrbitOS。"
+      },
+      "profile_ref": "00-系统/agents/nova.md",
+      "last_seen": "2026-06-13",
+      "notes": "第二个接入 Agent。定位为知识管家，负责笔记整理、知识库组织和概念拆解。"
+    }
+  ]
+}

@@ -22,6 +22,7 @@ Core Change 约束 OrbitOS 内核内容的编写和修改。
 - 根 `AGENTS.md`
 - `.orbitos/AGENTS.md`
 - `.orbitos/docs/`
+- `.orbitos/rules/`
 - `.orbitos/schemas/`
 - `.orbitos/workflows/`
 - `.orbitos/scripts/`
@@ -35,16 +36,17 @@ Core Change 约束 OrbitOS 内核内容的编写和修改。
 
 1. 先判断这是内部设计变更，还是用户可见规则变更。
 2. 内部设计先写 `.orbitos/docs/`。
-3. 用户可见规则必须经过确认，并改写成用户视角后进入 `00-系统/`。
-4. 每次核心变更必须有 reason。
-5. 每次核心变更必须说明 validation。
-6. 核心变更完成后必须写 event。
+3. 稳定执行规则写 `.orbitos/rules/core/`。
+4. 用户可见规则必须经过确认，并改写成用户视角后进入 `00-系统/`。
+5. 每次核心变更必须有 reason。
+6. 每次核心变更必须说明 validation。
+7. 核心变更完成后必须写 event。
 
 ## 执行流程
 
 1. 读取 `.orbitos/AGENTS.md`。
-2. 如涉及 README，读取 `.orbitos/docs/README-WRITING.md`。
-3. 如涉及 `00-系统/`，读取 `.orbitos/docs/DOC-PROMOTION.md`。
+2. 如涉及 README，读取 `.orbitos/rules/core/readme-writing.md`。
+3. 如涉及 `00-系统/`，读取 `.orbitos/rules/core/doc-promotion.md`。
 4. 生成 core-change draft，符合 `.orbitos/schemas/core-change.schema.yaml`。
 5. 执行 Validate Sync。
 6. 修改目标文件。
@@ -59,4 +61,3 @@ Core Change 约束 OrbitOS 内核内容的编写和修改。
 - 不记录 validation 就修改 schema/workflow/script。
 - 不经确认就把内部设计讨论提升为用户规则。
 - 不把 `.orbitos/` 细节直接塞进用户说明。
-

@@ -15,7 +15,7 @@ OrbitOS is not a traditional personal knowledge base, and it is not only an agen
 - Obsidian as the human-facing dashboard and reading surface
 - `AGENTS.md` as the shared entry contract for agents
 - `00-系统/` as the user-facing system manual
-- `.orbitos/` as the internal runtime layer for schemas, logs, queues, workflows, and design records
+- `.orbitos/` as the internal runtime layer for schemas, logs, queues, workflows, rules, and design records
 
 ## Fastest Start
 
@@ -72,7 +72,7 @@ README.zh-CN.md        # Chinese project guide
 05-资源/               # Processed references and attachments
 06-输出/               # Markdown outputs produced in Obsidian
 99-归档/               # Archived inactive objects
-.orbitos/              # Runtime layer: schemas, logs, queues, workflows, design docs
+.orbitos/              # Runtime layer: schemas, logs, queues, workflows, rules, design docs
 ```
 
 ## User Manual
@@ -92,6 +92,16 @@ Every agent should start with:
 ```text
 Read AGENTS.md and run Startup Sync.
 ```
+
+When connecting a new agent for the first time, use this fuller prompt:
+
+```text
+You are now connecting to OrbitOS. Read AGENTS.md first and run Startup Sync.
+If you are not registered yet, do not write any files. Tell me which agent_id, deployment location, LAN IP, access method, and OrbitOS path I need to confirm.
+After I confirm them, register through the agent-onboarding workflow.
+```
+
+The important boundary is: a new agent starts read-only; if it is not registered, it stops and asks for identity and deployment details; only after user confirmation may it write the registry and Agent Profile.
 
 When work is complete, or when the user says "同步", "同步进度", or "更新进度", run Progress Sync:
 
@@ -113,8 +123,11 @@ Start here only if you are modifying OrbitOS itself:
 - `.orbitos/docs/REQUIREMENTS.md`
 - `.orbitos/docs/ARCHITECTURE.md`
 - `.orbitos/docs/DESIGN.md`
-- `.orbitos/docs/GIT-MANAGEMENT.md`
-- `.orbitos/docs/OBSIDIAN-STANDARD.md`
+- `.orbitos/workflows/agent-onboarding.md`
+- `.orbitos/rules/core/git-management.md`
+- `.orbitos/rules/core/markdown-writing.md`
+
+Design records live in `.orbitos/docs/`. Stable execution rules live in `.orbitos/rules/core/`.
 
 The current runtime baseline includes strict schemas, workflows, event logs, queues, lifecycle state, and validation evals.
 
@@ -124,20 +137,24 @@ Run the validation eval set with:
 pwsh -ExecutionPolicy Bypass -File .orbitos/scripts/run-validation.ps1
 ```
 
+If an agent sandbox cannot start PowerShell, use the Node.js fallback:
+
+```powershell
+node .orbitos/scripts/run-validation.mjs
+```
+
 ## Roadmap
 
-- Run the first real inbox triage dry run against `01-收件箱/`.
-- Draft `startup-sync.md` to match the root `AGENTS.md` entry contract.
-- Validate the protocol with one real agent integration.
-- Add agent profiles only after the single-agent workflow is stable.
+- Run one `01-收件箱/` inbox triage dry run with Nova and validate its knowledge-manager role and the inbox loop.
+- Trigger Experience Capture with one real pitfall and validate the profile -> Rule Evolution input loop.
 - Add role cards and thinking mode libraries after the logging and lifecycle loop is proven.
 - Clarify Hindsight Bridge rules after OrbitOS core workflow stabilizes.
 
 ## Status
 
-OrbitOS is in early scaffold stage with a working system baseline. The repository contains the workspace structure, user manual, timeline dashboard, strict schemas, validation workflow, inbox triage workflow, event log convention, and a minimal validation eval set.
+OrbitOS is in early scaffold stage with a working system baseline. The repository contains the workspace structure, user manual, timeline dashboard, Agent Profile baseline, strict schemas, validation workflow, inbox triage workflow, event log convention, and a minimal validation eval set.
 
-The next milestone is testing the loop on real inbox content and then connecting a single agent end to end.
+The next milestone is connecting one real agent end to end, then testing the loop on real inbox content.
 
 ## License
 

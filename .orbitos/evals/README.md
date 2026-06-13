@@ -21,6 +21,12 @@ tags:
 pwsh -ExecutionPolicy Bypass -File .orbitos/scripts/run-validation.ps1
 ```
 
+如果 agent sandbox 无法启动 `pwsh.exe`，使用 Node.js fallback：
+
+```powershell
+node .orbitos/scripts/run-validation.mjs
+```
+
 ## 覆盖范围
 
 - event 必填字段缺失必须失败。
@@ -28,6 +34,8 @@ pwsh -ExecutionPolicy Bypass -File .orbitos/scripts/run-validation.ps1
 - inbox triage item 缺少 `reason` 必须失败。
 - lifecycle 非法状态跳转必须失败。
 - 合法样例必须通过。
+- 可见 Markdown 不得使用指向 `.orbitos/` 的 Obsidian 双链。
+- 真实 agent registry 必须符合 schema。
 
 ## 文件命名
 

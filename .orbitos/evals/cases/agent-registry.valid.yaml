@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "updated": "2026-06-12",
+  "agents": [
+    {
+      "agent_id": "codex",
+      "deployment": {
+        "location": "Eason Windows desktop",
+        "lan_ip": "10.10.10.70",
+        "access": "local filesystem",
+        "orbitos_path": "E:\\SynologyDrive\\OrbitOS",
+        "notes": "Local Codex desktop session."
+      },
+      "profile_ref": "00-系统/agents/codex.md",
+      "last_seen": "2026-06-12",
+      "notes": null
+    }
+  ]
+}

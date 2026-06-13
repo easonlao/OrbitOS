@@ -16,6 +16,10 @@ tags:
 
 具体执行体，例如 Hermes、HanaAgent、Codex、Claude Code。
 
+## Agent Profile
+
+具体 agent 在 OrbitOS 中的接入档案。记录 `agent_id`、部署位置、接入方式、状态、做过什么、经验和踩坑。Agent Profile 不等于 Role。
+
 ## Role
 
 可加载的专家身份，不绑定具体 agent。

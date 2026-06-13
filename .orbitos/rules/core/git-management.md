@@ -1,19 +1,19 @@
 ---
-title: Git Management Rules
+title: Git Management Rule
 area: internal
 purpose: rule
 lifecycle: active
 created: 2026-06-12
-updated: 2026-06-12
+updated: 2026-06-13
 tags:
   - orbitos
   - git
   - agent-rule
 ---
 
-# Git Management Rules
+# Git Management Rule
 
-This document defines how agents keep the public Git repository separate from local OrbitOS user data.
+This rule defines how agents keep the public Git repository separate from local OrbitOS user data.
 
 ## Repository Boundary
 
@@ -26,6 +26,7 @@ The public repository should contain:
 - `02-时间线/` dashboard templates and current visible status
 - `.orbitos/AGENTS.md`
 - `.orbitos/docs/`
+- `.orbitos/rules/core/`
 - `.orbitos/schemas/`
 - `.orbitos/workflows/`
 - `.orbitos/scripts/`
@@ -106,3 +107,4 @@ Expected result:
 Removing files from the Git index prevents future commits from carrying them.
 
 It does not remove files from existing Git history. If sensitive content has already been pushed, use a separate history rewrite procedure such as `git filter-repo` or BFG, then force-push with explicit approval.
+

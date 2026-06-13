@@ -1,6 +1,6 @@
-# Documentation Promotion Standard
+# Documentation Promotion Rule
 
-This document defines how OrbitOS design discussion becomes user-facing system documentation.
+This rule defines how OrbitOS design discussion becomes user-facing system documentation.
 
 ## Core Rule
 
@@ -20,12 +20,22 @@ Use this layer for:
 - implementation plans
 - schema and workflow design rationale
 - unresolved tradeoffs
-- README writing standards
-- documentation promotion rules
 
 This layer is for agents and developers.
 
 It may include implementation details, open questions, and historical reasoning.
+
+### `.orbitos/rules/core/`
+
+Use this layer for stable execution rules that agents must follow.
+
+Examples:
+
+- Markdown writing rules
+- Git boundary rules
+- README writing rules
+- versioning and release rules
+- documentation promotion rules
 
 ### `00-系统/`
 
@@ -35,7 +45,6 @@ Use this layer for:
 - stable terminology
 - readable operating principles
 - data lifecycle explanations
-- Obsidian writing standards
 - changelog entries for landed changes
 - maps to existing user-facing files
 
@@ -53,6 +62,18 @@ discussion / design draft
   -> 00-系统/
   -> event log + changelog
 ```
+
+## Rule Extraction Flow
+
+```text
+repeated need / confirmed operating constraint
+  -> .orbitos/rules/learned/
+  -> evidence and usage tracking
+  -> user confirmation
+  -> .orbitos/rules/core/
+```
+
+Do not put stable execution rules in `.orbitos/docs/`.
 
 ## Promotion Requirements
 
@@ -99,3 +120,4 @@ Is this a user-facing stable rule, or is it still internal design material?
 ```
 
 If it is internal design material, write or update `.orbitos/docs/` instead.
+

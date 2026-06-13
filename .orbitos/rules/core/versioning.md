@@ -1,6 +1,6 @@
-# Versioning, Commit, and Release Standard
+# Versioning, Commit, and Release Rule
 
-This document defines OrbitOS versioning, commit, changelog, and release rules.
+This rule defines OrbitOS versioning, commit, changelog, and release behavior.
 
 ## Version Format
 
@@ -138,7 +138,7 @@ When preparing a release:
 
 1. Run Startup Sync.
 2. Read `.orbitos/AGENTS.md`.
-3. Read this file.
+3. Read this rule.
 4. Review changed files and event logs since the previous release.
 5. Decide version bump: MAJOR, MINOR, or PATCH.
 6. Run validation:

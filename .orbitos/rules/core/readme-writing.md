@@ -1,6 +1,6 @@
-# README Writing Standard
+# README Writing Rule
 
-This document defines how OrbitOS root README files should be written.
+This rule defines how OrbitOS root README files should be written.
 
 It applies to:
 
@@ -60,6 +60,7 @@ The README should include:
 - developer entry:
   - `.orbitos/AGENTS.md`
   - `.orbitos/docs/`
+  - `.orbitos/rules/`
 - current status and next milestone
 - license
 
@@ -107,6 +108,7 @@ Use plain code paths for internal files, for example:
 ```text
 .orbitos/AGENTS.md
 .orbitos/docs/ARCHITECTURE.md
+.orbitos/rules/core/git-management.md
 .orbitos/scripts/run-validation.ps1
 ```
 
@@ -130,6 +132,7 @@ Avoid:
 
 ## Maintenance Rule
 
-When changing root README files, update this standard only if the expected README role or audience changes.
+When changing root README files, update this rule only if the expected README role or audience changes.
 
 Routine content updates do not require changing this document.
+

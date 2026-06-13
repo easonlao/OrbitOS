@@ -218,23 +218,45 @@ function Test-LifecycleTransition {
   Add-ValidationError $Errors '$.status' "illegal lifecycle transition: $from -> $to"
 }
 
+function Test-MarkdownNoInternalWikilinks {
+  param([string]$Path)
+
+  $errors = New-Object System.Collections.Generic.List[object]
+  $content = Get-Content -LiteralPath $Path -Raw -Encoding UTF8
+  $pattern = '\[\[[^\]]*(?:^|/|\\|\.\.)\.orbitos(?:/|\\)[^\]]*\]\]'
+  $matches = [regex]::Matches($content, $pattern)
+
+  foreach ($match in $matches) {
+    $line = (($content.Substring(0, $match.Index) -split "`n").Count)
+    Add-ValidationError $errors "line $line" "Obsidian wikilink must not point to .orbitos/"
+  }
+
+  return $errors
+}
+
 $schemaRoot = Join-Path $Root ".orbitos\schemas"
 $caseRoot = Join-Path $Root ".orbitos\evals\cases"
+$markdownCaseRoot = Join-Path $Root ".orbitos\evals\markdown-link-boundary"
 
 $schemas = @{
   "event" = Read-JsonLikeFile (Join-Path $schemaRoot "event.schema.yaml")
   "inbox-triage" = Read-JsonLikeFile (Join-Path $schemaRoot "inbox-triage.schema.yaml")
   "lifecycle" = Read-JsonLikeFile (Join-Path $schemaRoot "lifecycle.schema.yaml")
   "core-change" = Read-JsonLikeFile (Join-Path $schemaRoot "core-change.schema.yaml")
+  "agent-registry" = Read-JsonLikeFile (Join-Path $schemaRoot "agent-registry.schema.yaml")
 }
 
 $failureCount = 0
+$caseCount = 0
 $cases = Get-ChildItem -LiteralPath $caseRoot -Filter "*.yaml" | Sort-Object Name
 
 foreach ($case in $cases) {
+  $caseCount += 1
   $name = $case.Name
   $schemaName = if ($name.StartsWith("inbox-triage.")) {
     "inbox-triage"
+  } elseif ($name.StartsWith("agent-registry.")) {
+    "agent-registry"
   } elseif ($name.StartsWith("core-change.")) {
     "core-change"
   } elseif ($name.StartsWith("event.")) {
@@ -267,6 +289,75 @@ foreach ($case in $cases) {
   }
 }
 
+$markdownCases = Get-ChildItem -LiteralPath $markdownCaseRoot -Filter "*.md" | Sort-Object Name
+foreach ($case in $markdownCases) {
+  $caseCount += 1
+  $expectedValid = $case.Name -like "*.valid.*"
+  $errors = Test-MarkdownNoInternalWikilinks $case.FullName
+  $actualValid = $errors.Count -eq 0
+  if ($actualValid -ne $expectedValid) {
+    $failureCount += 1
+  }
+
+  $status = if ($actualValid -eq $expectedValid) { "PASS" } else { "FAIL" }
+  Write-Host "$status $($case.Name)"
+  foreach ($err in $errors) {
+    Write-Host "  - $($err.path): $($err.message)"
+  }
+}
+
+$visibleRoots = @(
+  "AGENTS.md",
+  "README.md",
+  "README.zh-CN.md",
+  "00-系统",
+  "02-时间线"
+)
+
+$visibleFiles = New-Object System.Collections.Generic.List[object]
+foreach ($relativePath in $visibleRoots) {
+  $path = Join-Path $Root $relativePath
+  if (-not (Test-Path -LiteralPath $path)) { continue }
+  $item = Get-Item -LiteralPath $path
+  if ($item.PSIsContainer) {
+    Get-ChildItem -LiteralPath $path -Recurse -Filter "*.md" | ForEach-Object { $visibleFiles.Add($_) | Out-Null }
+  } else {
+    $visibleFiles.Add($item) | Out-Null
+  }
+}
+
+$visibleErrors = New-Object System.Collections.Generic.List[object]
+foreach ($file in $visibleFiles) {
+  $errors = Test-MarkdownNoInternalWikilinks $file.FullName
+  foreach ($err in $errors) {
+    $relative = Resolve-Path -LiteralPath $file.FullName -Relative
+    Add-ValidationError $visibleErrors "$relative $($err.path)" $err.message
+  }
+}
+
+$caseCount += 1
+if ($visibleErrors.Count -gt 0) {
+  $failureCount += 1
+}
+$visibleStatus = if ($visibleErrors.Count -eq 0) { "PASS" } else { "FAIL" }
+Write-Host "$visibleStatus visible-markdown.no-internal-wikilinks"
+foreach ($err in $visibleErrors) {
+  Write-Host "  - $($err.path): $($err.message)"
+}
+
+$caseCount += 1
+$registryErrors = New-Object System.Collections.Generic.List[object]
+$registry = Read-JsonLikeFile (Join-Path $Root ".orbitos\agents\registry.yaml")
+Test-ValueAgainstSchema $registry $schemas["agent-registry"] '$' $registryErrors
+if ($registryErrors.Count -gt 0) {
+  $failureCount += 1
+}
+$registryStatus = if ($registryErrors.Count -eq 0) { "PASS" } else { "FAIL" }
+Write-Host "$registryStatus actual.agent-registry"
+foreach ($err in $registryErrors) {
+  Write-Host "  - $($err.path): $($err.message)"
+}
+
 if ($failureCount -gt 0) {
   Write-Host ""
   Write-Host "Validation eval failed: $failureCount case(s)."
@@ -274,4 +365,4 @@ if ($failureCount -gt 0) {
 }
 
 Write-Host ""
-Write-Host "Validation eval passed: $($cases.Count) case(s)."
+Write-Host "Validation eval passed: $caseCount case(s)."

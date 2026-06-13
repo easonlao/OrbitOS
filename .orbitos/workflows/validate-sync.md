@@ -71,11 +71,24 @@ next_steps:
 
 ## 本地验证脚本
 
-运行：
+优先运行 PowerShell 版本：
 
 ```powershell
 pwsh -ExecutionPolicy Bypass -File .orbitos/scripts/run-validation.ps1
 ```
+
+如果当前 agent sandbox 无法启动 `pwsh.exe`，运行 Node.js fallback：
+
+```powershell
+node .orbitos/scripts/run-validation.mjs
+```
+
+两者都不可用时，才允许手动校验。手动校验必须在 event checklist 中把 validation 标为 `skipped`，并写明：
+
+- 哪个命令失败。
+- 失败原因。
+- 手动检查了哪些对象。
+- 哪些风险仍未覆盖。
 
 脚本必须至少覆盖：
 
@@ -83,3 +96,5 @@ pwsh -ExecutionPolicy Bypass -File .orbitos/scripts/run-validation.ps1
 - enum 错误失败
 - inbox triage item 缺 reason 失败
 - lifecycle 非法跳转失败
+- 可见 Markdown 不得使用指向 `.orbitos/` 的 Obsidian 双链
+- 真实 `.orbitos/agents/registry.yaml` 必须符合 agent registry schema

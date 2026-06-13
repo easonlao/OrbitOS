@@ -4,7 +4,7 @@ area: system
 purpose: map
 lifecycle: active
 created: 2026-06-11
-updated: 2026-06-11
+updated: 2026-06-13
 tags:
   - orbitos
   - system
@@ -18,6 +18,7 @@ tags:
 - [[PRINCIPLES]]：运行时原则
 - [[DATA-LIFECYCLE]]：数据生命周期
 - [[CHANGELOG]]：已落地系统变更
+- [[agents/README]]：已接入 agent 看板
 - [[ADR/README]]：重大架构决策索引
 
 ## 常用视图
@@ -29,17 +30,23 @@ tags:
 
 ## 内核文档
 
-- [[../.orbitos/docs/REQUIREMENTS|REQUIREMENTS]]：开发需求
-- [[../.orbitos/docs/ARCHITECTURE|ARCHITECTURE]]：开发架构
-- [[../.orbitos/docs/DESIGN|DESIGN]]：开发设计
-- `.orbitos/docs/README-WRITING.md`：README 编写规范
-- `.orbitos/docs/DOC-PROMOTION.md`：内部设计到用户文档的提升规则
-- `.orbitos/docs/OBSIDIAN-STANDARD.md`：agent 写可见 Markdown 时遵守的 Obsidian 规范
-- `.orbitos/docs/VERSIONING.md`：版本号、changelog、commit 和 release 流程
+- `.orbitos/docs/REQUIREMENTS.md`：开发需求
+- `.orbitos/docs/ARCHITECTURE.md`：开发架构
+- `.orbitos/docs/DESIGN.md`：开发设计
 - `.orbitos/CHANGELOG.md`：完整版本历史
+
+## 核心规则
+
+- `.orbitos/rules/core/markdown-writing.md`：agent 写可见 Markdown 时遵守的规则
+- `.orbitos/rules/core/readme-writing.md`：README 编写规则
+- `.orbitos/rules/core/doc-promotion.md`：内部设计到用户文档的提升规则
+- `.orbitos/rules/core/git-management.md`：Git 边界与跟踪规则
+- `.orbitos/rules/core/versioning.md`：版本号、changelog、commit 和 release 规则
 
 ## 机器约束
 
+- `.orbitos/agents/registry.yaml`：已确认 agent 注册表
+- `.orbitos/schemas/agent-registry.schema.yaml`：agent 注册表结构
 - `.orbitos/schemas/event.schema.yaml`：事实日志结构
 - `.orbitos/schemas/core-change.schema.yaml`：OrbitOS 内核变更结构
 - `.orbitos/schemas/lifecycle.schema.yaml`：内容生命周期结构与合法跳转
@@ -48,6 +55,7 @@ tags:
 
 ## 工作流
 
+- `.orbitos/workflows/startup-sync.md`：agent 进入系统时的只读同步与未知 agent 拦截
 - `.orbitos/workflows/core-change.md`：内核文件修改流程
 - `.orbitos/workflows/validate-sync.md`：写入前校验与审核回退
 - `.orbitos/workflows/progress-sync.md`：完成工作后的事实记录与 Dashboard 刷新

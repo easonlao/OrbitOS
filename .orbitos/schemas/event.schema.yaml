@@ -263,6 +263,41 @@
       "type": "array",
       "description": "需要用户确认或注意的事项。"
     },
+    "checklist": {
+      "type": "array",
+      "description": "本次 workflow 执行清单结果。完整结果写入 event，Dashboard 只投影异常、阻塞、待确认和关键摘要。",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "item",
+          "status"
+        ],
+        "properties": {
+          "item": {
+            "type": "string",
+            "description": "核对项名称。"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "done",
+              "skipped",
+              "failed",
+              "blocked"
+            ],
+            "description": "本次执行结果。"
+          },
+          "note": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "跳过、失败、阻塞或重要完成结果的说明。"
+          }
+        }
+      }
+    },
     "next_steps": {
       "type": "array",
       "description": "这件事之后可以继续做什么。用于刷新下一步视图。",
