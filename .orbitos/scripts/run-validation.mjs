@@ -109,6 +109,7 @@ function walkMarkdown(fullPath, out = []) {
 const schemas = {
   event: readJsonLike(".orbitos/schemas/event.schema.yaml"),
   "inbox-triage": readJsonLike(".orbitos/schemas/inbox-triage.schema.yaml"),
+  "ingest-batch": readJsonLike(".orbitos/schemas/ingest-batch.schema.yaml"),
   lifecycle: readJsonLike(".orbitos/schemas/lifecycle.schema.yaml"),
   "core-change": readJsonLike(".orbitos/schemas/core-change.schema.yaml"),
   "agent-registry": readJsonLike(".orbitos/schemas/agent-registry.schema.yaml"),
@@ -126,6 +127,7 @@ function printCase(name, expectedValid, errors) {
 }
 
 function schemaNameForCase(name) {
+  if (name.startsWith("ingest-batch.")) return "ingest-batch";
   if (name.startsWith("inbox-triage.")) return "inbox-triage";
   if (name.startsWith("agent-registry.")) return "agent-registry";
   if (name.startsWith("core-change.")) return "core-change";
@@ -172,6 +174,36 @@ caseCount += 1;
 const registryErrors = [];
 validateValue(readJsonLike(".orbitos/agents/registry.yaml"), schemas["agent-registry"], "$", registryErrors);
 printCase("actual.agent-registry", true, registryErrors);
+
+caseCount += 1;
+const ingestErrors = [];
+const ingestDir = path.join(root, ".orbitos/ingest/batches");
+const ingestedDir = path.join(root, "01-收件箱/已入库");
+const recordedFiles = new Set();
+if (fs.existsSync(ingestDir)) {
+  for (const name of fs.readdirSync(ingestDir).filter((item) => item.endsWith(".yaml")).sort()) {
+    const relative = `.orbitos/ingest/batches/${name}`;
+    const batch = readJsonLike(relative);
+    validateValue(batch, schemas["ingest-batch"], `$[${name}]`, ingestErrors);
+    if (Array.isArray(batch.items)) {
+      for (const item of batch.items) {
+        if (typeof item.file === "string") {
+          recordedFiles.add(item.file);
+          const storedPath = path.join(ingestedDir, item.file);
+          if (!fs.existsSync(storedPath)) addError(ingestErrors, `${relative}:${item.file}`, "batch item file does not exist in 01-收件箱/已入库/");
+        }
+      }
+    }
+  }
+}
+if (fs.existsSync(ingestedDir)) {
+  for (const item of fs.readdirSync(ingestedDir, { withFileTypes: true })) {
+    if (item.isFile() && !recordedFiles.has(item.name)) {
+      addError(ingestErrors, `01-收件箱/已入库/${item.name}`, "ingested file is missing an ingest batch record");
+    }
+  }
+}
+printCase("actual.ingest-batches", true, ingestErrors);
 
 if (failureCount > 0) {
   console.log("");

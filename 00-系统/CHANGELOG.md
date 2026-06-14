@@ -31,10 +31,15 @@ tags:
 - 根 `AGENTS.md` 已重排：工作流入口和规则入口分开，减少新 agent 误读。
 - 新增 Agent Onboarding：新 agent 第一次接入时先只读同步，确认身份和部署信息后再注册。
 - 新增 Node.js validation fallback：当 agent sandbox 无法启动 PowerShell 时，可运行 `.orbitos/scripts/run-validation.mjs`。
+- validation 主实现已切换为 Python；PowerShell 保留为 Windows 本地 wrapper，Node 继续作为 fallback。
+- 新增 agent 运行环境检查：agent 可运行 `.orbitos/scripts/env-check.py` 生成本地 runtime 报告，确认 Python、Node、Git、PowerShell 等可用性。
+- 新增默认任务边界规则：用户给短指令时，agent 默认只做最小可逆动作，Progress Sync 需要记录是否越界、是否移动用户内容、是否创建正式产物、validation 是否通过。
 - Startup Sync 现在要求已注册 agent 行动前读取自己的 Agent Profile 经验、踩坑、待确认来源和 Learned Rule 使用记录。
 - Progress Sync 明确了项目状态与今日投影的主从关系：项目 `STATUS.md` 是状态源，`今日.md` 只汇总和链接。
 - 新增 workflow checklist：workflow 定义核对清单，event 记录执行结果，`今日.md` 只显示异常、阻塞、待确认和关键摘要。
 - 收件箱第一轮处理方式是 triage：只盘点、粗分、给建议，不直接移动或沉淀。
+- 新增收件箱入库最小内核：已确认处理的原始输入进入 `01-收件箱/已入库/`，避免重复扫描。
+- 新增入库自检：系统会检查已入库文件是否有批次记录、批次记录指向的文件是否存在。
 - 新增 Agent 看板：`00-系统/agents/` 用于查看已接入 agents、部署位置、状态、经验和踩坑。
 
 ## 完整历史

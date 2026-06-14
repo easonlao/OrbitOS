@@ -31,8 +31,20 @@ This release establishes the workspace skeleton, user onboarding README, Dashboa
   - `.orbitos/workflows/core-change.md`
 - Added validation eval cases under `.orbitos/evals/`.
 - Added validation script:
+  - `.orbitos/scripts/env-check.py`
+  - `.orbitos/scripts/run-validation.py`
   - `.orbitos/scripts/run-validation.ps1`
   - `.orbitos/scripts/run-validation.mjs`
+- Added inbox ingest kernel:
+  - `.orbitos/schemas/ingest-batch.schema.yaml`
+  - `.orbitos/workflows/inbox-ingest.md`
+  - `.orbitos/workflows/vault-audit.md`
+  - `.orbitos/ingest/batches/.gitkeep`
+- Added runtime contract:
+  - `.orbitos/docs/RUNTIME.md`
+  - `.orbitos/scripts/env-check.py`
+- Added task boundary core rule:
+  - `.orbitos/rules/core/task-boundary.md`
 - Added Agent Profile baseline:
   - `.orbitos/agents/registry.yaml`
   - `.orbitos/schemas/agent-registry.schema.yaml`
@@ -49,6 +61,10 @@ This release establishes the workspace skeleton, user onboarding README, Dashboa
   - optional `checklist` field in `.orbitos/schemas/event.schema.yaml`
   - checklist eval fixture for invalid status
 - Added Node.js validation fallback for agent sandboxes that cannot launch `pwsh.exe`.
+- Promoted Python validation runner to the primary implementation; PowerShell is now a local wrapper and Node remains the fallback.
+- Added runtime environment check to Startup Sync expectations; runtime reports are written to `.orbitos/state/env/{agent_id}.json`.
+- Added default task boundary self-check to root `AGENTS.md` and Progress Sync, reducing the need for users to provide long per-task constraints.
+- Added ingest batch validation to both PowerShell and Node validation scripts, including actual `.orbitos/ingest/batches/*.yaml` schema checks and `01-收件箱/已入库/` file-record consistency.
 - Added Agent Profile experience recall to Startup Sync, so registered agents must read their own experience, pitfalls, pending sources, and learned-rule usage before acting.
 - Clarified the Progress Sync source-of-truth contract between project `STATUS.md` files and `02-时间线/今日.md`: project status is updated first when project state changes, and today only summarizes and links to it.
 - Added rules pool placeholders:
@@ -106,7 +122,7 @@ pwsh -ExecutionPolicy Bypass -File .orbitos/scripts/run-validation.ps1
 Current validation result:
 
 ```text
-Validation eval passed: 15 case(s).
+Validation eval passed: 20 case(s).
 ```
 
 ### Migration Notes

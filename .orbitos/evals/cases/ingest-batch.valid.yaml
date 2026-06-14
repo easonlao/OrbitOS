@@ -1,0 +1,18 @@
+{
+  "id": "INB-20260614-001",
+  "date": "2026-06-14",
+  "items": [
+    {
+      "file": "example.md",
+      "status": "ingested"
+    },
+    {
+      "file": "needs-review.pdf",
+      "status": "needs_review"
+    },
+    {
+      "file": "discarded-note.md",
+      "status": "discarded"
+    }
+  ]
+}

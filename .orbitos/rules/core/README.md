@@ -12,3 +12,4 @@ Current core rules:
 - `versioning.md`: version, changelog, commit, and release rules.
 - `doc-promotion.md`: promotion rules from internal design to user-facing system docs.
 - `workflow-writing.md`: workflow checklist and audit rules.
+- `task-boundary.md`: default scope and self-check rules for agent actions.

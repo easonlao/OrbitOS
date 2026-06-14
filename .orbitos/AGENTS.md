@@ -40,6 +40,7 @@ Read this only when modifying:
 - `.orbitos/docs/REQUIREMENTS.md`: confirmed needs and constraints
 - `.orbitos/docs/ARCHITECTURE.md`: system layers and object model
 - `.orbitos/docs/DESIGN.md`: concrete directory and document design
+- `.orbitos/docs/RUNTIME.md`: minimum runtime contract for agents
 
 ## Core Rules
 
@@ -50,6 +51,7 @@ Read this only when modifying:
 - `.orbitos/rules/core/git-management.md`: Git boundary, ignore rules, and tracked-file cleanup
 - `.orbitos/rules/core/versioning.md`: version numbers, changelog layers, commit rules, and release flow
 - `.orbitos/rules/core/workflow-writing.md`: workflow checklist and audit rules
+- `.orbitos/rules/core/task-boundary.md`: default scope and self-check rules for agent actions
 
 ## Core Workflows
 
@@ -57,6 +59,8 @@ Read this only when modifying:
 - `.orbitos/workflows/startup-sync.md`: read-only entry workflow and unknown-agent gate
 - `.orbitos/workflows/agent-onboarding.md`: workflow for registering a confirmed new agent
 - `.orbitos/workflows/progress-sync.md`: required closeout workflow after substantive work
+- `.orbitos/workflows/inbox-ingest.md`: workflow for moving confirmed inbox inputs into the ingested area
+- `.orbitos/workflows/vault-audit.md`: workflow for auditing the inbox ingest kernel
 - `.orbitos/workflows/experience-capture.md`: workflow for recording agent experience and pitfalls before rule evolution
 - `.orbitos/workflows/rule-evolution.md`: workflow for extracting agent experience into learned/core rules
 

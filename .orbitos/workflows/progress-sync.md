@@ -76,15 +76,21 @@ Progress Sync 至少生成包含以下字段的 event：
 7. 如果有 pending review item，同步到 `02-时间线/待确认.md`。
 8. 如果有 pending / blocked next step，同步到 `02-时间线/下一步.md`。
 9. Progress Sync 前必须自检：本次工作是否产生经验、踩坑、用户纠正、返工、验证失败、规则候选或 learned rule 使用反馈。
-10. 如果有经验输入，先执行 `.orbitos/workflows/experience-capture.md`：
+10. Progress Sync 前必须执行任务边界自检，参考 `.orbitos/rules/core/task-boundary.md`：
+   - 是否只修改了用户请求或 workflow 所需范围。
+   - 是否移动、删除或归档了用户内容。
+   - 是否创建了知识卡片、ADR、正式产物或 core rule。
+   - 是否先更新了正确状态源，再投影到 `今日.md`。
+   - validation 是否通过。
+11. 如果有经验输入，先执行 `.orbitos/workflows/experience-capture.md`：
    - 更新当前 agent profile。
    - 记录来源、影响和下一步。
    - 需要用户确认时，投影到 `今日.md` 的“待确认”。
-11. 如果捕获内容足够通用、原子化、可执行、可验证，再执行 `.orbitos/workflows/rule-evolution.md`：
+12. 如果捕获内容足够通用、原子化、可执行、可验证，再执行 `.orbitos/workflows/rule-evolution.md`：
    - 先更新对应 agent profile。
    - 必要时更新 `.orbitos/rules/learned/INDEX.md`。
    - 需要用户判断时，投影到 `今日.md` 的“待确认”。
-12. 如果修改 OrbitOS 系统层，更新 `00-系统/CHANGELOG.md`。
+13. 如果修改 OrbitOS 系统层，更新 `00-系统/CHANGELOG.md`。
 
 ## 项目状态与今日投影
 
@@ -107,6 +113,7 @@ Progress Sync 至少生成包含以下字段的 event：
 
 - [ ] 已确认本次工作完成了实质性动作，或用户明确要求同步。
 - [ ] 已汇总本次文件变更、状态变化、待确认事项和下一步。
+- [ ] 已执行任务边界自检。
 - [ ] 已确认是否需要 Experience Capture 或 Rule Evolution。
 
 ### 执行检查
@@ -125,6 +132,7 @@ Progress Sync 至少生成包含以下字段的 event：
 ### 退出检查
 
 - [ ] 已确认 event 中记录 checklist 结果。
+- [ ] 已确认 event checklist 记录了 scope / user_content / formal_artifact / source_of_truth / validation。
 - [ ] 已确认项目 STATUS 与今日投影的主从关系正确，或记录不适用原因。
 - [ ] 已确认 `今日.md` 只投影异常、待确认、阻塞和关键摘要。
 - [ ] 已确认 validation 通过，或已记录失败和回退。

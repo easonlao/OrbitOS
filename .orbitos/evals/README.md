@@ -4,7 +4,7 @@ area: internal
 purpose: eval
 lifecycle: active
 created: 2026-06-12
-updated: 2026-06-12
+updated: 2026-06-14
 tags:
   - orbitos
   - eval
@@ -17,11 +17,21 @@ tags:
 
 ## 运行
 
+优先运行 Python 主实现：
+
+```powershell
+python .orbitos/scripts/run-validation.py
+```
+
+Windows 本地也可以运行 PowerShell wrapper：
+
 ```powershell
 pwsh -ExecutionPolicy Bypass -File .orbitos/scripts/run-validation.ps1
 ```
 
-如果 agent sandbox 无法启动 `pwsh.exe`，使用 Node.js fallback：
+如果 agent sandbox 无法启动 `pwsh.exe`，仍应优先尝试 Python 主实现。
+
+如果 Python 不可用，使用 Node.js fallback：
 
 ```powershell
 node .orbitos/scripts/run-validation.mjs
@@ -32,10 +42,13 @@ node .orbitos/scripts/run-validation.mjs
 - event 必填字段缺失必须失败。
 - event enum 错误必须失败。
 - inbox triage item 缺少 `reason` 必须失败。
+- ingest batch 缺少 `file` 必须失败。
+- ingest batch 状态枚举错误必须失败。
 - lifecycle 非法状态跳转必须失败。
 - 合法样例必须通过。
 - 可见 Markdown 不得使用指向 `.orbitos/` 的 Obsidian 双链。
 - 真实 agent registry 必须符合 schema。
+- 真实 ingest batch 必须符合 schema，且 `01-收件箱/已入库/` 文件与 batch 记录要互相对应。
 
 ## 文件命名
 
@@ -43,6 +56,7 @@ node .orbitos/scripts/run-validation.mjs
 
 - `event.*.yaml`
 - `inbox-triage.*.yaml`
+- `ingest-batch.*.yaml`
 - `lifecycle.*.yaml`
 
 脚本根据文件名判断预期：

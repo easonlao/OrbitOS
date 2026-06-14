@@ -33,6 +33,7 @@ tags:
 - `.orbitos/docs/REQUIREMENTS.md`：开发需求
 - `.orbitos/docs/ARCHITECTURE.md`：开发架构
 - `.orbitos/docs/DESIGN.md`：开发设计
+- `.orbitos/docs/RUNTIME.md`：agent 运行环境约定
 - `.orbitos/CHANGELOG.md`：完整版本历史
 
 ## 核心规则
@@ -42,6 +43,7 @@ tags:
 - `.orbitos/rules/core/doc-promotion.md`：内部设计到用户文档的提升规则
 - `.orbitos/rules/core/git-management.md`：Git 边界与跟踪规则
 - `.orbitos/rules/core/versioning.md`：版本号、changelog、commit 和 release 规则
+- `.orbitos/rules/core/task-boundary.md`：agent 默认任务边界与自检规则
 
 ## 机器约束
 
@@ -51,6 +53,7 @@ tags:
 - `.orbitos/schemas/core-change.schema.yaml`：OrbitOS 内核变更结构
 - `.orbitos/schemas/lifecycle.schema.yaml`：内容生命周期结构与合法跳转
 - `.orbitos/schemas/inbox-triage.schema.yaml`：收件箱盘点结构
+- `.orbitos/schemas/ingest-batch.schema.yaml`：收件箱入库批次结构
 - `.orbitos/schemas/validation-report.schema.yaml`：校验报告结构
 
 ## 工作流
@@ -60,3 +63,5 @@ tags:
 - `.orbitos/workflows/validate-sync.md`：写入前校验与审核回退
 - `.orbitos/workflows/progress-sync.md`：完成工作后的事实记录与 Dashboard 刷新
 - `.orbitos/workflows/inbox-triage.md`：收件箱盘点与去向建议
+- `.orbitos/workflows/inbox-ingest.md`：已确认收件箱原始输入的入库流程
+- `.orbitos/workflows/vault-audit.md`：收件箱入库闭环自检流程

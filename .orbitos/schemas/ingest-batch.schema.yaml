@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "orbitos/ingest-batch.schema.yaml",
+  "title": "OrbitOS Ingest Batch",
+  "description": "收件箱入库批次索引。只记录已入库原始输入的最低去重信息，不记录价值判断、长理由或执行者。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "date",
+    "items"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "入库批次 ID。建议格式：INB-YYYYMMDD-NNN。"
+    },
+    "date": {
+      "type": "string",
+      "description": "入库日期，格式 YYYY-MM-DD。"
+    },
+    "items": {
+      "type": "array",
+      "description": "本批次处理过的收件箱原始输入。file 默认位于 01-收件箱/已入库/ 下。",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "file",
+          "status"
+        ],
+        "properties": {
+          "file": {
+            "type": "string",
+            "description": "文件名。首版不记录目录；若已入库未来产生子目录，再升级为 path。"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ingested",
+              "needs_review",
+              "discarded"
+            ],
+            "description": "ingested=已处理保留；needs_review=已处理但有后续方向待确认；discarded=已处理且无后续价值。"
+          }
+        }
+      }
+    }
+  }
+}

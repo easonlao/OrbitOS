@@ -5,6 +5,8 @@
 
 # OrbitOS runtime state
 .orbitos/cache/
+.orbitos/ingest/batches/*
+!.orbitos/ingest/batches/.gitkeep
 .orbitos/indexes/*
 !.orbitos/indexes/.gitkeep
 .orbitos/logs/events/*

@@ -35,6 +35,7 @@ Validate Sync 是所有写入型 workflow 的前置校验层。
 | event | `.orbitos/schemas/event.schema.yaml` |
 | lifecycle item | `.orbitos/schemas/lifecycle.schema.yaml` |
 | inbox triage queue | `.orbitos/schemas/inbox-triage.schema.yaml` |
+| inbox ingest batch | `.orbitos/schemas/ingest-batch.schema.yaml` |
 | validation report | `.orbitos/schemas/validation-report.schema.yaml` |
 
 ## 执行顺序
@@ -71,19 +72,27 @@ next_steps:
 
 ## 本地验证脚本
 
-优先运行 PowerShell 版本：
+优先运行 Python 主实现：
+
+```powershell
+python .orbitos/scripts/run-validation.py
+```
+
+Windows 本地也可以运行 PowerShell wrapper：
 
 ```powershell
 pwsh -ExecutionPolicy Bypass -File .orbitos/scripts/run-validation.ps1
 ```
 
-如果当前 agent sandbox 无法启动 `pwsh.exe`，运行 Node.js fallback：
+如果当前 agent sandbox 无法启动 `pwsh.exe`，仍应优先尝试 Python 主实现。
+
+如果 Python 不可用，运行 Node.js fallback：
 
 ```powershell
 node .orbitos/scripts/run-validation.mjs
 ```
 
-两者都不可用时，才允许手动校验。手动校验必须在 event checklist 中把 validation 标为 `skipped`，并写明：
+Python、PowerShell wrapper 和 Node fallback 都不可用时，才允许手动校验。手动校验必须在 event checklist 中把 validation 标为 `skipped`，并写明：
 
 - 哪个命令失败。
 - 失败原因。
@@ -98,3 +107,17 @@ node .orbitos/scripts/run-validation.mjs
 - lifecycle 非法跳转失败
 - 可见 Markdown 不得使用指向 `.orbitos/` 的 Obsidian 双链
 - 真实 `.orbitos/agents/registry.yaml` 必须符合 agent registry schema
+- 真实 `.orbitos/ingest/batches/*.yaml` 必须符合 ingest batch schema
+- `01-收件箱/已入库/` 文件必须有 ingest batch 记录，batch 记录指向的文件必须存在
+
+注意：validation 只能检查结构和路径一致性，不能替代任务边界判断。是否越界、是否错误创建正式产物、是否误移动用户内容，必须通过 Progress Sync checklist 和必要时的 Vault Audit 记录。
+
+## Runtime Check
+
+写入型 workflow 前建议先运行：
+
+```powershell
+python .orbitos/scripts/env-check.py --agent-id <agent_id>
+```
+
+如果报告状态为 `blocked`，停止写入并向用户说明缺失项。
