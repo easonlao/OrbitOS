@@ -44,6 +44,7 @@ tags:
 - `.orbitos/rules/core/git-management.md`：Git 边界与跟踪规则
 - `.orbitos/rules/core/versioning.md`：版本号、changelog、commit 和 release 规则
 - `.orbitos/rules/core/task-boundary.md`：agent 默认任务边界与自检规则
+- `.orbitos/rules/core/scheduled-task-boundary.md`：无人值守定时任务边界与通知规则
 
 ## 机器约束
 

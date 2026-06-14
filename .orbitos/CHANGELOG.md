@@ -64,6 +64,7 @@ This release establishes the workspace skeleton, user onboarding README, Dashboa
 - Promoted Python validation runner to the primary implementation; PowerShell is now a local wrapper and Node remains the fallback.
 - Added runtime environment check to Startup Sync expectations; runtime reports are written to `.orbitos/state/env/{agent_id}.json`.
 - Added default task boundary self-check to root `AGENTS.md` and Progress Sync, reducing the need for users to provide long per-task constraints.
+- Added scheduled task boundary rule for unattended OrbitOS jobs, keeping watchdog tasks read-only by default and requiring explicit write paths for write-enabled cron tasks.
 - Added ingest batch validation to both PowerShell and Node validation scripts, including actual `.orbitos/ingest/batches/*.yaml` schema checks and `01-收件箱/已入库/` file-record consistency.
 - Added Agent Profile experience recall to Startup Sync, so registered agents must read their own experience, pitfalls, pending sources, and learned-rule usage before acting.
 - Clarified the Progress Sync source-of-truth contract between project `STATUS.md` files and `02-时间线/今日.md`: project status is updated first when project state changes, and today only summarizes and links to it.

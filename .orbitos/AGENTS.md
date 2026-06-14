@@ -52,6 +52,7 @@ Read this only when modifying:
 - `.orbitos/rules/core/versioning.md`: version numbers, changelog layers, commit rules, and release flow
 - `.orbitos/rules/core/workflow-writing.md`: workflow checklist and audit rules
 - `.orbitos/rules/core/task-boundary.md`: default scope and self-check rules for agent actions
+- `.orbitos/rules/core/scheduled-task-boundary.md`: unattended scheduled task boundary and delivery rules
 
 ## Core Workflows
 

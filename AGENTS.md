@@ -40,6 +40,7 @@ OrbitOS 是一个多 agent 协作工作台。Obsidian 是人读界面，`.orbito
 - 从内部设计提升到用户说明：`.orbitos/rules/core/doc-promotion.md`
 - 编写或修改 workflow：`.orbitos/rules/core/workflow-writing.md`
 - 判断任务范围、避免越界执行：`.orbitos/rules/core/task-boundary.md`
+- 创建或审查定时任务：`.orbitos/rules/core/scheduled-task-boundary.md`
 
 Hindsight 不是 OrbitOS 运行必需项。若使用 Hindsight，先 recall；如果 retain，必须在 event 中记录。
 
@@ -87,6 +88,7 @@ Startup Sync 只同步状态，不推进任务，不做决策。
 - 需要改变 Git 跟踪边界。
 - 关键必填字段缺失，无法通过 schema。
 - 需要扩大到用户没有点名的目录、项目或内容类型。
+- 需要让无人值守定时任务写入 OrbitOS 文件。
 
 处理具体项目时，只读该项目的 `README.md`、`STATUS.md` 和明确相关文件。
 

@@ -34,6 +34,7 @@ tags:
 - validation 主实现已切换为 Python；PowerShell 保留为 Windows 本地 wrapper，Node 继续作为 fallback。
 - 新增 agent 运行环境检查：agent 可运行 `.orbitos/scripts/env-check.py` 生成本地 runtime 报告，确认 Python、Node、Git、PowerShell 等可用性。
 - 新增默认任务边界规则：用户给短指令时，agent 默认只做最小可逆动作，Progress Sync 需要记录是否越界、是否移动用户内容、是否创建正式产物、validation 是否通过。
+- 新增定时任务边界规则：Hermes 这类无人值守任务默认只读，写入型定时任务必须明确允许写哪些路径，失败时只报告不自动扩权修复。
 - Startup Sync 现在要求已注册 agent 行动前读取自己的 Agent Profile 经验、踩坑、待确认来源和 Learned Rule 使用记录。
 - Progress Sync 明确了项目状态与今日投影的主从关系：项目 `STATUS.md` 是状态源，`今日.md` 只汇总和链接。
 - 新增 workflow checklist：workflow 定义核对清单，event 记录执行结果，`今日.md` 只显示异常、阻塞、待确认和关键摘要。
