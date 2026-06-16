@@ -26,12 +26,20 @@ Default behavior:
 - keep changes reversible
 - run validation when system files or visible Markdown are changed
 - summarize what was changed and what remains
+- do not create temporary workdirs, external repository clones, downloads, or experiment outputs at the OrbitOS root
+
+Temporary placement:
+
+- If the material should be visible for later user/agent review, put it under `01-收件箱/`.
+- If it is disposable execution scratch, use the OS temp directory or `.orbitos/tmp/`.
+- Do not create new top-level directories such as `raw/`, `.tmp-*`, `temp/`, or cloned repositories without explicit user confirmation.
 
 ## Stop And Ask
 
 Stop and ask before:
 
 - moving, deleting, archiving, or batch-renaming user content
+- creating any new top-level directory in the OrbitOS root
 - creating knowledge cards, ADRs, formal artifacts, or core rules
 - changing Git tracking boundaries
 - editing multiple areas when the user only named one target

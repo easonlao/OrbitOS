@@ -77,6 +77,7 @@ This release establishes the workspace skeleton, user onboarding README, Dashboa
 - Added event file naming validation for new event logs: from 2026-06-15 onward, event files must use `YYYYMMDD_HHMMSS_slug.yaml` with lowercase snake_case and no `evt_` prefix.
 - Added core naming rule: root visible directories and stable first-level subdirectories keep stable numeric order for the knowledge flow, human-facing notes may use readable Chinese names, and machine files use lowercase snake_case.
 - Added project directory split convention: `03-项目/{Project}/main/` holds local OrbitOS-side management material, while `03-项目/{Project}/repo/` holds the actual product/release Git repository.
+- Added root workspace temporary-file boundary: agents must not create temporary directories, external repository clones, downloads, or experiment outputs in the OrbitOS root; reviewable temporary material goes to `01-收件箱/`, disposable scratch goes to OS temp or `.orbitos/tmp/`.
 - Added root directory validation to ensure the core numbered flow exists and does not gain unconfirmed numbered areas.
 - Clarified timeline archive semantics: `02-时间线/归档/` is only for old timeline view snapshots, while `99-归档/` remains the global inactive-object archive.
 - Updated project map navigation with the OrbitOS Hindsight Bridge review entry.
