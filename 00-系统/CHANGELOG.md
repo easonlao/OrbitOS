@@ -51,6 +51,7 @@ tags:
 - 新增 Hindsight MCP 试点验证结论：`orbitos-test` single-bank MCP recall / retain 可用，传输层能隔离 bank；正式主 bank 将新建，当前局域网可信部署暂不要求认证。
 - 新增 event 文件命名约束：从 2026-06-15 起，新 event 文件统一使用 `YYYYMMDD_HHMMSS_slug.yaml`，不再使用 `evt_` 前缀或连字符。
 - 新增命名规则：根目录和稳定一级子目录用数字前缀表达稳定阅读顺序；人读笔记可以使用中文标题，机器层文件使用英文小写 snake_case。
+- 新增项目目录约定：项目本地管理材料放在 `main/`，实际 release/product Git 仓库放在 `repo/`，避免把状态、handoff 和发布仓库混在一起。
 - 明确 `02-时间线/归档/` 只保存旧时间线视图快照，不等同于全局 `99-归档/`。
 - 新增 Agent 看板：`00-系统/agents/` 用于查看已接入 agents、部署位置、状态、经验和踩坑。
 

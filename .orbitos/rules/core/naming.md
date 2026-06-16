@@ -160,6 +160,21 @@ ROADMAP.md
 
 Project internals do not need to follow OrbitOS-wide visible directory naming, but project status files should stay stable.
 
+When a project has both local management material and a releasable/product repository, keep them separated:
+
+```text
+03-项目/{Project}/
+  main/    # local project management, status, roadmap, reviews, handoffs
+  repo/    # actual product/release Git repository cloned from or pushed to remote
+```
+
+Rules:
+
+- `main/` is for OrbitOS-side planning and coordination material.
+- `repo/` is for release/product code and its own Git history.
+- Do not mix local handoff/status files into the product repository unless the user explicitly promotes them.
+- Other subdirectories may exist when a project needs them, but `main/` and `repo/` are the default split.
+
 ## Do Not
 
 - Do not rename existing directories for style without a migration plan.
