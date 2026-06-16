@@ -22,10 +22,13 @@
 !.orbitos/queues/review/.gitkeep
 .orbitos/state/*
 !.orbitos/state/.gitkeep
+.orbitos/tmp/
 
 # User content and local workspace data
 01-收件箱/**
 !01-收件箱/.gitkeep
+02-时间线/归档/**
+!02-时间线/归档/.gitkeep
 03-项目/**
 !03-项目/
 !03-项目/MAP.md
@@ -42,6 +45,7 @@
 !99-归档/.gitkeep
 OH-Works/
 jian.md
+.tmp-security/
 
 # OS noise
 .DS_Store

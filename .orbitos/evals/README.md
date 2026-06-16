@@ -47,6 +47,9 @@ node .orbitos/scripts/run-validation.mjs
 - lifecycle 非法状态跳转必须失败。
 - 合法样例必须通过。
 - 可见 Markdown 不得使用指向 `.orbitos/` 的 Obsidian 双链。
+- 2026-06-15 起的新 event 文件名必须符合 `YYYYMMDD_HHMMSS_slug.yaml`，不使用 `evt_` 前缀、空格或连字符。
+- 根目录编号流必须存在且不冲突：`00-系统`、`01-收件箱`、`02-时间线`、`03-项目`、`04-知识`、`05-资源`、`06-输出`、`99-归档`。
+- `04-知识/` 一级目录必须使用 `NN-名称`，保持知识分类的稳定阅读顺序。
 - 真实 agent registry 必须符合 schema。
 - 真实 ingest batch 必须符合 schema，且 `01-收件箱/已入库/` 文件与 batch 记录要互相对应。
 

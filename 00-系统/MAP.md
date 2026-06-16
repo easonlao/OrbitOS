@@ -4,7 +4,7 @@ area: system
 purpose: map
 lifecycle: active
 created: 2026-06-11
-updated: 2026-06-13
+updated: 2026-06-15
 tags:
   - orbitos
   - system
@@ -43,6 +43,7 @@ tags:
 - `.orbitos/rules/core/doc-promotion.md`：内部设计到用户文档的提升规则
 - `.orbitos/rules/core/git-management.md`：Git 边界与跟踪规则
 - `.orbitos/rules/core/versioning.md`：版本号、changelog、commit 和 release 规则
+- `.orbitos/rules/core/naming.md`：目录、文件、根目录顺序和 event 文件命名规则
 - `.orbitos/rules/core/task-boundary.md`：agent 默认任务边界与自检规则
 - `.orbitos/rules/core/scheduled-task-boundary.md`：无人值守定时任务边界与通知规则
 
@@ -65,4 +66,7 @@ tags:
 - `.orbitos/workflows/progress-sync.md`：完成工作后的事实记录与 Dashboard 刷新
 - `.orbitos/workflows/inbox-triage.md`：收件箱盘点与去向建议
 - `.orbitos/workflows/inbox-ingest.md`：已确认收件箱原始输入的入库流程
+- `.orbitos/workflows/knowledge-draft.md`：已入库原始输入转写为知识草稿的流程
 - `.orbitos/workflows/vault-audit.md`：收件箱入库闭环自检流程
+- `.orbitos/workflows/weekly-review.md`：以 event 时间线为主源的本周回顾流程
+- `.orbitos/workflows/hindsight-bridge.md`：Hindsight recall / retain / tag / event 审计试点流程

@@ -4,7 +4,7 @@ area: internal
 purpose: rule
 lifecycle: active
 created: 2026-06-11
-updated: 2026-06-13
+updated: 2026-06-15
 tags:
   - orbitos
   - obsidian
@@ -101,6 +101,13 @@ Do not put long execution traces, hidden reasoning, or implementation history in
 ## Links
 
 Use Obsidian wikilinks only for existing human-facing Markdown files that the user should open in Obsidian.
+
+When visible Markdown mentions a specific existing human-facing Markdown file that the user may need to open, link it with an Obsidian wikilink instead of leaving it as plain text or an inline code path.
+
+Examples:
+
+- `[[../01-收件箱/20260615_Hermes技能更新前PR提醒|Hermes 技能更新前 PR 提醒]]`
+- `[[../04-知识/01-本地运维/WSL2 安装与自定义位置迁移指引|WSL2 安装与自定义位置迁移指引]]`
 
 Use plain code paths for internal files, including:
 

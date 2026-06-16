@@ -50,6 +50,7 @@ Read this only when modifying:
 - `.orbitos/rules/core/doc-promotion.md`: how internal design becomes user-facing system docs
 - `.orbitos/rules/core/git-management.md`: Git boundary, ignore rules, and tracked-file cleanup
 - `.orbitos/rules/core/versioning.md`: version numbers, changelog layers, commit rules, and release flow
+- `.orbitos/rules/core/naming.md`: directory, file, root order, and event filename rules
 - `.orbitos/rules/core/workflow-writing.md`: workflow checklist and audit rules
 - `.orbitos/rules/core/task-boundary.md`: default scope and self-check rules for agent actions
 - `.orbitos/rules/core/scheduled-task-boundary.md`: unattended scheduled task boundary and delivery rules
@@ -61,9 +62,12 @@ Read this only when modifying:
 - `.orbitos/workflows/agent-onboarding.md`: workflow for registering a confirmed new agent
 - `.orbitos/workflows/progress-sync.md`: required closeout workflow after substantive work
 - `.orbitos/workflows/inbox-ingest.md`: workflow for moving confirmed inbox inputs into the ingested area
+- `.orbitos/workflows/knowledge-draft.md`: workflow for rewriting ingested inputs into human-readable knowledge drafts
 - `.orbitos/workflows/vault-audit.md`: workflow for auditing the inbox ingest kernel
+- `.orbitos/workflows/weekly-review.md`: event-first weekly review workflow
 - `.orbitos/workflows/experience-capture.md`: workflow for recording agent experience and pitfalls before rule evolution
 - `.orbitos/workflows/rule-evolution.md`: workflow for extracting agent experience into learned/core rules
+- `.orbitos/workflows/hindsight-bridge.md`: pilot workflow for Hindsight recall / retain / tag / event audit
 
 ## Change Flow
 

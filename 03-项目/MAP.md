@@ -19,6 +19,7 @@ tags:
   - [[OrbitOS/main/ROADMAP|ROADMAP]]：阶段路线图。
   - [[OrbitOS/main/WORKFLOW-DECOUPLING-REVIEW|Workflow 解耦审查]]：核心 workflow 触发边界审查。
   - [[OrbitOS/main/MINIMAL-KERNEL-INGEST-AUDIT|最小内核：收件箱入库与自检审核]]：最小内核设计记录。
+  - [[OrbitOS/main/HINDSIGHT-BRIDGE-REVIEW|Hindsight Bridge 审查]]：Hindsight recall / retain / bank / MCP 接入审查。
 
 ## 项目区约定
 

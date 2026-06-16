@@ -4,7 +4,7 @@ area: internal
 purpose: workflow
 lifecycle: active
 created: 2026-06-13
-updated: 2026-06-13
+updated: 2026-06-15
 tags:
   - orbitos
   - workflow
@@ -107,6 +107,18 @@ Experience Capture 只负责捕获输入。
 
 否则保留在 agent profile，不进入 learned index。
 
+## 输出结果
+
+Experience Capture 给 Progress Sync 返回以下结果之一：
+
+| result | 含义 |
+|---|---|
+| `not_applicable` | 检查后确认不需要记录，原因写入 event checklist |
+| `captured` | 已写入 agent profile，当前不具备 learned 条件 |
+| `candidate_only` | 已写入 agent profile 的规则候选或待观察项，暂不进入 learned index |
+
+Experience Capture 不直接返回 `learned_updated`；该结果只能由 Rule Evolution 更新 learned index 或 learned 使用反馈后产生。
+
 ## Progress Sync 要求
 
 Progress Sync 前，agent 必须自检：
@@ -122,6 +134,8 @@ Progress Sync 前，agent 必须自检：
 3. 把需要用户确认的事项投影到 `今日.md`。
 4. 在 event 中记录本次 capture 动作。
 
+如果答案是“否”，Progress Sync 仍应在 event checklist 中记录 `experience_check: not_applicable` 和跳过原因。
+
 ## 执行清单
 
 ### 进入检查
@@ -135,6 +149,7 @@ Progress Sync 前，agent 必须自检：
 - [ ] 已判断记录类型：经验、踩坑、待确认来源、规则候选或 learned rule 使用记录。
 - [ ] 已写入 `00-系统/agents/{agent_id}.md` 对应小节。
 - [ ] 已记录来源、影响和下一步。
+- [ ] 已给出结果：`not_applicable / captured / candidate_only`。
 - [ ] 如内容足够通用，已触发或标记 Rule Evolution。
 - [ ] 如需要用户确认，已投影到 `今日.md`。
 

@@ -4,7 +4,7 @@ area: internal
 purpose: workflow
 lifecycle: active
 created: 2026-06-13
-updated: 2026-06-13
+updated: 2026-06-15
 tags:
   - orbitos
   - workflow
@@ -114,6 +114,7 @@ learned rules 使用一个总表维护，不按规则拆文件。
 
 以下情况触发 Rule Evolution 检查：
 
+- Progress Sync 的经验自检结果为 `learned_updated`，或需要判断 `candidate_only` 是否可进入 learned。
 - Progress Sync 发现本次工作产生了经验、踩坑、返工或验证失败。
 - 用户说“提炼规则”“同步规则”“这个以后要记住”“规则演化”。
 - agent profile 中新增了可复用经验或待确认来源。
@@ -123,6 +124,18 @@ learned rules 使用一个总表维护，不按规则拆文件。
 - Experience Capture 判断某条记录满足 learned 条件。
 
 如果只是普通任务完成，且没有经验、踩坑、规则候选或使用反馈，可以跳过。
+
+## 与 Progress Sync 的解耦
+
+Progress Sync 只负责强制做经验自检，不强制执行 Rule Evolution。
+
+Rule Evolution 只在以下情况下写入 `.orbitos/rules/learned/INDEX.md`：
+
+- 候选满足通用、原子化、可执行、可验证、有来源。
+- learned rule 的使用反馈需要更新。
+- 用户明确要求提炼规则，并且候选通过边界判断。
+
+如果候选还不成熟，结果保持为 `candidate_only`，留在 agent profile 或今日待确认，不写 learned index。
 
 ## 闭环总览
 
@@ -305,6 +318,7 @@ agent 使用 learned rule 后，更新 learned index：
 - [ ] 如进入 learned，已保持规则原子化并更新 `.orbitos/rules/learned/INDEX.md`。
 - [ ] 如只是 agent 私有经验，已保留在 agent profile。
 - [ ] 如需要用户判断，已投影到 `今日.md`。
+- [ ] 已在 Progress Sync event 中记录最终结果：`candidate_only` 或 `learned_updated`。
 - [ ] 如建议提升 core，已确认需要用户明确确认。
 - [ ] 如存在失败或冲突，已标记 conflict / deprecated / watching 或回退。
 

@@ -20,7 +20,8 @@
   "properties": {
     "id": {
       "type": "string",
-      "description": "事件唯一 ID。建议格式：evt_YYYYMMDD_HHMMSS_agent_topic。用于 related_events 串联。"
+      "pattern": "^evt_[0-9]{8}_[0-9]{6}_[a-z0-9]+_[a-z0-9_]+$",
+      "description": "事件唯一 ID。格式：evt_YYYYMMDD_HHMMSS_agent_topic。只使用小写字母、数字和下划线，用于 related_events 串联。"
     },
     "timestamp": {
       "type": "string",

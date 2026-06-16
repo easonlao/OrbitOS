@@ -57,6 +57,10 @@ def validate_value(value, schema, path_text, errors):
     if "enum" in schema and value not in schema["enum"]:
         add_error(errors, path_text, "value is not in enum")
 
+    if "string" in types and isinstance(value, str) and "pattern" in schema:
+        if not re.match(schema["pattern"], value):
+            add_error(errors, path_text, "value does not match pattern")
+
     if "object" in types and isinstance(value, dict):
         properties = schema.get("properties", {})
         required = schema.get("required", [])
@@ -191,6 +195,86 @@ for file_path in visible_files:
             error["message"],
         )
 print_case("visible-markdown.no-internal-wikilinks", True, visible_errors)
+
+
+case_count += 1
+event_filename_errors = []
+event_filename_pattern = re.compile(r"^20[0-9]{6}_[0-9]{6}_[a-z0-9]+(?:_[a-z0-9]+)*\.yaml$")
+event_cutoff = "20260615"
+for event_path in sorted((ROOT / ".orbitos/logs/events").glob("*.yaml")):
+    name = event_path.name
+    date_text = name[:8]
+    if date_text.isdigit() and date_text >= event_cutoff and not event_filename_pattern.match(name):
+        add_error(
+            event_filename_errors,
+            f".orbitos/logs/events/{name}",
+            "event file name must match YYYYMMDD_HHMMSS_slug.yaml with lowercase snake_case",
+        )
+    if name.startswith("evt_"):
+        embedded_date = name[4:12]
+        if embedded_date.isdigit() and embedded_date >= event_cutoff:
+            add_error(
+                event_filename_errors,
+                f".orbitos/logs/events/{name}",
+                "event file name must not include evt_ prefix",
+            )
+print_case("actual.event-filenames", True, event_filename_errors)
+
+
+case_count += 1
+root_directory_errors = []
+expected_root_dirs = [
+    "00-系统",
+    "01-收件箱",
+    "02-时间线",
+    "03-项目",
+    "04-知识",
+    "05-资源",
+    "06-输出",
+    "99-归档",
+]
+root_numbered_pattern = re.compile(r"^[0-9]{2}-")
+root_numbered_dirs = [
+    path.name for path in ROOT.iterdir() if path.is_dir() and root_numbered_pattern.match(path.name)
+]
+for expected_name in expected_root_dirs:
+    if not (ROOT / expected_name).is_dir():
+        add_error(
+            root_directory_errors,
+            expected_name,
+            "required root numbered directory is missing",
+        )
+for name in root_numbered_dirs:
+    if name not in expected_root_dirs:
+        add_error(
+            root_directory_errors,
+            name,
+            "unexpected root numbered directory; discuss lifecycle role before adding",
+        )
+prefixes = [name[:2] for name in root_numbered_dirs]
+for prefix in sorted(set(prefixes)):
+    if prefixes.count(prefix) > 1:
+        add_error(
+            root_directory_errors,
+            prefix,
+            "duplicate root directory numeric prefix",
+        )
+print_case("actual.root-directories", True, root_directory_errors)
+
+
+case_count += 1
+knowledge_directory_errors = []
+knowledge_dir = ROOT / "04-知识"
+knowledge_subdir_pattern = re.compile(r"^[0-9]{2}-")
+if knowledge_dir.exists():
+    for path in sorted(knowledge_dir.iterdir()):
+        if path.is_dir() and not knowledge_subdir_pattern.match(path.name):
+            add_error(
+                knowledge_directory_errors,
+                f"04-知识/{path.name}",
+                "knowledge first-level directory must use NN-name stable order",
+            )
+print_case("actual.knowledge-directories", True, knowledge_directory_errors)
 
 
 case_count += 1

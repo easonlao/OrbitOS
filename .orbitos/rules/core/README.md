@@ -10,6 +10,7 @@ Current core rules:
 - `readme-writing.md`: root README writing rules.
 - `git-management.md`: repository boundary and Git tracking rules.
 - `versioning.md`: version, changelog, commit, and release rules.
+- `naming.md`: directory, file, root order, and event filename rules.
 - `doc-promotion.md`: promotion rules from internal design to user-facing system docs.
 - `workflow-writing.md`: workflow checklist and audit rules.
 - `task-boundary.md`: default scope and self-check rules for agent actions.

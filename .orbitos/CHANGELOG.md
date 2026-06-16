@@ -65,6 +65,20 @@ This release establishes the workspace skeleton, user onboarding README, Dashboa
 - Added runtime environment check to Startup Sync expectations; runtime reports are written to `.orbitos/state/env/{agent_id}.json`.
 - Added default task boundary self-check to root `AGENTS.md` and Progress Sync, reducing the need for users to provide long per-task constraints.
 - Added scheduled task boundary rule for unattended OrbitOS jobs, keeping watchdog tasks read-only by default and requiring explicit write paths for write-enabled cron tasks.
+- Clarified the daily Dashboard time boundary: `02-时间线/今日.md` expands only same-day facts, current review items, and next steps; older completed work belongs in weekly views, project status, or event logs.
+- Added weekly review workflow: `02-时间线/本周.md` must be generated from event timeline first, then summarized by themes, risks, and next-week focus.
+- Added weekly rollover behavior: before writing the current ISO week, `weekly-review` archives the previous `本周.md` to `02-时间线/归档/YYYY-Www.md`; normal Progress Sync no longer writes `本周.md`.
+- Added knowledge draft workflow: ingested raw inputs remain unchanged in `01-收件箱/已入库/`, while rewritten `draft` notes are created under `04-知识/00-草稿箱/` and move to `04-知识/{NN-topic}/` only after user confirmation.
+- Added a visible Markdown link-quality rule: when a human-facing Markdown view names an existing human-facing Markdown file, agents must use an Obsidian wikilink so users can open it directly.
+- Added Progress Sync experience-check results: `not_applicable`, `captured`, `candidate_only`, and `learned_updated`, decoupling status sync from mandatory Experience Capture or Rule Evolution writes.
+- Added Hindsight Bridge pilot workflow: `.orbitos/workflows/hindsight-bridge.md` defines the `orbitos-test` bank, structured retain input, tag whitelist, forbidden high-cardinality tags, and event audit requirements.
+- Added Hindsight MCP pilot validation notes: `orbitos-test` single-bank MCP recall works as a transport boundary, while the unauthenticated REST API still exposes other banks until API/MCP authentication is configured.
+- Confirmed Hindsight long-term bank strategy: create a new formal OrbitOS bank instead of making `eason` the formal system bank; authentication is not required for the current trusted LAN-only deployment.
+- Added event file naming validation for new event logs: from 2026-06-15 onward, event files must use `YYYYMMDD_HHMMSS_slug.yaml` with lowercase snake_case and no `evt_` prefix.
+- Added core naming rule: root visible directories and stable first-level subdirectories keep stable numeric order for the knowledge flow, human-facing notes may use readable Chinese names, and machine files use lowercase snake_case.
+- Added root directory validation to ensure the core numbered flow exists and does not gain unconfirmed numbered areas.
+- Clarified timeline archive semantics: `02-时间线/归档/` is only for old timeline view snapshots, while `99-归档/` remains the global inactive-object archive.
+- Updated project map navigation with the OrbitOS Hindsight Bridge review entry.
 - Added ingest batch validation to both PowerShell and Node validation scripts, including actual `.orbitos/ingest/batches/*.yaml` schema checks and `01-收件箱/已入库/` file-record consistency.
 - Added Agent Profile experience recall to Startup Sync, so registered agents must read their own experience, pitfalls, pending sources, and learned-rule usage before acting.
 - Clarified the Progress Sync source-of-truth contract between project `STATUS.md` files and `02-时间线/今日.md`: project status is updated first when project state changes, and today only summarizes and links to it.
