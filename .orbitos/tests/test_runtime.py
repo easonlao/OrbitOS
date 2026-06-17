@@ -34,11 +34,22 @@ def require(condition, message):
 
 
 def copy_product(source, target):
-    shutil.copytree(
-        source,
-        target,
-        ignore=shutil.ignore_patterns(".git", "__pycache__", "*.pyc"),
+    result = subprocess.run(
+        ["git", "ls-files", "--cached", "--others", "--exclude-standard", "-z"],
+        cwd=source,
+        capture_output=True,
+        check=True,
     )
+    target.mkdir(parents=True, exist_ok=True)
+    for raw_path in result.stdout.split(b"\0"):
+        if not raw_path:
+            continue
+        relative_path = Path(raw_path.decode("utf-8"))
+        source_path = source / relative_path
+        target_path = target / relative_path
+        if source_path.is_file():
+            target_path.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(source_path, target_path)
 
 
 def test_runtime(runtime_root):
