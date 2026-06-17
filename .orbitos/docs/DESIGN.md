@@ -84,7 +84,11 @@
 03-项目/{project}/
   README.md
   STATUS.md
-  main/ 或项目自有内容
+  ROADMAP.md
+  TASKS.md
+  OPEN-QUESTIONS.md
+  docs/
+  repo/
 ```
 
 - `README.md`：稳定定位、范围和使用方法。
@@ -92,6 +96,8 @@
 - `ROADMAP.md`：完整阶段顺序和里程碑。
 - `TASKS.md`：当前阶段可执行任务。
 - `OPEN-QUESTIONS.md`：未确认问题、原因、选项和建议。
+- `docs/`：专项调研、评审、handoff 和设计记录。
+- `repo/`：项目实际产品或 release Git 仓库；没有独立发布物的项目可以不创建。
 - 历史 review、handoff 和专项调查保留为证据，但不承担当前状态。
 
 ## 6. Event 设计

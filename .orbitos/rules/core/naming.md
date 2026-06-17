@@ -166,16 +166,24 @@ When a project has both local management material and a releasable/product repos
 
 ```text
 03-项目/{Project}/
-  main/    # local project management, status, roadmap, reviews, handoffs
-  repo/    # actual product/release Git repository cloned from or pushed to remote
+  README.md
+  AGENTS.md            # optional short routing file; do not duplicate product rules
+  STATUS.md
+  ROADMAP.md
+  TASKS.md
+  OPEN-QUESTIONS.md
+  docs/                # reviews, research, design records, and handoffs
+  repo/                # actual product/release Git repository
 ```
 
 Rules:
 
-- `main/` is for OrbitOS-side planning and coordination material.
+- Keep current project control files at the project root so humans and agents can find the state without another navigation layer.
+- `docs/` is for supporting development records; it is not the project status source.
 - `repo/` is for release/product code and its own Git history.
-- Do not mix local handoff/status files into the product repository unless the user explicitly promotes them.
-- Other subdirectories may exist when a project needs them, but `main/` and `repo/` are the default split.
+- A project-level `AGENTS.md` may route agents to the canonical development rules inside `repo/`, but must not copy those rules.
+- Do not use symlinks or directory junctions as the routing contract across Windows, Synology, and Linux environments.
+- Do not mix local status, review, or handoff files into the product repository unless the user explicitly promotes them.
 
 ## Do Not
 
