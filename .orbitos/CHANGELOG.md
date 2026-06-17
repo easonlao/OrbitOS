@@ -2,7 +2,7 @@
 
 This is the full internal changelog and release history for OrbitOS.
 
-The user-facing current release summary lives at `00-系统/CHANGELOG.md`.
+The user-facing current release summary lives at `00-系统/07-系统变更.md`.
 
 ## v0.1.0 - 2026-06-12
 
@@ -114,9 +114,9 @@ This release establishes the workspace skeleton, user onboarding README, Dashboa
 - Added workflow checklist projection rule: workflow files define checklists, events record execution results, and `今日.md` only projects exceptions, blocks, review items, and key summaries.
 - Defined documentation promotion flow from `.orbitos/docs/` to `00-系统/`, with stable execution rules kept in `.orbitos/rules/core/`.
 - Moved full changelog history to `.orbitos/CHANGELOG.md`.
-- Reduced `00-系统/CHANGELOG.md` to current release summary only.
-- Removed validation status and next-step planning from `00-系统/CHANGELOG.md`; those belong in Dashboard or internal release history.
-- Rewrote `00-系统/DATA-LIFECYCLE.md` as a user-facing Obsidian folder-flow guide instead of an internal terminology page.
+- Reduced `00-系统/07-系统变更.md` to current release summary only.
+- Removed validation status and next-step planning from `00-系统/07-系统变更.md`; those belong in Dashboard or internal release history.
+- Rewrote `00-系统/03-内容生命周期.md` as a user-facing Obsidian folder-flow guide instead of an internal terminology page.
 - Moved agent-authored Markdown constraints to `.orbitos/rules/core/markdown-writing.md` because they are execution rules rather than user-facing system understanding or design notes.
 
 ### Fixed
@@ -145,7 +145,7 @@ Validation eval passed: 20 case(s).
 ### Migration Notes
 
 - Use `02-时间线/今日.md` as the main user Dashboard.
-- Use `00-系统/CHANGELOG.md` for current release summary.
+- Use `00-系统/07-系统变更.md` for current release summary.
 - Use `.orbitos/CHANGELOG.md` for complete version history.
 - Use `.orbitos/rules/core/versioning.md` before preparing commits, tags, or releases.
 

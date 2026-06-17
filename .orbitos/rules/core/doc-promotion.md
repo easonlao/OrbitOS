@@ -108,7 +108,7 @@ Summarize these only when they become stable user-facing rules.
 Every promotion into `00-系统/` must:
 
 - write an event under `.orbitos/logs/events/`
-- update `00-系统/CHANGELOG.md` if it changes system behavior or user-facing guidance
+- update `00-系统/07-系统变更.md` if it changes system behavior or user-facing guidance
 - refresh `02-时间线/今日.md` when it changes current state
 
 ## Agent Instruction

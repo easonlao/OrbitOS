@@ -263,6 +263,35 @@ print_case("actual.root-directories", True, root_directory_errors)
 
 
 case_count += 1
+system_manual_errors = []
+required_system_manual = [
+    "00-开始使用.md",
+    "01-目录说明.md",
+    "02-日常协作.md",
+    "03-内容生命周期.md",
+    "04-Agent协作.md",
+    "05-安全与边界.md",
+    "06-术语表.md",
+    "07-系统变更.md",
+]
+legacy_system_manual = [
+    "MAP.md",
+    "CONTEXT.md",
+    "PRINCIPLES.md",
+    "DATA-LIFECYCLE.md",
+    "CHANGELOG.md",
+]
+system_dir = ROOT / "00-系统"
+for name in required_system_manual:
+    if not (system_dir / name).is_file():
+        add_error(system_manual_errors, f"00-系统/{name}", "required numbered system manual page is missing")
+for name in legacy_system_manual:
+    if (system_dir / name).exists():
+        add_error(system_manual_errors, f"00-系统/{name}", "legacy system manual filename must not be restored")
+print_case("actual.system-manual", True, system_manual_errors)
+
+
+case_count += 1
 knowledge_directory_errors = []
 knowledge_dir = ROOT / "04-知识"
 knowledge_subdir_pattern = re.compile(r"^[0-9]{2}-")

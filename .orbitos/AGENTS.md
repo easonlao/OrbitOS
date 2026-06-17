@@ -23,7 +23,7 @@
 2. 面向用户的系统说明放在 `00-系统/`。
 3. 稳定的 agent 执行规则放在 `.orbitos/rules/core/`。
 4. 实现、schema、workflow 和设计文档放在 `.orbitos/`。
-5. 已确认的当前版本系统变化记录在 `00-系统/CHANGELOG.md`。
+5. 已确认的当前版本系统变化记录在 `00-系统/07-系统变更.md`。
 6. 只有重大且难以回退的架构决策才使用 ADR。
 7. 未经用户明确确认，不得把讨论或脑暴直接提升为规则。
 8. 修改根 README 前，先读 `.orbitos/rules/core/readme-writing.md`。
@@ -79,4 +79,4 @@
 4. 写入 event。
 5. 按需更新人读视图。
 6. 版本或 release 内容变化时，更新 `.orbitos/CHANGELOG.md` 的完整版本历史。
-7. `00-系统/CHANGELOG.md` 只展示当前 release 摘要。
+7. `00-系统/07-系统变更.md` 只展示当前 release 摘要。

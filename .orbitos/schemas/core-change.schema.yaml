@@ -221,7 +221,7 @@
             "string",
             "null"
           ],
-          "description": "目标用户可见文件，例如 00-系统/PRINCIPLES.md。无需提升则填 null。"
+          "description": "目标用户可见文件，例如 00-系统/05-安全与边界.md。无需提升则填 null。"
         },
         "reason": {
           "type": "string",

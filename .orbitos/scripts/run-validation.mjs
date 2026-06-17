@@ -171,6 +171,32 @@ for (const file of visibleFiles) {
 printCase("visible-markdown.no-internal-wikilinks", true, visibleErrors);
 
 caseCount += 1;
+const systemManualErrors = [];
+const systemDir = path.join(root, "00-系统");
+const requiredSystemManual = [
+  "00-开始使用.md",
+  "01-目录说明.md",
+  "02-日常协作.md",
+  "03-内容生命周期.md",
+  "04-Agent协作.md",
+  "05-安全与边界.md",
+  "06-术语表.md",
+  "07-系统变更.md",
+];
+const legacySystemManual = ["MAP.md", "CONTEXT.md", "PRINCIPLES.md", "DATA-LIFECYCLE.md", "CHANGELOG.md"];
+for (const name of requiredSystemManual) {
+  if (!fs.existsSync(path.join(systemDir, name))) {
+    addError(systemManualErrors, `00-系统/${name}`, "required numbered system manual page is missing");
+  }
+}
+for (const name of legacySystemManual) {
+  if (fs.existsSync(path.join(systemDir, name))) {
+    addError(systemManualErrors, `00-系统/${name}`, "legacy system manual filename must not be restored");
+  }
+}
+printCase("actual.system-manual", true, systemManualErrors);
+
+caseCount += 1;
 const registryErrors = [];
 validateValue(readJsonLike(".orbitos/agents/registry.yaml"), schemas["agent-registry"], "$", registryErrors);
 printCase("actual.agent-registry", true, registryErrors);

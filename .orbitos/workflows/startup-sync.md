@@ -32,9 +32,9 @@ Startup Sync 是只读流程。
 
 允许读取：
 
-- `00-系统/MAP.md`
-- `00-系统/CONTEXT.md`
-- `00-系统/PRINCIPLES.md`
+- `00-系统/00-开始使用.md`
+- `00-系统/06-术语表.md`
+- `00-系统/05-安全与边界.md`
 - `.orbitos/agents/registry.yaml`
 - 当前 agent 的 `profile_ref`
 - `.orbitos/state/env/{agent_id}.json`，如果存在
@@ -149,7 +149,7 @@ Startup Sync 完成，但下一步不明确
 
 ### 执行检查
 
-- [ ] 已读取 `00-系统/MAP.md`、`00-系统/CONTEXT.md`、`00-系统/PRINCIPLES.md`。
+- [ ] 已读取 `00-系统/00-开始使用.md`、`00-系统/06-术语表.md`、`00-系统/05-安全与边界.md`。
 - [ ] 已读取 `.orbitos/agents/registry.yaml` 并确认当前 `agent_id`。
 - [ ] 已读取当前 agent 的 `profile_ref`，并提取与本任务相关的经验、踩坑、待确认来源和 Learned Rule 使用记录。
 - [ ] 已运行或读取 `.orbitos/state/env/{agent_id}.json`，并确认 runtime 未 blocked。

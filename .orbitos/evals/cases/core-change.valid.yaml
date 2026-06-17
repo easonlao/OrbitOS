@@ -35,7 +35,7 @@
   "user_visible_change": true,
   "promotion": {
     "needed": true,
-    "target": "00-系统/CHANGELOG.md",
+    "target": "00-系统/07-系统变更.md",
     "reason": "这是系统级规则新增，需要用户能在变更记录中看到。"
   },
   "related_event": null

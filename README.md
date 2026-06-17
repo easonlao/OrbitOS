@@ -81,13 +81,16 @@ README.zh-CN.md        # Chinese getting-started guide
 
 ## User Manual
 
-The `00-系统/` folder is the user-facing manual for OrbitOS:
+The `00-系统/` folder is the user-facing manual for OrbitOS. Read it in order:
 
-- [System Map](00-%E7%B3%BB%E7%BB%9F/MAP.md): where things live
-- [Context](00-%E7%B3%BB%E7%BB%9F/CONTEXT.md): key terms
-- [Principles](00-%E7%B3%BB%E7%BB%9F/PRINCIPLES.md): operating principles
-- [Data Lifecycle](00-%E7%B3%BB%E7%BB%9F/DATA-LIFECYCLE.md): how data moves through the system
-- [Changelog](00-%E7%B3%BB%E7%BB%9F/CHANGELOG.md): system updates
+1. [Getting Started](00-系统/00-开始使用.md)
+2. [Directory Guide](00-系统/01-目录说明.md)
+3. [Daily Collaboration](00-系统/02-日常协作.md)
+4. [Content Lifecycle](00-系统/03-内容生命周期.md)
+5. [Agent Collaboration](00-系统/04-Agent协作.md)
+6. [Safety and Boundaries](00-系统/05-安全与边界.md)
+7. [Glossary](00-系统/06-术语表.md)
+8. [System Changes](00-系统/07-系统变更.md)
 
 ## Working With Agents
 

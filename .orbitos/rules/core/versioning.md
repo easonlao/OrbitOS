@@ -94,7 +94,7 @@ This is the source of truth for release history.
 Path:
 
 ```text
-00-系统/CHANGELOG.md
+00-系统/07-系统变更.md
 ```
 
 Purpose:
@@ -103,7 +103,7 @@ Purpose:
 - keep Obsidian reading lightweight
 - point to `.orbitos/CHANGELOG.md` for full history
 
-Do not copy all historical release notes into `00-系统/CHANGELOG.md`.
+Do not copy all historical release notes into `00-系统/07-系统变更.md`.
 
 ## Commit Rules
 
@@ -148,7 +148,7 @@ pwsh -ExecutionPolicy Bypass -File .orbitos/scripts/run-validation.ps1
 ```
 
 7. Update `.orbitos/CHANGELOG.md` with full release notes.
-8. Update `00-系统/CHANGELOG.md` with only the current release summary.
+8. Update `00-系统/07-系统变更.md` with only the current release summary.
 9. Write a release event under `.orbitos/logs/events/`.
 10. Commit with a release commit message.
 11. Create a git tag:
@@ -184,7 +184,7 @@ Use this structure in `.orbitos/CHANGELOG.md`:
 ### Migration Notes
 ```
 
-`00-系统/CHANGELOG.md` should use a shorter structure:
+`00-系统/07-系统变更.md` should use a shorter structure:
 
 ```markdown
 # 系统变更记录
@@ -205,7 +205,7 @@ Agents preparing version or release changes must:
 - follow `.orbitos/workflows/core-change.md`
 - validate core changes against `.orbitos/schemas/core-change.schema.yaml`
 - update `.orbitos/CHANGELOG.md`
-- update `00-系统/CHANGELOG.md`
+- update `00-系统/07-系统变更.md`
 - write an event log
 - not create git commits or tags unless the user explicitly asks
 

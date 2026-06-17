@@ -49,11 +49,14 @@ The README should include:
 - the main daily view:
   - `02-时间线/今日.md`
 - the system manual entry:
-  - `00-系统/MAP.md`
-  - `00-系统/CONTEXT.md`
-  - `00-系统/PRINCIPLES.md`
-  - `00-系统/DATA-LIFECYCLE.md`
-  - `00-系统/CHANGELOG.md`
+  - `00-系统/00-开始使用.md`
+  - `00-系统/01-目录说明.md`
+  - `00-系统/02-日常协作.md`
+  - `00-系统/03-内容生命周期.md`
+  - `00-系统/04-Agent协作.md`
+  - `00-系统/05-安全与边界.md`
+  - `00-系统/06-术语表.md`
+  - `00-系统/07-系统变更.md`
 - a brief repository layout
 - agent entry:
   - `AGENTS.md`

@@ -51,7 +51,7 @@ Core Change 约束 OrbitOS 内核内容的编写和修改。
 5. 执行 Validate Sync。
 6. 修改目标文件。
 7. 写入 event。
-8. 更新 `00-系统/CHANGELOG.md`。
+8. 更新 `00-系统/07-系统变更.md`。
 9. 如果影响当前状态，刷新 `02-时间线/今日.md`。
 10. 运行 validation eval。
 

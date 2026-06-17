@@ -129,7 +129,7 @@ Progress Sync 必须做经验自检，但不等于必须写经验或提炼规则
    - 先更新对应 agent profile。
    - 必要时更新 `.orbitos/rules/learned/INDEX.md`。
    - 需要用户判断时，投影到 `今日.md` 的“待确认”。
-14. 如果修改 OrbitOS 系统层，更新 `00-系统/CHANGELOG.md`。
+14. 如果修改 OrbitOS 系统层，更新 `00-系统/07-系统变更.md`。
 
 ## 项目状态与今日投影
 
