@@ -119,3 +119,14 @@ Use plain code paths for internal files, including:
 - queues
 
 This prevents Obsidian from creating blank files from accidental clicks.
+
+## Glossary Links
+
+The glossary is an on-demand explanation layer, not required pre-reading.
+
+- When a visible Markdown page cannot avoid an OrbitOS-specific or technical term, link its first meaningful occurrence to the matching heading in `00-系统/06-术语表.md`.
+- Use a heading link such as `[[../00-系统/06-术语表#Event|Event]]`; adjust the relative path for the current file.
+- Do not link every repeated occurrence. One link per term per page is normally enough.
+- Do not link ordinary language merely because a matching glossary heading exists.
+- Obsidian comments (`%% ... %%`) are hidden from readers and must not carry required explanations.
+- Use footnotes only for context-specific clarification that does not belong in the shared glossary.
