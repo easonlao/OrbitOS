@@ -26,8 +26,16 @@ git clone https://github.com/easonlao/OrbitOS.git
 ```
 
 2. 在 Obsidian 里把克隆下来的 `OrbitOS` 文件夹打开为一个 vault。
-3. 把你想丢进系统的东西复制到 `01-收件箱/`。
-4. 如果要让 agent 接入，让它从 `AGENTS.md` 开始；具体执行规则都在 `AGENTS.md`，不是 README。
+3. 初始化本地运行文件：
+
+```bash
+python .orbitos/scripts/init-runtime.py
+```
+
+这个命令只创建缺失的本地文件，不会覆盖你已有的内容。
+
+4. 把你想丢进系统的东西复制到 `01-收件箱/`。
+5. 如果要让 agent 接入，让它从 `AGENTS.md` 开始；具体执行规则都在 `AGENTS.md`，不是 README。
 
 你每天主要看：
 

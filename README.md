@@ -26,8 +26,16 @@ git clone https://github.com/easonlao/OrbitOS.git
 ```
 
 2. Open the cloned `OrbitOS` folder as a vault in Obsidian.
-3. Put anything you want OrbitOS to handle into `01-收件箱/`.
-4. If you want an agent to connect, have it start from `AGENTS.md`; the execution rules live there, not in README.
+3. Initialize local runtime files:
+
+```bash
+python .orbitos/scripts/init-runtime.py
+```
+
+This command only creates missing local files. It does not overwrite existing content.
+
+4. Put anything you want OrbitOS to handle into `01-收件箱/`.
+5. If you want an agent to connect, have it start from `AGENTS.md`; the execution rules live there, not in README.
 
 Your main daily view is:
 

@@ -1,6 +1,12 @@
 
+# Local app state
+.obsidian/
+.claude/
+.codex/
+
 # OrbitOS runtime state
 .orbitos/cache/
+.orbitos/agents/registry.yaml
 .orbitos/ingest/batches/*
 !.orbitos/ingest/batches/.gitkeep
 .orbitos/indexes/*
@@ -19,19 +25,21 @@
 .orbitos/state/*
 !.orbitos/state/.gitkeep
 .orbitos/tmp/
+.orbitos/rules/learned/*
+!.orbitos/rules/learned/.gitkeep
 
 # User content and local workspace data
 01-收件箱/**
 !01-收件箱/.gitkeep
-!01-收件箱/粘贴.md
+02-时间线/*.md
 02-时间线/归档/**
 !02-时间线/归档/.gitkeep
 03-项目/**
 !03-项目/
-!03-项目/MAP.md
+!03-项目/.gitkeep
 04-知识/**
 !04-知识/
-!04-知识/MAP.md
+!04-知识/.gitkeep
 05-资源/**
 !05-资源/.gitkeep
 !05-资源/附件/
@@ -40,4 +48,8 @@
 !06-输出/.gitkeep
 99-归档/**
 !99-归档/.gitkeep
+
+# Local agent profiles
+00-系统/agents/*.md
+!00-系统/agents/README.md
 
