@@ -21,6 +21,8 @@ def main():
     results = []
 
     registry = {
+        "version": 1,
+        "updated": TODAY,
         "agents": []
     }
     results.append(
