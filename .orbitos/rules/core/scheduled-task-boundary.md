@@ -4,7 +4,7 @@ area: internal
 purpose: rule
 lifecycle: active
 created: 2026-06-14
-updated: 2026-06-14
+updated: 2026-06-17
 tags:
   - orbitos
   - agent-rule
@@ -101,12 +101,12 @@ Do not spam the user with normal successful watchdog runs.
 Use this boundary for OrbitOS scheduled tasks unless the user confirms otherwise:
 
 ```text
-You are Hermes, agent_id=hermes.
-OrbitOS root is /home/lyx/orbitos.
-The task workdir must be /home/lyx/orbitos.
+You are {agent_name}, agent_id={agent_id}.
+OrbitOS root is {orbitos_root}.
+The task workdir must be {orbitos_root}.
 
 Before acting, confirm:
-1. current path is /home/lyx/orbitos
+1. current path is {orbitos_root}
 2. .orbitos/ exists
 3. .orbitos/agents/registry.yaml exists
 4. .orbitos/workflows/startup-sync.md exists

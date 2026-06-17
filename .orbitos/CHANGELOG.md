@@ -71,9 +71,9 @@ This release establishes the workspace skeleton, user onboarding README, Dashboa
 - Added knowledge draft workflow: ingested raw inputs remain unchanged in `01-收件箱/已入库/`, while rewritten `draft` notes are created under `04-知识/00-草稿箱/` and move to `04-知识/{NN-topic}/` only after user confirmation.
 - Added a visible Markdown link-quality rule: when a human-facing Markdown view names an existing human-facing Markdown file, agents must use an Obsidian wikilink so users can open it directly.
 - Added Progress Sync experience-check results: `not_applicable`, `captured`, `candidate_only`, and `learned_updated`, decoupling status sync from mandatory Experience Capture or Rule Evolution writes.
-- Added Hindsight Bridge pilot workflow: `.orbitos/workflows/hindsight-bridge.md` defines the `orbitos-test` bank, structured retain input, tag whitelist, forbidden high-cardinality tags, and event audit requirements.
-- Added Hindsight MCP pilot validation notes: `orbitos-test` single-bank MCP recall works as a transport boundary, while the unauthenticated REST API still exposes other banks until API/MCP authentication is configured.
-- Confirmed Hindsight long-term bank strategy: create a new formal OrbitOS bank instead of making `eason` the formal system bank; authentication is not required for the current trusted LAN-only deployment.
+- Added Hindsight Bridge pilot workflow: `.orbitos/workflows/hindsight-bridge.md` defines configurable test-bank usage, structured retain input, tag whitelist, forbidden high-cardinality tags, and event audit requirements.
+- Added Hindsight MCP pilot notes: single-bank MCP endpoints should be preferred for ordinary agents because the bank is scoped by endpoint.
+- Clarified Hindsight long-term bank strategy: create or choose one formal OrbitOS bank by user confirmation, and treat any existing personal/history bank as a legacy source unless explicitly promoted.
 - Added event file naming validation for new event logs: from 2026-06-15 onward, event files must use `YYYYMMDD_HHMMSS_slug.yaml` with lowercase snake_case and no `evt_` prefix.
 - Added core naming rule: root visible directories and stable first-level subdirectories keep stable numeric order for the knowledge flow, human-facing notes may use readable Chinese names, and machine files use lowercase snake_case.
 - Added project directory split convention: `03-项目/{Project}/main/` holds local OrbitOS-side management material, while `03-项目/{Project}/repo/` holds the actual product/release Git repository.
@@ -126,7 +126,7 @@ This release establishes the workspace skeleton, user onboarding README, Dashboa
   - Chinese README may use Obsidian wikilinks only for existing human-readable files.
   - Machine/internal paths use plain code paths.
 - Fixed validation script behavior for JSON arrays and ISO timestamp strings.
-- Fixed validation portability after Nova exposed that HanaAgent sandbox cannot start `pwsh.exe`; PowerShell and Node validation now both check the actual agent registry.
+- Fixed validation portability after agent sandbox testing showed that `pwsh.exe` may be unavailable; PowerShell and Node validation now both check the actual agent registry.
 
 ### Validation
 

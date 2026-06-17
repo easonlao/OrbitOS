@@ -27,11 +27,7 @@ git clone https://github.com/easonlao/OrbitOS.git
 
 2. Open the cloned `OrbitOS` folder as a vault in Obsidian.
 3. Put anything you want OrbitOS to handle into `01-收件箱/`.
-4. Ask an agent to start from the workspace entry:
-
-```text
-Read AGENTS.md, run Startup Sync, and tell me the current OrbitOS state.
-```
+4. If you want an agent to connect, have it start from `AGENTS.md`; the execution rules live there, not in README.
 
 Your main daily view is:
 
@@ -56,23 +52,23 @@ drop material into 01-收件箱/
   -> confirmed material becomes project, knowledge, resource, or output
 ```
 
-Raw input stays low-friction. Agents can triage, summarize, and propose routes, but confirmed long-term knowledge or formal artifacts still require user review.
+`01-收件箱/` is the temporary intake area: you can drop text, links, image notes, or old material there first. Agents may triage, summarize, group, and suggest where the material should go; they must not turn it into confirmed knowledge cards, project artifacts, or publishable outputs without your confirmation.
 
 ## Repository Layout
 
 ```text
-AGENTS.md              # Agent usage entry
-README.md              # GitHub-facing project guide
-README.zh-CN.md        # Chinese project guide
-00-系统/               # Human-readable runtime rules and system docs
-01-收件箱/             # Low-friction raw input
-02-时间线/             # Human dashboard and expanded status views
-03-项目/               # Project boundary layer
-04-知识/               # Confirmed reusable knowledge
-05-资源/               # Processed references and attachments
-06-输出/               # Markdown outputs produced in Obsidian
-99-归档/               # Archived inactive objects
-.orbitos/              # Runtime layer: schemas, logs, queues, workflows, rules, design docs
+AGENTS.md              # Rules an agent must read before using OrbitOS
+README.md              # English getting-started guide
+README.zh-CN.md        # Chinese getting-started guide
+00-系统/               # User-facing system manual
+01-收件箱/             # Temporary intake for raw material
+02-时间线/             # Today, this week, pending confirmations, and next steps
+03-项目/               # Project folders, notes, and status
+04-知识/               # Confirmed knowledge worth keeping long term
+05-资源/               # References, attachments, and source material copies
+06-输出/               # Finished Markdown outputs such as articles or reports
+99-归档/               # Inactive material you want to keep
+.orbitos/              # Internal files for agents and scripts; usually not opened by users
 ```
 
 ## User Manual
@@ -85,76 +81,35 @@ The `00-系统/` folder is the user-facing manual for OrbitOS:
 - [Data Lifecycle](00-%E7%B3%BB%E7%BB%9F/DATA-LIFECYCLE.md): how data moves through the system
 - [Changelog](00-%E7%B3%BB%E7%BB%9F/CHANGELOG.md): system updates
 
-## For Agents
+## Working With Agents
 
-Every agent should start with:
+README only explains how you use OrbitOS as a user. The only execution entry for agents is `AGENTS.md`.
 
-```text
-Read AGENTS.md and run Startup Sync.
-```
+You only need to know three things:
 
-When connecting a new agent for the first time, use this fuller prompt:
+- A new agent should read `AGENTS.md` first.
+- An unregistered agent must ask you to confirm its identity and deployment details before writing to the system.
+- After work is done, you can say "同步", "同步进度", or "更新进度" to have the agent refresh the timeline and status according to `AGENTS.md`.
 
-```text
-You are now connecting to OrbitOS. Read AGENTS.md first and run Startup Sync.
-If you are not registered yet, do not write any files. Tell me which agent_id, deployment location, LAN IP, access method, and OrbitOS path I need to confirm.
-After I confirm them, register through the agent-onboarding workflow.
-```
+## Changing OrbitOS Itself
 
-The important boundary is: a new agent starts read-only; if it is not registered, it stops and asks for identity and deployment details; only after user confirmation may it write the registry and Agent Profile.
+Daily use does not require opening `.orbitos/`.
 
-When work is complete, or when the user says "同步", "同步进度", or "更新进度", run Progress Sync:
-
-```text
-Create a valid event, run Validate Sync, refresh relevant timeline/project views, and record candidates that need review.
-```
-
-Agents modifying OrbitOS internals must also read:
+Only enter the internal development layer when changing OrbitOS rules, workflows, schemas, directory protocol, or release process. Start here:
 
 - [`.orbitos/AGENTS.md`](.orbitos/AGENTS.md)
 
-## For Developers
-
-Internal implementation records are in `.orbitos/`.
-
-Start here only if you are modifying OrbitOS itself:
-
-- `.orbitos/AGENTS.md`
-- `.orbitos/docs/REQUIREMENTS.md`
-- `.orbitos/docs/ARCHITECTURE.md`
-- `.orbitos/docs/DESIGN.md`
-- `.orbitos/workflows/agent-onboarding.md`
-- `.orbitos/rules/core/git-management.md`
-- `.orbitos/rules/core/markdown-writing.md`
-
-Design records live in `.orbitos/docs/`. Stable execution rules live in `.orbitos/rules/core/`.
-
-The current runtime baseline includes strict schemas, workflows, event logs, queues, lifecycle state, and validation evals.
-
 Run the validation eval set with:
 
-```powershell
-pwsh -ExecutionPolicy Bypass -File .orbitos/scripts/run-validation.ps1
+```bash
+python .orbitos/scripts/run-validation.py
 ```
 
-If an agent sandbox cannot start PowerShell, use the Node.js fallback:
+If Python is not available, use the Node.js fallback:
 
-```powershell
+```bash
 node .orbitos/scripts/run-validation.mjs
 ```
-
-## Roadmap
-
-- Run one `01-收件箱/` inbox triage dry run with Nova and validate its knowledge-manager role and the inbox loop.
-- Trigger Experience Capture with one real pitfall and validate the profile -> Rule Evolution input loop.
-- Add role cards and thinking mode libraries after the logging and lifecycle loop is proven.
-- Clarify Hindsight Bridge rules after OrbitOS core workflow stabilizes.
-
-## Status
-
-OrbitOS is in early scaffold stage with a working system baseline. The repository contains the workspace structure, user manual, timeline dashboard, Agent Profile baseline, strict schemas, validation workflow, inbox triage workflow, event log convention, and a minimal validation eval set.
-
-The next milestone is connecting one real agent end to end, then testing the loop on real inbox content.
 
 ## License
 

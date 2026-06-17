@@ -106,7 +106,7 @@ When visible Markdown mentions a specific existing human-facing Markdown file th
 
 Examples:
 
-- `[[../01-收件箱/20260615_Hermes技能更新前PR提醒|Hermes 技能更新前 PR 提醒]]`
+- `[[../01-收件箱/示例资料|示例资料]]`
 - `[[../04-知识/01-本地运维/WSL2 安装与自定义位置迁移指引|WSL2 安装与自定义位置迁移指引]]`
 
 Use plain code paths for internal files, including:

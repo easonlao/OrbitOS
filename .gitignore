@@ -1,7 +1,3 @@
-# Local app state
-.obsidian/
-.claude/
-.codex/
 
 # OrbitOS runtime state
 .orbitos/cache/
@@ -27,6 +23,7 @@
 # User content and local workspace data
 01-收件箱/**
 !01-收件箱/.gitkeep
+!01-收件箱/粘贴.md
 02-时间线/归档/**
 !02-时间线/归档/.gitkeep
 03-项目/**
@@ -43,9 +40,4 @@
 !06-输出/.gitkeep
 99-归档/**
 !99-归档/.gitkeep
-OH-Works/
-jian.md
 
-# OS noise
-.DS_Store
-Thumbs.db

@@ -3,14 +3,14 @@
   "updated": "2026-06-12",
   "agents": [
     {
-      "agent_id": "codex",
+      "agent_id": "sample-agent",
       "deployment": {
-        "location": "Eason Windows desktop",
+        "location": "Sample workstation",
         "access": "local filesystem",
-        "orbitos_path": "E:\\SynologyDrive\\OrbitOS",
-        "notes": "Local Codex desktop session."
+        "orbitos_path": "/path/to/OrbitOS",
+        "notes": "Sample local agent session."
       },
-      "profile_ref": "00-系统/agents/codex.md",
+      "profile_ref": "00-系统/agents/sample-agent.md",
       "last_seen": "2026-06-12",
       "notes": null
     }

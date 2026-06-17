@@ -4,7 +4,7 @@ area: project
 purpose: map
 lifecycle: active
 created: 2026-06-11
-updated: 2026-06-14
+updated: 2026-06-17
 tags:
   - orbitos
   - project
@@ -14,12 +14,7 @@ tags:
 
 ## 当前项目
 
-- [[OrbitOS/README|OrbitOS]]：OrbitOS 自身的重构、验证和迭代。
-  - [[OrbitOS/STATUS|STATUS]]：项目当前状态源。
-  - [[OrbitOS/main/ROADMAP|ROADMAP]]：阶段路线图。
-  - [[OrbitOS/main/WORKFLOW-DECOUPLING-REVIEW|Workflow 解耦审查]]：核心 workflow 触发边界审查。
-  - [[OrbitOS/main/MINIMAL-KERNEL-INGEST-AUDIT|最小内核：收件箱入库与自检审核]]：最小内核设计记录。
-  - [[OrbitOS/main/HINDSIGHT-BRIDGE-REVIEW|Hindsight Bridge 审查]]：Hindsight recall / retain / bank / MCP 接入审查。
+- 暂无。
 
 ## 项目区约定
 

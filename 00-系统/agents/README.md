@@ -4,7 +4,7 @@ area: system
 purpose: status
 lifecycle: active
 created: 2026-06-12
-updated: 2026-06-14
+updated: 2026-06-17
 tags:
   - orbitos
   - agents
@@ -14,25 +14,17 @@ tags:
 
 这里只看当前已接入 agents 的状态入口。详细经验、踩坑和待确认来源进入各自档案。
 
+当前仓库是发布模板，不预置任何真实 agent。第一次使用时，请让 agent 先执行 Startup Sync；如果它不在 registry 中，必须先向你确认 `agent_id`、部署位置、局域网 IP、接入方式和 OrbitOS 路径，再按 agent-onboarding workflow 注册。
+
 ## 当前 Agents
 
-| Agent | 定位 | 部署位置 | 局域网 IP | OrbitOS 路径 | 当前注意 |
-|---|---|---|---|---|---|
-| [[codex]] | 架构审查、规则/workflow/schema、Git 边界 | Windows desktop / Codex desktop | `10.10.10.70` | `E:\SynologyDrive\OrbitOS` | 当前主要维护 OrbitOS 内核与验证脚本 |
-| [[nova]] | 知识管家、笔记整理、收件箱盘点 | Windows desktop / HanaAgent sandbox | `10.10.10.70` | `E:\SynologyDrive\OrbitOS` | `pwsh` 可能不可用；validation 优先 Python/Node |
-| [[hermes]] | 24 小时在线 agent、Ubuntu 映射环境、定时任务 | Ubuntu host / Hermes runtime | `10.10.10.33` | `/home/lyx/orbitos` | PowerShell 不可用；已创建 validation watchdog |
+- 暂无。请通过 agent-onboarding workflow 注册第一个 agent。
 
 ## 当前运行状态
 
-- 已注册 agents：Codex、Nova、Hermes。
-- Hermes validation watchdog：
-  - 任务 ID：`305ca17e29ad`
-  - 频率：每 60 分钟
-  - workdir：`/home/lyx/orbitos`
-  - 行为：成功静默，失败通知
-  - 2026-06-15 需要确认周期运行稳定性。
-- Nova 的 2026-06-13 收件箱 dry run 已识别 6 个主题簇、57 个文件，等待用户确认后才迁移。
-- Codex 当前负责 OrbitOS 架构、规则和系统脚本收口。
+- `.orbitos/agents/registry.yaml` 当前为空。
+- 第一个 agent 注册后，应在这里追加对应入口，并链接到 `00-系统/agents/{agent_id}.md`。
+- 运行时环境差异、定时任务和踩坑只记录到你自己的 runtime，不作为发布模板预置内容。
 
 ## 使用规则
 

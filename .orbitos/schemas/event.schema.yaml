@@ -47,7 +47,7 @@
         },
         "name": {
           "type": "string",
-          "description": "执行者显示名，例如 eason、codex、hanaAgent、hermes。"
+          "description": "执行者显示名，例如 user、agent-name、hanaAgent、claude-code。"
         },
         "agent_id": {
           "type": [

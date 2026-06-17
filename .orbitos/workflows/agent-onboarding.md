@@ -4,7 +4,7 @@ area: internal
 purpose: workflow
 lifecycle: active
 created: 2026-06-13
-updated: 2026-06-13
+updated: 2026-06-17
 tags:
   - orbitos
   - workflow
@@ -58,10 +58,73 @@ Agent Onboarding 用于把一个真实 agent 接入 OrbitOS。
    - 规则候选
    - Learned Rule 使用记录
 7. 运行 validation eval：
-   - 优先：`pwsh -ExecutionPolicy Bypass -File .orbitos/scripts/run-validation.ps1`
+   - 优先：`python .orbitos/scripts/run-validation.py`
    - fallback：`node .orbitos/scripts/run-validation.mjs`
-   - 两者都不可用时，才允许手动校验，并在 event checklist 中标记 `skipped`。
-8. 执行 Progress Sync，写入 event，并刷新 `今日.md` 的 Agents 状态。
+   - Windows 本地也可使用 PowerShell wrapper：`pwsh -ExecutionPolicy Bypass -File .orbitos/scripts/run-validation.ps1`
+   - 三者都不可用时，才允许手动校验，并在 event checklist 中标记 `skipped`。
+8. 执行 Progress Sync，写入 event，并刷新 `今日.md` 的 Agents 状态和 `00-系统/agents/README.md`。
+
+## Agent Profile 模板
+
+新建 `00-系统/agents/{agent_id}.md` 时使用以下结构：
+
+```markdown
+---
+title: {display_name} Agent 档案
+area: system
+purpose: status
+lifecycle: active
+created: YYYY-MM-DD
+updated: YYYY-MM-DD
+tags:
+  - orbitos
+  - agent
+  - {agent_id}
+---
+
+# {display_name} Agent 档案
+
+## 基本信息
+
+| 字段 | 内容 |
+|---|---|
+| agent_id | `{agent_id}` |
+| 显示名 | {display_name} |
+
+## 部署信息
+
+| 字段 | 内容 |
+|---|---|
+| deployment.location | {deployment.location} |
+| deployment.lan_ip | `{deployment.lan_ip}` |
+| deployment.access | {deployment.access} |
+| deployment.orbitos_path | `{deployment.orbitos_path}` |
+| notes | {deployment.notes} |
+
+## 最近工作
+
+- 暂无。
+
+## 待确认来源
+
+- 暂无。
+
+## 经验记录
+
+- 暂无。
+
+## 踩坑
+
+- 暂无。
+
+## 规则候选
+
+- 暂无。
+
+## Learned Rule 使用记录
+
+- 暂无。
+```
 
 ## 用户提示词
 
@@ -91,9 +154,10 @@ Agent Onboarding 用于把一个真实 agent 接入 OrbitOS。
 
 ### 退出检查
 
-- [ ] 已运行 validation eval；如 sandbox 阻止脚本执行，已尝试 Node fallback 或记录手动校验范围。
+- [ ] 已运行 validation eval；如 Python 不可用，已尝试 Node fallback 或 PowerShell wrapper，并记录手动校验范围。
 - [ ] 已执行 Progress Sync 并写入 event。
 - [ ] 已刷新 `今日.md` 的 Agents 状态。
+- [ ] 已刷新 `00-系统/agents/README.md`。
 - [ ] 已给用户一段可复用的新 agent 接入提示词。
 
 ## 禁止

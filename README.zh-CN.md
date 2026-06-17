@@ -27,11 +27,7 @@ git clone https://github.com/easonlao/OrbitOS.git
 
 2. 在 Obsidian 里把克隆下来的 `OrbitOS` 文件夹打开为一个 vault。
 3. 把你想丢进系统的东西复制到 `01-收件箱/`。
-4. 和 agent 聊天，让它从入口开始：
-
-```text
-请读取 AGENTS.md，执行 Startup Sync，然后告诉我当前 OrbitOS 状态。
-```
+4. 如果要让 agent 接入，让它从 `AGENTS.md` 开始；具体执行规则都在 `AGENTS.md`，不是 README。
 
 你每天主要看：
 
@@ -56,23 +52,23 @@ OrbitOS 的用户路径应该尽量短：
   -> 确认后的内容进入项目、知识、资源或输出
 ```
 
-收件箱保持低摩擦。agent 可以盘点、摘要、提出去向建议，但长期知识和正式产物必须经过确认。
+`01-收件箱/` 是临时入口：你可以先随手放文字、链接、截图说明或旧资料。agent 可以帮你盘点、摘要、分组，并建议放到哪里；但不能未经你确认就把这些内容变成正式知识卡片、项目产物或发布内容。
 
 ## 仓库结构
 
 ```text
-AGENTS.md              # agent 使用入口
-README.md              # GitHub 英文项目说明
-README.zh-CN.md        # GitHub 中文项目说明
-00-系统/               # 人读的运行规则和系统说明
-01-收件箱/             # 低摩擦原始输入
-02-时间线/             # 用户 Dashboard 和展开状态视图
-03-项目/               # 项目边界层
-04-知识/               # 已确认、可复用的知识
-05-资源/               # 已处理的参考资料和附件
-06-输出/               # Obsidian 内产出的 Markdown 成品
-99-归档/               # 退出当前使用的对象
-.orbitos/              # 运行时层：schema、日志、队列、workflow、rules、设计文档
+AGENTS.md              # agent 进入系统时必须读取的规则入口
+README.md              # 英文上手说明
+README.zh-CN.md        # 中文上手说明
+00-系统/               # 给用户看的系统说明书
+01-收件箱/             # 临时入口，先放原始材料
+02-时间线/             # 今天、本周、待确认和下一步
+03-项目/               # 每个项目自己的资料和状态
+04-知识/               # 已确认、值得长期保留的知识
+05-资源/               # 参考资料、附件和原始材料副本
+06-输出/               # 写好的文章、报告或其他 Markdown 成品
+99-归档/               # 暂时不用但不想删除的内容
+.orbitos/              # agent 和脚本使用的内部文件，普通使用时不用打开
 ```
 
 ## 系统说明书
@@ -85,76 +81,35 @@ README.zh-CN.md        # GitHub 中文项目说明
 - [[00-系统/DATA-LIFECYCLE|数据生命周期]]：内容从进入系统到确认、处理、归档如何流转
 - [[00-系统/CHANGELOG|系统变更记录]]：系统最近更新了什么
 
-## 给 agent 使用
+## Agent 协作
 
-每个 agent 都应该从这句话开始：
+README 只说明你作为用户怎么使用 OrbitOS。agent 的唯一执行入口是 `AGENTS.md`。
 
-```text
-读取 AGENTS.md 并执行 Startup Sync。
-```
+你只需要知道三件事：
 
-第一次接入一个新 agent 时，用这段更完整的提示：
+- 新 agent 第一次接入时，应该先读 `AGENTS.md`。
+- 未注册的 agent 需要先向你确认身份和部署信息，不能直接写入系统。
+- 工作完成后，你可以说“同步”“同步进度”或“更新进度”，让 agent 按 `AGENTS.md` 刷新时间线和状态。
 
-```text
-你现在接入 OrbitOS。请先阅读 AGENTS.md，执行 Startup Sync。
-如果你还没有注册，不要写入任何文件；请先告诉我需要确认的 agent_id、部署位置、局域网 IP、接入方式和 OrbitOS 路径。
-我确认后，再按 agent-onboarding workflow 注册。
-```
+## 修改 OrbitOS 本身
 
-这个流程的重点是：新 agent 先只读同步；如果它还没注册，就停下来让你确认身份和部署信息；确认后才允许写入 registry 和 Agent Profile。
+日常使用不需要打开 `.orbitos/`。
 
-当工作完成，或用户说“同步”“同步进度”“更新进度”时，执行 Progress Sync：
-
-```text
-生成合法 event，执行 Validate Sync，刷新相关时间线/项目视图，并记录需要 review 的候选事项。
-```
-
-如果 agent 要修改 OrbitOS 内核，还必须读取：
+只有当你要修改 OrbitOS 的规则、workflow、schema、目录协议或发布流程时，才需要进入内部开发层。入口是：
 
 - [`.orbitos/AGENTS.md`](.orbitos/AGENTS.md)
 
-## 二次开发
-
-`.orbitos/` 是内部实现层。只有在你要修改 OrbitOS 内核、schema、workflow、日志、队列或设计文档时，才需要看这里。
-
-二次开发入口：
-
-- `.orbitos/AGENTS.md`
-- `.orbitos/docs/REQUIREMENTS.md`
-- `.orbitos/docs/ARCHITECTURE.md`
-- `.orbitos/docs/DESIGN.md`
-- `.orbitos/workflows/agent-onboarding.md`
-- `.orbitos/rules/core/git-management.md`
-- `.orbitos/rules/core/markdown-writing.md`
-
-设计记录放在 `.orbitos/docs/`。稳定执行规则放在 `.orbitos/rules/core/`。
-
-当前内部基线包括 strict schema、workflow、event log、queue、lifecycle state 和 validation eval。
-
 运行最小验证集：
 
-```powershell
-pwsh -ExecutionPolicy Bypass -File .orbitos/scripts/run-validation.ps1
+```bash
+python .orbitos/scripts/run-validation.py
 ```
 
-如果 agent 环境无法启动 PowerShell，可使用 Node.js fallback：
+如果 Python 不可用，可使用 Node.js fallback：
 
-```powershell
+```bash
 node .orbitos/scripts/run-validation.mjs
 ```
-
-## 路线图
-
-- 用 Nova 执行一次 `01-收件箱/` inbox triage dry run，验证知识管家定位和收件箱闭环。
-- 用一次真实踩坑触发 Experience Capture，验证 agent profile 到 Rule Evolution 的输入链路。
-- 日志和生命周期闭环跑通后，再添加 role card 和 thinking mode library。
-- 在 OrbitOS 核心 workflow 稳定后，再细化 Hindsight Bridge 规则。
-
-## 状态
-
-OrbitOS 处于早期骨架阶段，但已经有可运行的系统基线。当前仓库包含工作区结构、系统说明书、时间线 Dashboard、Agent Profile、严格 schema、校验 workflow、收件箱盘点 workflow、event log 约定和最小 eval。
-
-下一阶段目标是接入一个真实 agent 跑通端到端流程，再用真实收件箱内容测试整理闭环。
 
 ## 许可证
 
