@@ -64,6 +64,7 @@ For human-facing Markdown:
 - Use stable names that can be linked from Obsidian.
 - Keep fixed navigation and state files uppercase when already established: `MAP.md`, `README.md`, `STATUS.md`, `ROADMAP.md`.
 - Avoid date prefixes unless the note is inherently time-based.
+- Fixed entry files may use a numeric prefix when their reading position must remain stable, such as `01-收件箱/00-粘贴.md`.
 
 Examples:
 
@@ -108,6 +109,7 @@ Rules:
 - The number expresses stable reading order, not creation time.
 - Do not renumber existing stable subdirectories unless the user confirms a migration.
 - Temporary raw imports may keep their original names until triage or ingest.
+- Numeric prefixes for fixed entry files do not authorize renaming user-provided raw inputs.
 - Project directories under `03-项目/` use the project name as the stable identifier and do not need numeric prefixes.
 - Fixed system areas and external tool folders do not need numeric prefixes unless they become user-facing reading categories.
 - System-specific fixed names such as `README.md`, `STATUS.md`, `MAP.md`, and project code folders follow their local convention.

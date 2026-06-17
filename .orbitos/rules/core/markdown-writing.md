@@ -34,7 +34,7 @@ tags:
 Exceptions:
 
 - `README.md` and `README.zh-CN.md` are GitHub-facing project pages and do not require frontmatter.
-- `01-收件箱/粘贴.md` is a free input entry and does not require frontmatter.
+- `01-收件箱/00-粘贴.md` is a free input entry and does not require frontmatter.
 
 ## Fields
 

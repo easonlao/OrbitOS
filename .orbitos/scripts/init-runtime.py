@@ -34,7 +34,7 @@ def main():
 
     results.append(
         write_if_missing(
-            "01-收件箱/粘贴.md",
+            "01-收件箱/00-粘贴.md",
             "# 粘贴\n\n把临时想丢进 OrbitOS 的文字、链接、摘录或待整理材料贴在这里。\n\n这里不要求 frontmatter。agent 处理时应保留原始输入，不直接把内容改写成知识卡片；确认后的处理结果再进入对应区域。\n",
         )
     )
