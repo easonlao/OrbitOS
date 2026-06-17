@@ -95,6 +95,9 @@ This release establishes the workspace skeleton, user onboarding README, Dashboa
   - `.orbitos/rules/core/versioning.md`
 - Added MIT `LICENSE`.
 - Added `README.zh-CN.md`.
+- Added `.orbitos/scripts/write_event.py` to compile minimal task results into schema-compatible events instead of requiring agents to hand-write YAML.
+- Added validation coverage for the event writer and JSON-compatible runtime event records.
+- Added `.orbitos/tests/test_runtime.py` as the pre-commit/push integration gate for initialization, mutable data protection, event writing, and validation failure detection.
 
 ### Changed
 
@@ -118,6 +121,7 @@ This release establishes the workspace skeleton, user onboarding README, Dashboa
 - Removed validation status and next-step planning from `00-系统/07-系统变更.md`; those belong in Dashboard or internal release history.
 - Rewrote `00-系统/03-内容生命周期.md` as a user-facing Obsidian folder-flow guide instead of an internal terminology page.
 - Moved agent-authored Markdown constraints to `.orbitos/rules/core/markdown-writing.md` because they are execution rules rather than user-facing system understanding or design notes.
+- Simplified Progress Sync into result compilation, validation, and minimal human-view projection; ordinary conversation no longer needs structured markers or a task state machine.
 
 ### Fixed
 

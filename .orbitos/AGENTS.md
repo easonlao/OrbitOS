@@ -31,8 +31,9 @@
 10. 修改 OrbitOS 内核文件时，执行 `.orbitos/workflows/core-change.md`，并按 `.orbitos/schemas/core-change.schema.yaml` 校验。
 11. 准备版本、changelog、commit 或 release 时，先读 `.orbitos/rules/core/versioning.md`。
 12. 修改 Git 跟踪规则或创建新的生成内容区域时，先读 `.orbitos/rules/core/git-management.md`。
-13. 根 `AGENTS.md` 必须让新进入的 agent 可以直接行动：包含启动步骤、任务路由、停止条件和同步要求。
-14. 根 `AGENTS.md` 不得变成长篇设计文档；详细行为放进链接到的 workflow 和 rule。
+13. 内核变更在 commit/push 前必须通过 `python .orbitos/tests/test_runtime.py`。
+14. 根 `AGENTS.md` 必须让新进入的 agent 可以直接行动：包含启动步骤、任务路由、停止条件和同步要求。
+15. 根 `AGENTS.md` 不得变成长篇设计文档；详细行为放进链接到的 workflow 和 rule。
 
 ## 设计文档
 
@@ -62,7 +63,7 @@
 - `.orbitos/workflows/core-change.md`：修改 OrbitOS 内核文件时必须执行
 - `.orbitos/workflows/startup-sync.md`：只读启动同步与未知 agent 拦截
 - `.orbitos/workflows/agent-onboarding.md`：注册已确认新 agent
-- `.orbitos/workflows/progress-sync.md`：实质性工作完成后的收尾同步
+- `.orbitos/workflows/progress-sync.md`：把实质性工作编译成最小完成凭证并刷新必要视图
 - `.orbitos/workflows/inbox-ingest.md`：将已确认收件箱输入移入已入库区
 - `.orbitos/workflows/knowledge-draft.md`：将已入库输入转写为人读知识草稿
 - `.orbitos/workflows/vault-audit.md`：审核收件箱入库内核
@@ -76,7 +77,7 @@
 1. 明确需求。
 2. 检查现有设计文档和规则。
 3. 进行范围受控的修改。
-4. 写入 event。
+4. 使用 `.orbitos/scripts/write_event.py` 生成 event。
 5. 按需更新人读视图。
 6. 版本或 release 内容变化时，更新 `.orbitos/CHANGELOG.md` 的完整版本历史。
 7. `00-系统/07-系统变更.md` 只展示当前 release 摘要。

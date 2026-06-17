@@ -147,17 +147,25 @@ When preparing a release:
 pwsh -ExecutionPolicy Bypass -File .orbitos/scripts/run-validation.ps1
 ```
 
-7. Update `.orbitos/CHANGELOG.md` with full release notes.
-8. Update `00-系统/07-系统变更.md` with only the current release summary.
-9. Write a release event under `.orbitos/logs/events/`.
-10. Commit with a release commit message.
-11. Create a git tag:
+7. Run the Runtime integration test:
+
+```bash
+python .orbitos/tests/test_runtime.py
+```
+
+Validation and the Runtime integration test must both pass before commit or push.
+
+8. Update `.orbitos/CHANGELOG.md` with full release notes.
+9. Update `00-系统/07-系统变更.md` with only the current release summary.
+10. Write a release event under `.orbitos/logs/events/`.
+11. Commit with a release commit message.
+12. Create a git tag:
 
 ```bash
 git tag vX.Y.Z
 ```
 
-12. Push commit and tag:
+13. Push commit and tag:
 
 ```bash
 git push
@@ -207,5 +215,6 @@ Agents preparing version or release changes must:
 - update `.orbitos/CHANGELOG.md`
 - update `00-系统/07-系统变更.md`
 - write an event log
+- run `.orbitos/tests/test_runtime.py` and stop if it fails
 - not create git commits or tags unless the user explicitly asks
 

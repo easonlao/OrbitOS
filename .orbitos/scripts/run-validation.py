@@ -1,5 +1,6 @@
 import json
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -230,6 +231,29 @@ print_case("actual.event-filenames", True, event_filename_errors)
 
 
 case_count += 1
+event_record_errors = []
+for event_path in sorted(events_root.glob("*.yaml")):
+    content = event_path.read_text(encoding="utf-8").lstrip()
+    if not content.startswith("{"):
+        continue
+    try:
+        event_data = json.loads(content)
+        validate_value(
+            event_data,
+            SCHEMAS["event"],
+            f"$[{event_path.name}]",
+            event_record_errors,
+        )
+    except json.JSONDecodeError as error:
+        add_error(
+            event_record_errors,
+            f".orbitos/logs/events/{event_path.name}",
+            f"invalid JSON-compatible event: {error}",
+        )
+print_case("actual.event-records", True, event_record_errors)
+
+
+case_count += 1
 root_directory_errors = []
 expected_root_dirs = [
     "00-系统",
@@ -351,6 +375,39 @@ if ingested_dir.exists():
                 "ingested file is missing an ingest batch record",
             )
 print_case("actual.ingest-batches", True, ingest_errors)
+
+
+case_count += 1
+event_writer_errors = []
+writer_path = ROOT / ".orbitos/scripts/write_event.py"
+if not writer_path.is_file():
+    add_error(event_writer_errors, ".orbitos/scripts/write_event.py", "event writer is missing")
+else:
+    command = [
+        sys.executable,
+        str(writer_path),
+        "--agent-id",
+        "codex",
+        "--slug",
+        "validation_probe",
+        "--summary",
+        "Validate the generated completion receipt.",
+        "--reason",
+        "Ensure the event writer still matches event.schema.yaml.",
+        "--validation",
+        "passed",
+        "--dry-run",
+    ]
+    result = subprocess.run(command, capture_output=True, text=True, encoding="utf-8")
+    if result.returncode != 0:
+        add_error(event_writer_errors, ".orbitos/scripts/write_event.py", result.stderr.strip())
+    else:
+        try:
+            generated_event = json.loads(result.stdout)
+            validate_value(generated_event, SCHEMAS["event"], "$", event_writer_errors)
+        except json.JSONDecodeError as error:
+            add_error(event_writer_errors, ".orbitos/scripts/write_event.py", f"invalid JSON output: {error}")
+print_case("actual.event-writer", True, event_writer_errors)
 
 
 if failure_count > 0:

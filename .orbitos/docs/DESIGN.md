@@ -114,6 +114,16 @@ Event 只记录操作事实：
 
 Event 不保存完整推理，不代替原始内容，也不代替 active knowledge。
 
+Event 默认由 `.orbitos/scripts/write_event.py` 生成。Agent 只提交：
+
+- `agent_id`、短英文 `slug`。
+- 一句话摘要和执行原因。
+- 发生变更的文件。
+- validation 与 experience check 结果。
+- 如有需要，待确认事项。
+
+脚本负责生成时间、event ID、actor、默认 checklist 和稳定结构。输出使用 JSON-compatible YAML，既可由现有工具读取，也避免 agent 手写 YAML 时出现缩进、字段和命名漂移。
+
 ## 7. Hindsight 设计
 
 - Hindsight 是可选长期记忆投影。
@@ -137,7 +147,15 @@ Event 不保存完整推理，不代替原始内容，也不代替 active knowle
 - 旧 OrbitOS Skills 已归档，不得作为当前设计依据。
 - Role、Thinking Mode 和 Skills 属于不同资产，未来分别设计，不能混为同一对象。
 
-## 10. MAP、STATUS 与 Frontmatter
+## 10. 测试分层
+
+- `.orbitos/evals/`：验证 schema、规则和反例等局部契约。
+- `run-validation.py`：检查当前 Runtime 的目录、对象和链接边界。
+- `.orbitos/tests/test_runtime.py`：在系统临时目录验证初始化幂等、用户内容保护、event 写入、失败拦截和 Python/Node 校验。
+
+内核变更必须通过 Runtime 集成测试后才能 commit 或 push。
+
+## 11. MAP、STATUS 与 Frontmatter
 
 - `MAP.md` 只做导航，不写状态。
 - `STATUS.md` 只写当前状态，不写完整历史。

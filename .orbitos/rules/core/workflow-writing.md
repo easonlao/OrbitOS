@@ -72,6 +72,8 @@ Record it in the event checklist as:
 
 Checklist results belong in event logs, not in full inside `今日.md`.
 
+Progress Sync event 应优先由 `.orbitos/scripts/write_event.py` 生成。Workflow 不应要求 agent 重复填写可由脚本确定的时间、ID、actor 和默认 checklist。
+
 `今日.md` only projects:
 
 - `failed`

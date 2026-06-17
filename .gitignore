@@ -4,6 +4,8 @@
 .obsidianignore
 .claude/
 .codex/
+__pycache__/
+*.pyc
 
 # OrbitOS runtime state
 .orbitos/cache/

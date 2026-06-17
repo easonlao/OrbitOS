@@ -138,6 +138,8 @@ Event `id` and event filename are different:
 - `id`: `evt_YYYYMMDD_HHMMSS_{agent_id}_{slug}`
 - filename: `YYYYMMDD_HHMMSS_{slug}.yaml`
 
+新 event 应由 `.orbitos/scripts/write_event.py` 生成。脚本输出 JSON-compatible YAML，避免手写结构和命名漂移。
+
 The filename is for time sorting and file lookup. The `id` is for `related_events`.
 
 ## Raw Inputs

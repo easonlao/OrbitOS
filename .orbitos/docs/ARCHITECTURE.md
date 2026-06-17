@@ -67,7 +67,21 @@ Obsidian 是四个平面的用户界面，不是另一套事实源。
 
 时间线是聚合视图，不是操作事实账本；项目 STATUS 是项目当前状态源，不是历史日志。
 
-## 4. 核心数据流
+## 4. 双通道编译
+
+OrbitOS 不要求用户与 agent 的自然对话本身结构化。结构只在结果需要持久化时出现。
+
+### 4.1 普通工作通道
+
+```text
+自然对话 -> 直接工作 -> 最小完成凭证 -> Validation -> 必要的人读投影
+```
+
+- agent 可以使用适合当前任务的方法工作。
+- 实质性工作结束时，脚本把少量结果字段编译成 event。
+- Validation 检查持久化结果，不审查或保存完整思考过程。
+
+### 4.2 内容编译通道
 
 ```text
 原始输入
@@ -92,13 +106,13 @@ Obsidian 是四个平面的用户界面，不是另一套事实源。
 ## 5. Agent 生命周期
 
 ```text
-Startup Sync -> Task Workflow -> Validation -> Progress Sync
+Startup Sync -> Natural Work -> Result Compilation -> Validation
 ```
 
 - Startup Sync 只读取状态，不推进任务。
-- Task Workflow 完成领域动作。
-- Validation 检查机器对象和关键结构。
-- Progress Sync 写 event，并刷新必要的人读视图。
+- Natural Work 不要求固定话术或完整状态机。
+- Result Compilation 通过 Progress Sync 把结果编译成最小 event，并刷新必要的人读视图。
+- Validation 是完成门，只检查文件、对象和边界是否稳定。
 
 Experience Capture、Rule Evolution 和 Hindsight Bridge 都是条件触发扩展，不是每次任务必须完整执行的串行管线。
 

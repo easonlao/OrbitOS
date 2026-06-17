@@ -112,11 +112,11 @@ Startup Sync 只同步状态，不推进任务，不做决策。
 
 Progress Sync 必须：
 
-1. 至少在 `.orbitos/logs/events/` 写入一条 event。
+1. 使用 `python .orbitos/scripts/write_event.py` 生成最小完成凭证；不要手写完整 event YAML。
 2. 刷新相关人读视图，例如 `02-时间线/今日.md`、`待确认.md`、`下一步.md`。
 3. 如果项目状态发生变化，更新项目 `STATUS.md`。
 4. 对长期影响候选事项做记录，不静默提升为正式规则。
-5. 在 event checklist 中记录任务边界自检：是否只改了目标范围、是否移动用户内容、是否创建正式产物、validation 是否通过。
+5. 只向写入器提供摘要、原因、变更文件、确认事项、validation 和 experience check；其余稳定字段由脚本生成。
 
 Progress Sync 不会自动写 ADR，不会自动提升规则，不会自动创建知识卡片。
 

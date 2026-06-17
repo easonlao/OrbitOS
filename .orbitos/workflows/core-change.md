@@ -54,6 +54,7 @@ Core Change 约束 OrbitOS 内核内容的编写和修改。
 8. 更新 `00-系统/07-系统变更.md`。
 9. 如果影响当前状态，刷新 `02-时间线/今日.md`。
 10. 运行 validation eval。
+11. 运行 `python .orbitos/tests/test_runtime.py`；失败时不得 commit 或 push。
 
 ## 禁止
 

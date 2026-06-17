@@ -197,6 +197,22 @@ if (fs.existsSync(eventsRoot)) {
 printCase("actual.event-filenames", true, eventFilenameErrors);
 
 caseCount += 1;
+const eventRecordErrors = [];
+if (fs.existsSync(eventsRoot)) {
+  for (const name of fs.readdirSync(eventsRoot).filter((item) => item.endsWith(".yaml")).sort()) {
+    const content = fs.readFileSync(path.join(eventsRoot, name), "utf8").trimStart();
+    if (!content.startsWith("{")) continue;
+    try {
+      const eventData = JSON.parse(content);
+      validateValue(eventData, schemas.event, `$[${name}]`, eventRecordErrors);
+    } catch (error) {
+      addError(eventRecordErrors, `.orbitos/logs/events/${name}`, `invalid JSON-compatible event: ${error.message}`);
+    }
+  }
+}
+printCase("actual.event-records", true, eventRecordErrors);
+
+caseCount += 1;
 const systemManualErrors = [];
 const systemDir = path.join(root, "00-系统");
 const requiredSystemManual = [
@@ -256,6 +272,13 @@ if (fs.existsSync(ingestedDir)) {
   }
 }
 printCase("actual.ingest-batches", true, ingestErrors);
+
+caseCount += 1;
+const eventWriterErrors = [];
+if (!fs.existsSync(path.join(root, ".orbitos/scripts/write_event.py"))) {
+  addError(eventWriterErrors, ".orbitos/scripts/write_event.py", "event writer is missing");
+}
+printCase("actual.event-writer.exists", true, eventWriterErrors);
 
 if (failureCount > 0) {
   console.log("");
