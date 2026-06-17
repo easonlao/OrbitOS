@@ -1,6 +1,7 @@
 
 # Local app state
 .obsidian/
+.obsidianignore
 .claude/
 .codex/
 

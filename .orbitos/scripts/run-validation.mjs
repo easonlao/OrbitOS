@@ -171,6 +171,32 @@ for (const file of visibleFiles) {
 printCase("visible-markdown.no-internal-wikilinks", true, visibleErrors);
 
 caseCount += 1;
+const eventFilenameErrors = [];
+const eventsRoot = path.join(root, ".orbitos/logs/events");
+const eventFilenamePattern = /^20[0-9]{6}_[0-9]{6}_[a-z0-9]+(?:_[a-z0-9]+)*\.yaml$/;
+const eventCutoff = "20260615";
+if (fs.existsSync(eventsRoot)) {
+  for (const item of fs.readdirSync(eventsRoot, { withFileTypes: true })) {
+    if (item.isDirectory()) {
+      addError(eventFilenameErrors, `.orbitos/logs/events/${item.name}`, "event directory must stay flat; date subdirectories are not allowed");
+      continue;
+    }
+    if (!item.name.endsWith(".yaml")) continue;
+    const dateText = item.name.slice(0, 8);
+    if (/^[0-9]{8}$/.test(dateText) && dateText >= eventCutoff && !eventFilenamePattern.test(item.name)) {
+      addError(eventFilenameErrors, `.orbitos/logs/events/${item.name}`, "event file name must match YYYYMMDD_HHMMSS_slug.yaml with lowercase snake_case");
+    }
+    if (item.name.startsWith("evt_")) {
+      const embeddedDate = item.name.slice(4, 12);
+      if (/^[0-9]{8}$/.test(embeddedDate) && embeddedDate >= eventCutoff) {
+        addError(eventFilenameErrors, `.orbitos/logs/events/${item.name}`, "event file name must not include evt_ prefix");
+      }
+    }
+  }
+}
+printCase("actual.event-filenames", true, eventFilenameErrors);
+
+caseCount += 1;
 const systemManualErrors = [];
 const systemDir = path.join(root, "00-系统");
 const requiredSystemManual = [

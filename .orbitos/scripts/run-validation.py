@@ -201,7 +201,15 @@ case_count += 1
 event_filename_errors = []
 event_filename_pattern = re.compile(r"^20[0-9]{6}_[0-9]{6}_[a-z0-9]+(?:_[a-z0-9]+)*\.yaml$")
 event_cutoff = "20260615"
-for event_path in sorted((ROOT / ".orbitos/logs/events").glob("*.yaml")):
+events_root = ROOT / ".orbitos/logs/events"
+for child in sorted(events_root.iterdir() if events_root.exists() else []):
+    if child.is_dir():
+        add_error(
+            event_filename_errors,
+            f".orbitos/logs/events/{child.name}",
+            "event directory must stay flat; date subdirectories are not allowed",
+        )
+for event_path in sorted(events_root.glob("*.yaml")):
     name = event_path.name
     date_text = name[:8]
     if date_text.isdigit() and date_text >= event_cutoff and not event_filename_pattern.match(name):
