@@ -2,10 +2,12 @@
 
 Core rules are stable OrbitOS operating constraints.
 
-Agents should read the relevant rule only when the root `AGENTS.md` task router points to it.
+The root `AGENTS.md` routes Agents to the relevant rule only when a task needs it.
 
 Current core rules:
 
+- `project-management.md`: shared project entry, state, roadmap, and product-repository boundaries.
+- `document-semantics.md`: global roles and audience boundaries for fixed-purpose Markdown files.
 - `markdown-writing.md`: visible Obsidian Markdown writing rules.
 - `readme-writing.md`: root README writing rules.
 - `git-management.md`: repository boundary and Git tracking rules.

@@ -23,14 +23,15 @@ It should help a first-time reader understand:
 
 It should not be the main place for internal protocol details, schema definitions, workflow internals, or implementation history.
 
+Agents are not expected to read README as execution context. README may point users to `AGENTS.md`, but all Agent routing and constraints must live in `AGENTS.md`, rules, or workflows.
+
 ## Audience Order
 
 Write for these readers in this order:
 
 1. The user opening OrbitOS in Obsidian.
 2. A person evaluating the GitHub repository.
-3. An agent that needs to know where to start.
-4. A developer extending OrbitOS internals.
+3. A developer extending OrbitOS internals.
 
 Internal implementation details belong in `.orbitos/`.
 

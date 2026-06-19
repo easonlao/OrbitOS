@@ -4,7 +4,7 @@ area: internal
 purpose: rule
 lifecycle: active
 created: 2026-06-14
-updated: 2026-06-14
+updated: 2026-06-20
 tags:
   - orbitos
   - agent-rule
@@ -34,11 +34,13 @@ Before reading or modifying task files:
 
 1. Resolve the target work area from explicit paths, project names, referenced files, or the object named by the user.
 2. Starting at the OrbitOS root, read each `AGENTS.md` that lies on the direct path to the target directory.
-3. For `03-项目/{project}/`, check the project root `AGENTS.md` before `README.md` and `STATUS.md`.
+3. For `03-项目/{project}/`, read the project `AGENTS.md`, then the `STATUS.md` it routes to for current state and tasks.
 4. If the project router points into a product repository or deeper work area, continue the same path-based lookup there.
 5. When the task changes work area, resolve the path again before acting.
 
 Do not scan the entire vault for `AGENTS.md`. A local file applies only to its directory tree, may add or tighten instructions, and cannot weaken root safety or confirmation boundaries.
+
+Do not read README as default Agent context. Read it only when the task concerns the user-facing project introduction, onboarding, or README itself.
 
 Temporary placement:
 
@@ -51,6 +53,7 @@ Temporary placement:
 Stop and ask before:
 
 - moving, deleting, archiving, or batch-renaming user content
+- creating a new visible Markdown file that the user did not explicitly request; first explain its purpose, why existing files cannot carry it, its path, audience, and lifecycle
 - creating any new top-level directory in the OrbitOS root
 - creating knowledge cards, ADRs, formal artifacts, or core rules
 - changing Git tracking boundaries

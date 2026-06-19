@@ -4,7 +4,7 @@ area: internal
 purpose: eval
 lifecycle: active
 created: 2026-06-12
-updated: 2026-06-14
+updated: 2026-06-19
 tags:
   - orbitos
   - eval
@@ -47,6 +47,10 @@ node .orbitos/scripts/run-validation.mjs
 - lifecycle 非法状态跳转必须失败。
 - 合法样例必须通过。
 - 可见 Markdown 不得使用指向 `.orbitos/` 的 Obsidian 双链。
+- 可见 Markdown 的双链目标必须存在；代码块中的示例不参与检查。
+- 可见 Markdown 不得恢复 `.orbit/`、`02-日记/`、`03-知识/` 或 `04-项目/` 等旧路径与旧目录编号。
+- 可见 Markdown 不得把 Hindsight、今日、event 或 active knowledge 描述成违背当前架构边界的角色。
+- 全局文档语义规则必须存在、覆盖固定角色，并由根 `AGENTS.md` 路由。
 - 2026-06-15 起的新 event 文件名必须符合 `YYYYMMDD_HHMMSS_slug.yaml`，不使用 `evt_` 前缀、空格或连字符。
 - 根目录编号流必须存在且不冲突：`00-系统`、`01-收件箱`、`02-时间线`、`03-项目`、`04-知识`、`05-资源`、`06-输出`、`99-归档`。
 - `04-知识/` 一级目录必须使用 `NN-名称`，保持知识分类的稳定阅读顺序。
@@ -61,6 +65,8 @@ node .orbitos/scripts/run-validation.mjs
 - `inbox-triage.*.yaml`
 - `ingest-batch.*.yaml`
 - `lifecycle.*.yaml`
+
+文档一致性样例位于 `doc-consistency/`，使用相同的 `.valid.` / `.invalid.` 命名约定。
 
 脚本根据文件名判断预期：
 

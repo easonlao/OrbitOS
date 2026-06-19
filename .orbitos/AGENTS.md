@@ -35,6 +35,13 @@
 14. 根 `AGENTS.md` 必须让新进入的 agent 可以直接行动：包含启动步骤、任务路由、停止条件和同步要求。
 15. 根 `AGENTS.md` 不得变成长篇设计文档；详细行为放进链接到的 workflow 和 rule。
 
+## 最小规则路由
+
+- 不全量读取 `core/`；只加载当前变更命中的规则。
+- 创建、修改或审查 MAP、README、AGENTS、STATUS、ROADMAP 或 ADR 时，先读 `.orbitos/rules/core/document-semantics.md`。
+- 写可见 Markdown 时再读 `markdown-writing.md`；修改根 README 时再读 `readme-writing.md`。
+- 其他 Git、版本、workflow、ADR、命名和任务边界规则按下方索引与任务类型加载。
+
 ## 设计文档
 
 - `.orbitos/docs/README.md`：开发文档边界
@@ -43,11 +50,13 @@
 - `.orbitos/docs/DESIGN.md`：具体目录与文档设计
 - `.orbitos/docs/RUNTIME.md`：agent 最小运行环境约定
 
-开发进度属于本地项目管理，不得混入产品设计文档：`ROADMAP.md` 管里程碑，`TASKS.md` 管当前可执行任务，`STATUS.md` 管当前进度，`OPEN-QUESTIONS.md` 管未确认决策。
+开发进度属于本地项目管理，不得混入产品设计文档：`ROADMAP.md` 管目标、完成条件和总体状态，`STATUS.md` 管详细现状、判断依据、最多 3 项当前任务和 3 项待确认决策；任务通过路线编号与 ROADMAP 对应。
 
 ## 核心规则
 
 - `.orbitos/rules/core/README.md`：规则索引
+- `.orbitos/rules/core/project-management.md`：项目目录、状态、路线与产品仓库公共规则
+- `.orbitos/rules/core/document-semantics.md`：固定角色 Markdown 的全局职责边界
 - `.orbitos/rules/core/markdown-writing.md`：可见 Markdown 编写规则
 - `.orbitos/rules/core/readme-writing.md`：根 README 的受众、内容与链接规则
 - `.orbitos/rules/core/doc-promotion.md`：内部设计如何转为用户系统说明

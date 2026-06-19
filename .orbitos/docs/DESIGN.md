@@ -84,27 +84,25 @@ Startup Sync 默认只读 `今日.md`；`待确认.md` 和 `下一步.md` 是按
 
 ```text
 03-项目/{project}/
-  README.md
+  AGENTS.md
   STATUS.md
   ROADMAP.md
-  TASKS.md
-  OPEN-QUESTIONS.md
   docs/
   repo/
 ```
 
-- `README.md`：稳定定位、范围和使用方法。
-- `AGENTS.md`：可选局部路由；进入项目时优先读取，不复制全局或产品规则。
-- `STATUS.md`：当前阶段、已完成、进行中、阻塞和下一里程碑。
-- `ROADMAP.md`：完整阶段顺序和里程碑。
-- `TASKS.md`：当前阶段可执行任务。
-- `OPEN-QUESTIONS.md`：未确认问题、原因、选项和建议。
+- `AGENTS.md`：Agent 局部入口；保存开展工作必需的项目目标、稳定架构、项目规则与路由，不复制全局生命周期或下层规则正文。
+- `STATUS.md`：当前焦点、已验证基线、阻塞，以及最多 3 项当前任务和 3 项待确认决策。
+- `ROADMAP.md`：目标、总体状态和带日期的完成条件清单；当前任务与详细依据保存在 STATUS 和 event。
 - `docs/`：专项调研、评审、handoff 和设计记录。
 - `docs/LESSONS-LEARNED.md`：项目特有的经验、踩坑、验证结论和发布约束；只保留离开该项目后复用价值明显下降的内容。
 - `repo/`：项目实际产品或 release Git 仓库；没有独立发布物的项目可以不创建。
+- 项目管理目录默认不创建 README；只有 `repo/`、可独立使用模块或明确用户入口按需创建 README。
 - 历史 review、handoff 和专项调查保留为证据，但不承担当前状态。
 
 项目路由按目标路径继承：根 `AGENTS.md` → 项目 `AGENTS.md` → 产品仓库或子目录 `AGENTS.md`。不存在的层级直接跳过；任务切换区域时重新定位。
+
+进入具体项目前，根入口按需加载 `.orbitos/rules/core/project-management.md`；项目 `AGENTS.md` 只补充该项目自身内容，不复制公共项目规则。
 
 项目经验与 agent 经验分层：
 
@@ -149,7 +147,7 @@ Event 默认由 `.orbitos/scripts/write_event.py` 生成。Agent 只提交：
 - 不自动复制整个知识库。
 - Retain 需要稳定 `document_id`、受控 tags、来源、适用边界和 event 记录。
 - Recall 结果不能直接覆盖项目 STATUS、原件或 active knowledge。
-- 当前正式主 bank、迁移策略和认证边界仍由项目 `OPEN-QUESTIONS.md` 管理。
+- 当前正式主 bank、迁移策略和认证边界仍由项目 `STATUS.md` 的待确认区管理。
 
 ## 9. Git 与 Runtime 设计
 
@@ -174,9 +172,11 @@ Event 默认由 `.orbitos/scripts/write_event.py` 生成。Agent 只提交：
 
 内核变更必须通过 Runtime 集成测试后才能 commit 或 push。
 
-## 12. MAP、STATUS 与 Frontmatter
+## 12. MAP、README、AGENTS 与 STATUS
 
-- `MAP.md` 只做导航，不写状态。
+- `MAP.md` 是可见区域的人读导航：一句话说明区域用途，只列直属子目录及其用户入口，不下钻到子目录内部文件，也不写原则、规则、状态或目录协议。
+- `README.md` 只服务可独立发布或使用的对象，不是内部项目目录的默认文件；它不承载 Agent 执行规则或当前状态。
+- `AGENTS.md` 面向 Agent，负责项目目标、稳定架构、最小上下文路由、局部约束和停止条件；不承担用户教程或内容地图职责。
 - `STATUS.md` 只写当前状态，不写完整历史。
 - 可见 Markdown 默认使用 `title / area / purpose / lifecycle / created / updated / tags`。
 - 分类优先使用目录和 tags，不增加重复 frontmatter 字段。

@@ -1,5 +1,5 @@
 ---
-title: Agent 看板
+title: Agent 接入与状态
 area: system
 purpose: status
 lifecycle: active
@@ -10,9 +10,9 @@ tags:
   - agents
 ---
 
-# Agent 看板
+# Agent 接入与状态
 
-这里只看当前已接入 agents 的状态入口。详细经验、踩坑和待确认来源进入各自档案。
+这里是你查看已接入 Agent 及其运行状态的入口。Agent 的执行规则不放在本页，而由根 `AGENTS.md` 和对应 workflow 管理。
 
 当前仓库是发布模板，不预置任何真实 agent。第一次使用时，请让 agent 先执行 Startup Sync；如果它不在 registry 中，必须先向你确认 `agent_id`、部署位置、局域网 IP、接入方式和 OrbitOS 路径，再按 agent-onboarding workflow 注册。
 
@@ -26,12 +26,12 @@ tags:
 - 第一个 agent 注册后，应在这里追加对应入口，并链接到 `[[{agent_id}|对应 Agent 档案]]`。
 - 运行时环境差异、定时任务和踩坑只记录到你自己的 runtime，不作为发布模板预置内容。
 
-## 使用规则
+## 接入后会发生什么
 
-- 未知 agent 不允许自动注册，必须先向用户确认 `agent_id`、部署位置、局域网 IP、接入方式和 OrbitOS 路径。
-- 已注册 agent 启动时必须读取自己的轻量档案；完整经验与踩坑按需从经验入口展开。
-- agent 经验先进入单 agent 档案；跨 agent 复用的内容再通过 Rule Evolution 提炼。
-- 运行时能力差异要写清楚，例如 PowerShell 是否可用、Python/Node/Git 是否可用、是否需要 SSH 或映射目录。
+- 新 Agent 会先向你确认身份和部署信息，再完成注册。
+- 已注册 Agent 使用轻量档案保存定位和部署信息，完整经验按需展开。
+- 运行环境差异会记录在本地，例如 Python、Node、Git、PowerShell、SSH 或映射目录是否可用。
+- 跨 Agent 可复用的经验只有经过确认后才会提升为公共规则。
 
 ## 机器来源
 

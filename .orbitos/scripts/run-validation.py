@@ -5,7 +5,12 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from run_doc_consistency import find_visible_markdown, check_broken_wikilinks, check_legacy_paths
+from run_doc_consistency import (
+    check_broken_wikilinks,
+    check_forbidden_statements,
+    check_legacy_paths,
+    find_visible_markdown,
+)
 
 
 ROOT = Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else Path(__file__).resolve().parents[2]
@@ -182,6 +187,19 @@ for case_path in sorted(markdown_case_root.glob("*.md")):
     print_case(case_path.name, ".valid." in case_path.name, errors)
 
 
+doc_consistency_case_root = ROOT / ".orbitos/evals/doc-consistency"
+for case_path in sorted(doc_consistency_case_root.glob("*.md")):
+    case_count += 1
+    errors = []
+    for issue in check_broken_wikilinks([case_path], ROOT):
+        add_error(errors, f"{issue.file}:{issue.line}", issue.detail)
+    for issue in check_legacy_paths([case_path], ROOT):
+        add_error(errors, f"{issue.file}:{issue.line}", issue.detail)
+    for issue in check_forbidden_statements([case_path], ROOT):
+        add_error(errors, f"{issue.file}:{issue.line}", issue.detail)
+    print_case(case_path.name, ".valid." in case_path.name, errors)
+
+
 case_count += 1
 visible_files = [
     ROOT / "AGENTS.md",
@@ -208,7 +226,56 @@ for issue in check_broken_wikilinks(visible_files, ROOT):
     add_error(doc_consistency_errors, f"{issue.file}:{issue.line}", issue.detail)
 for issue in check_legacy_paths(visible_files, ROOT):
     add_error(doc_consistency_errors, f"{issue.file}:{issue.line}", issue.detail)
+for issue in check_forbidden_statements(visible_files, ROOT):
+    add_error(doc_consistency_errors, f"{issue.file}:{issue.line}", issue.detail)
 print_case("visible-markdown.doc-consistency", True, doc_consistency_errors)
+
+
+case_count += 1
+document_semantics_errors = []
+document_semantics_path = ROOT / ".orbitos/rules/core/document-semantics.md"
+if not document_semantics_path.is_file():
+    add_error(document_semantics_errors, ".orbitos/rules/core/document-semantics.md", "global document semantics rule is missing")
+else:
+    document_semantics = document_semantics_path.read_text(encoding="utf-8")
+    for role in ["MAP.md", "README.md", "AGENTS.md", "STATUS.md", "ROADMAP.md", "CHANGELOG.md", "ADR"]:
+        if role not in document_semantics:
+            add_error(document_semantics_errors, role, "fixed document role is missing from document semantics rule")
+    for creation_gate_term in ["Markdown 创建门", "现有文件为什么不能承载", "路径、受众和生命周期", "等待用户确认"]:
+        if creation_gate_term not in document_semantics:
+            add_error(document_semantics_errors, creation_gate_term, "generic Markdown creation gate is incomplete")
+    if "内部项目管理目录默认不创建" not in document_semantics:
+        add_error(document_semantics_errors, "README.md", "internal project directories must not require a README by default")
+    for map_boundary_term in ["直属子目录", "一句话说明它是什么", "不下钻"]:
+        if map_boundary_term not in document_semantics:
+            add_error(document_semantics_errors, map_boundary_term, "MAP navigation boundary is incomplete")
+    for roadmap_boundary_term in ["总体状态", "其他跨会话小任务标注“临时事项”", "validation 和 event 证据", "CHANGELOG.md"]:
+        if roadmap_boundary_term not in document_semantics:
+            add_error(document_semantics_errors, roadmap_boundary_term, "roadmap/status/changelog data flow is incomplete")
+root_agents = (ROOT / "AGENTS.md").read_text(encoding="utf-8")
+if "document-semantics.md" not in root_agents:
+    add_error(document_semantics_errors, "AGENTS.md", "root Agent router does not expose document semantics rule")
+internal_agents = (ROOT / ".orbitos/AGENTS.md").read_text(encoding="utf-8")
+if "document-semantics.md" not in internal_agents or "固定角色 Markdown" not in internal_agents:
+    add_error(document_semantics_errors, ".orbitos/AGENTS.md", "internal development router does not require document semantics for fixed-role Markdown")
+project_management_path = ROOT / ".orbitos/rules/core/project-management.md"
+if not project_management_path.is_file():
+    add_error(document_semantics_errors, ".orbitos/rules/core/project-management.md", "shared project management rule is missing")
+else:
+    project_management = project_management_path.read_text(encoding="utf-8")
+    for project_term in ["用户只需自然提出任务", "当场完成且不需要下次继续的小修改", "需要跨会话继续的工作", "只有用户决定现在推进后", "禁止自动流转", "否则标注“临时事项”", "已验证项使用 `[x]`", "STATUS 与 ROADMAP 必须在同一次 Progress Sync 中保持一致", "`repo/` 保存实际产品或发布仓库"]:
+        if project_term not in project_management:
+            add_error(document_semantics_errors, project_term, "shared project management rule is incomplete")
+progress_sync_path = ROOT / ".orbitos/workflows/progress-sync.md"
+progress_sync = progress_sync_path.read_text(encoding="utf-8") if progress_sync_path.is_file() else ""
+for sync_term in ["用户不需要主动说出同步命令", "project-management.md", "不把 STATUS 自动提升为 ROADMAP"]:
+    if sync_term not in progress_sync:
+        add_error(document_semantics_errors, sync_term, "Progress Sync does not enforce project task flow")
+if "project-management.md" not in root_agents:
+    add_error(document_semantics_errors, "AGENTS.md", "root Agent router does not expose project management rule")
+if "project-management.md" not in internal_agents:
+    add_error(document_semantics_errors, ".orbitos/AGENTS.md", "internal rule index does not expose project management rule")
+print_case("actual.document-semantics", True, document_semantics_errors)
 
 
 case_count += 1

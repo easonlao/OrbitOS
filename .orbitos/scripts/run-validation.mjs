@@ -106,6 +106,69 @@ function walkMarkdown(fullPath, out = []) {
   return out;
 }
 
+const wikilinkPattern = /\[\[([^\]|#]+?)(?:#[^\]|]*)?(?:\|[^\]]+)?\]\]/g;
+const legacyPatterns = [
+  [/(?<!\w)\.orbit[\\/]/, "legacy .orbit/ path"],
+  [/(?<![\w-])02-日记[\\/]/, "legacy 02-日记/ directory"],
+  [/(?<![\w-])03-知识[\\/]/, "legacy 03-知识/ directory"],
+  [/(?<![\w-])04-项目[\\/]/, "legacy 04-项目/ directory"],
+];
+const forbiddenStatements = [
+  [/Hindsight\s+是\s+OrbitOS(?:\s*的)?(?:\s*运行)?\s*(?:必需项|必需依赖|事实底座)/i, "Hindsight is optional and must not be described as an OrbitOS dependency or fact base"],
+  [/(?:`?02-时间线\/今日\.md`?|`?今日\.md`?)\s*是\s*项目(?:的)?(?:唯一)?状态源/i, "project STATUS.md, not 今日.md, is the project state source"],
+  [/(?:`?\.orbitos\/logs\/events\/`?|Event)\s+是\s+(?:OrbitOS(?:\s*的)?\s*)?唯一事实底座/i, "events are operation evidence, not the only fact base"],
+  [/Active knowledge\s*(?:可以|可)\s*直接(?:进行)?语义修改/i, "active knowledge must return to draft before semantic changes"],
+];
+const docConsistencyExcludePatterns = ["00-系统/agents/*.md", "AGENTS.md"];
+
+function isDocConsistencyExcluded(filePath) {
+  const rel = path.relative(root, filePath).replace(/\\/g, "/");
+  return docConsistencyExcludePatterns.some((pattern) => {
+    const regex = new RegExp(`^${pattern.replace(/\*/g, ".*")}$`);
+    return regex.test(rel);
+  });
+}
+
+function resolveWikilinkTarget(sourceFile, linkTarget) {
+  const candidates = [
+    path.join(path.dirname(sourceFile), linkTarget),
+    path.join(path.dirname(sourceFile), `${linkTarget}.md`),
+    path.join(root, linkTarget),
+    path.join(root, `${linkTarget}.md`),
+  ];
+  return candidates.find((candidate) => fs.existsSync(candidate) && fs.statSync(candidate).isFile()) ?? null;
+}
+
+function checkDocumentConsistency(files) {
+  const errors = [];
+  for (const file of files) {
+    if (isDocConsistencyExcluded(file)) continue;
+    const content = fs.readFileSync(file, "utf8");
+    let inCodeBlock = false;
+    for (const [lineIdx, line] of content.split("\n").entries()) {
+      if (line.trim().startsWith("```")) {
+        inCodeBlock = !inCodeBlock;
+        continue;
+      }
+      if (inCodeBlock) continue;
+      for (const match of line.matchAll(wikilinkPattern)) {
+        const linkTarget = match[1];
+        if (linkTarget.startsWith(".orbitos/") || linkTarget.startsWith(".orbit/")) continue;
+        if (resolveWikilinkTarget(file, linkTarget) === null) {
+          addError(errors, `${path.relative(root, file)}:${lineIdx + 1}`, `target '${linkTarget}' not found`);
+        }
+      }
+      for (const [pattern, detail] of legacyPatterns) {
+        if (pattern.test(line)) addError(errors, `${path.relative(root, file)}:${lineIdx + 1}`, detail);
+      }
+      for (const [pattern, detail] of forbiddenStatements) {
+        if (pattern.test(line)) addError(errors, `${path.relative(root, file)}:${lineIdx + 1}`, detail);
+      }
+    }
+  }
+  return errors;
+}
+
 const schemas = {
   event: readJsonLike(".orbitos/schemas/event.schema.yaml"),
   "inbox-triage": readJsonLike(".orbitos/schemas/inbox-triage.schema.yaml"),
@@ -154,6 +217,13 @@ for (const name of fs.readdirSync(markdownCaseRoot).filter((item) => item.endsWi
   printCase(name, name.includes(".valid."), errors);
 }
 
+const docConsistencyCaseRoot = path.join(root, ".orbitos/evals/doc-consistency");
+for (const name of fs.readdirSync(docConsistencyCaseRoot).filter((item) => item.endsWith(".md")).sort()) {
+  caseCount += 1;
+  const errors = checkDocumentConsistency([path.join(docConsistencyCaseRoot, name)]);
+  printCase(name, name.includes(".valid."), errors);
+}
+
 caseCount += 1;
 const visibleFiles = [
   path.join(root, "AGENTS.md"),
@@ -171,64 +241,73 @@ for (const file of visibleFiles) {
 printCase("visible-markdown.no-internal-wikilinks", true, visibleErrors);
 
 caseCount += 1;
-const docConsistencyErrors = [];
-const wikilinkPattern = /\[\[([^\]|#]+?)(?:#[^\]|]*)?(?:\|[^\]]+)?\]\]/g;
-const excludePatterns = ["00-系统/agents/*.md", "AGENTS.md"];
-function isExcluded(filePath) {
-  const rel = path.relative(root, filePath).replace(/\\/g, "/");
-  return excludePatterns.some((pat) => {
-    const regex = new RegExp("^" + pat.replace(/\*/g, ".*") + "$");
-    return regex.test(rel);
-  });
-}
-function resolveWikilinkTarget(sourceFile, linkTarget) {
-  const sourceDir = path.dirname(sourceFile);
-  const candidates = [
-    path.join(sourceDir, linkTarget),
-    path.join(sourceDir, linkTarget + ".md"),
-    path.join(root, linkTarget),
-    path.join(root, linkTarget + ".md"),
-  ];
-  for (const c of candidates) {
-    if (fs.existsSync(c) && fs.statSync(c).isFile()) return c;
-  }
-  return null;
-}
-for (const file of visibleFiles) {
-  if (isExcluded(file)) continue;
-  const content = fs.readFileSync(file, "utf8");
-  let inCodeBlock = false;
-  for (const [lineIdx, line] of content.split("\n").entries()) {
-    const stripped = line.trim();
-    if (stripped.startsWith("```")) inCodeBlock = !inCodeBlock;
-    if (inCodeBlock || stripped.startsWith("```")) continue;
-    for (const match of line.matchAll(wikilinkPattern)) {
-      const linkTarget = match[1];
-      if (linkTarget.startsWith(".orbitos/") || linkTarget.startsWith(".orbit/")) continue;
-      if (resolveWikilinkTarget(file, linkTarget) === null) {
-        addError(docConsistencyErrors, `${path.relative(root, file)}:${lineIdx + 1}`, `broken wikilink: target '${linkTarget}' not found`);
-      }
-    }
-  }
-}
-const legacyPattern = /(?<!\w)\.orbit\//;
-for (const file of visibleFiles) {
-  if (isExcluded(file)) continue;
-  const content = fs.readFileSync(file, "utf8");
-  let inCodeBlock = false;
-  for (const [lineIdx, line] of content.split("\n").entries()) {
-    const stripped = line.trim();
-    if (stripped.startsWith("```")) {
-      inCodeBlock = !inCodeBlock;
-      continue;
-    }
-    if (inCodeBlock) continue;
-    if (legacyPattern.test(line)) {
-      addError(docConsistencyErrors, `${path.relative(root, file)}:${lineIdx + 1}`, "legacy .orbit/ path");
-    }
-  }
-}
+const docConsistencyErrors = checkDocumentConsistency(visibleFiles);
 printCase("visible-markdown.doc-consistency", true, docConsistencyErrors);
+
+caseCount += 1;
+const documentSemanticsErrors = [];
+const documentSemanticsPath = path.join(root, ".orbitos/rules/core/document-semantics.md");
+if (!fs.existsSync(documentSemanticsPath)) {
+  addError(documentSemanticsErrors, ".orbitos/rules/core/document-semantics.md", "global document semantics rule is missing");
+} else {
+  const documentSemantics = fs.readFileSync(documentSemanticsPath, "utf8");
+  for (const role of ["MAP.md", "README.md", "AGENTS.md", "STATUS.md", "ROADMAP.md", "CHANGELOG.md", "ADR"]) {
+    if (!documentSemantics.includes(role)) {
+      addError(documentSemanticsErrors, role, "fixed document role is missing from document semantics rule");
+    }
+  }
+  for (const creationGateTerm of ["Markdown 创建门", "现有文件为什么不能承载", "路径、受众和生命周期", "等待用户确认"]) {
+    if (!documentSemantics.includes(creationGateTerm)) {
+      addError(documentSemanticsErrors, creationGateTerm, "generic Markdown creation gate is incomplete");
+    }
+  }
+  if (!documentSemantics.includes("内部项目管理目录默认不创建")) {
+    addError(documentSemanticsErrors, "README.md", "internal project directories must not require a README by default");
+  }
+  for (const mapBoundaryTerm of ["直属子目录", "一句话说明它是什么", "不下钻"]) {
+    if (!documentSemantics.includes(mapBoundaryTerm)) {
+      addError(documentSemanticsErrors, mapBoundaryTerm, "MAP navigation boundary is incomplete");
+    }
+  }
+  for (const roadmapBoundaryTerm of ["总体状态", "其他跨会话小任务标注“临时事项”", "validation 和 event 证据", "CHANGELOG.md"]) {
+    if (!documentSemantics.includes(roadmapBoundaryTerm)) {
+      addError(documentSemanticsErrors, roadmapBoundaryTerm, "roadmap/status/changelog data flow is incomplete");
+    }
+  }
+}
+const rootAgents = fs.readFileSync(path.join(root, "AGENTS.md"), "utf8");
+if (!rootAgents.includes("document-semantics.md")) {
+  addError(documentSemanticsErrors, "AGENTS.md", "root Agent router does not expose document semantics rule");
+}
+const internalAgents = fs.readFileSync(path.join(root, ".orbitos/AGENTS.md"), "utf8");
+if (!internalAgents.includes("document-semantics.md") || !internalAgents.includes("固定角色 Markdown")) {
+  addError(documentSemanticsErrors, ".orbitos/AGENTS.md", "internal development router does not require document semantics for fixed-role Markdown");
+}
+const projectManagementPath = path.join(root, ".orbitos/rules/core/project-management.md");
+if (!fs.existsSync(projectManagementPath)) {
+  addError(documentSemanticsErrors, ".orbitos/rules/core/project-management.md", "shared project management rule is missing");
+} else {
+  const projectManagement = fs.readFileSync(projectManagementPath, "utf8");
+  for (const projectTerm of ["用户只需自然提出任务", "当场完成且不需要下次继续的小修改", "需要跨会话继续的工作", "只有用户决定现在推进后", "禁止自动流转", "否则标注“临时事项”", "已验证项使用 `[x]`", "STATUS 与 ROADMAP 必须在同一次 Progress Sync 中保持一致", "`repo/` 保存实际产品或发布仓库"]) {
+    if (!projectManagement.includes(projectTerm)) {
+      addError(documentSemanticsErrors, projectTerm, "shared project management rule is incomplete");
+    }
+  }
+}
+const progressSyncPath = path.join(root, ".orbitos/workflows/progress-sync.md");
+const progressSync = fs.existsSync(progressSyncPath) ? fs.readFileSync(progressSyncPath, "utf8") : "";
+for (const syncTerm of ["用户不需要主动说出同步命令", "project-management.md", "不把 STATUS 自动提升为 ROADMAP"]) {
+  if (!progressSync.includes(syncTerm)) {
+    addError(documentSemanticsErrors, syncTerm, "Progress Sync does not enforce project task flow");
+  }
+}
+if (!rootAgents.includes("project-management.md")) {
+  addError(documentSemanticsErrors, "AGENTS.md", "root Agent router does not expose project management rule");
+}
+if (!internalAgents.includes("project-management.md")) {
+  addError(documentSemanticsErrors, ".orbitos/AGENTS.md", "internal rule index does not expose project management rule");
+}
+printCase("actual.document-semantics", true, documentSemanticsErrors);
 
 caseCount += 1;
 const eventFilenameErrors = [];

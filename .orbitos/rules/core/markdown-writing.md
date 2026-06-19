@@ -4,7 +4,7 @@ area: internal
 purpose: rule
 lifecycle: active
 created: 2026-06-11
-updated: 2026-06-15
+updated: 2026-06-20
 tags:
   - orbitos
   - obsidian
@@ -70,33 +70,24 @@ Exceptions:
 - `reviewed`
 - `archived`
 
-## MAP
+## Document Roles
 
-MAP files are navigation files. They do not carry status.
+Fixed-role files such as MAP, README, AGENTS, STATUS, ROADMAP, and ADR follow `.orbitos/rules/core/document-semantics.md`. This rule only adds visible Markdown formatting and linking requirements; it does not redefine their roles.
 
-Do not create MAP files by default. Create them only when an area has enough stable files that a human or agent needs a local navigation entry.
-
-## STATUS
-
-STATUS files describe the current state of a lifecycle object. They are not navigation files.
-
-For projects, `03-项目/{project}/STATUS.md` is the project state source. Daily timeline files may summarize it, but should not become the authoritative project status.
-
-Recommended structure:
-
-```markdown
-## 当前状态
-## 最近变化
-## 待确认
-## 可继续
-## 来源
-```
+Before creating any visible Markdown, apply the Markdown creation gate in `document-semantics.md`. Do not create a new file merely because its filename or document type is conventional.
 
 ## Body
 
 Every visible Markdown file should have one clear responsibility.
 
 Do not put long execution traces, hidden reasoning, or implementation history into visible Markdown. Use event logs, internal docs, archive snapshots, or ADRs instead.
+
+## Plain Language
+
+- Write for the document's human audience before preserving internal terminology.
+- Prefer ordinary Chinese descriptions when they express the same meaning; for example, use “自动检查” instead of exposing an internal validation name without explanation.
+- Keep unavoidable stable terms only when they help users identify a real system object. Link the first meaningful occurrence to the matching glossary heading.
+- A glossary link supplements a clear sentence; it must not be used to excuse jargon-heavy writing.
 
 ## Links
 
@@ -122,11 +113,15 @@ This prevents Obsidian from creating blank files from accidental clicks.
 
 ## Glossary Links
 
-The glossary is an on-demand explanation layer, not required pre-reading.
+Glossaries are on-demand explanation layers, not required pre-reading.
 
-- When a visible Markdown page cannot avoid an OrbitOS-specific or technical term, link its first meaningful occurrence to the matching heading in `00-系统/06-术语表.md`.
+- Link system-wide OrbitOS concepts to `00-系统/06-术语表.md`.
+- If a project has an explicitly confirmed glossary for genuinely specialized business or technical concepts, link those project-only terms there instead.
+- Define each term in one authoritative glossary only; a project glossary may point to the system glossary but must not copy its definitions.
+- When a visible Markdown page cannot avoid a scoped or technical term, link its first meaningful occurrence to the matching heading in the authoritative glossary.
+- Do not create glossary entries for ordinary planning words, headings, identifiers, or phrases that are already clear from the sentence itself.
 - Use a heading link such as `[[../00-系统/06-术语表#Event|Event]]`; adjust the relative path for the current file.
 - Do not link every repeated occurrence. One link per term per page is normally enough.
 - Do not link ordinary language merely because a matching glossary heading exists.
 - Obsidian comments (`%% ... %%`) are hidden from readers and must not carry required explanations.
-- Use footnotes only for context-specific clarification that does not belong in the shared glossary.
+- Use footnotes only for context-specific clarification that does not belong in an authoritative glossary.

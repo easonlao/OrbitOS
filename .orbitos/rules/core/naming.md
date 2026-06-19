@@ -4,7 +4,7 @@ area: internal
 purpose: rule
 lifecycle: active
 created: 2026-06-15
-updated: 2026-06-16
+updated: 2026-06-20
 tags:
   - orbitos
   - naming
@@ -157,10 +157,11 @@ Project directories may contain code, apps, documents, and intermediate work.
 Minimum recommended project files:
 
 ```text
-README.md
+AGENTS.md
 STATUS.md
-ROADMAP.md
 ```
+
+Add `ROADMAP.md` only when the project has a meaningful multi-stage route. Add README only for a releasable repository, independently usable module, or explicit user entry after applying the Markdown creation gate.
 
 Recommended project experience file for long-lived or technical projects:
 
@@ -181,12 +182,9 @@ When a project has both local management material and a releasable/product repos
 
 ```text
 03-项目/{Project}/
-  README.md
-  AGENTS.md            # optional short routing file; do not duplicate product rules
+  AGENTS.md            # project goal, stable architecture, rules, and routing
   STATUS.md
-  ROADMAP.md
-  TASKS.md
-  OPEN-QUESTIONS.md
+  ROADMAP.md           # optional milestone dependencies, goals, and exits
   docs/                # reviews, research, design records, and handoffs
   repo/                # actual product/release Git repository
 ```

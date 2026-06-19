@@ -24,10 +24,10 @@ Progress Sync 把已经完成的自然工作编译成可校验的 OrbitOS 记录
 
 ## 触发条件
 
-- 完成了会改变文件或长期状态的实质性工作。
+- 完成了会改变文件或长期状态的实质性工作时自动触发。
 - 用户说“同步”“同步进度”或“更新进度”。
 
-纯讨论、只读查询和没有形成持久化结果的短对话不需要 Progress Sync。
+用户不需要主动说出同步命令。纯讨论、只读查询和没有形成持久化结果的短对话不需要 Progress Sync。
 
 ## 最小输入
 
@@ -45,13 +45,14 @@ Agent 只需要整理：
 ## 执行流程
 
 1. 确认本次存在需要持久化的实质结果。
-2. 如果属于具体项目且项目状态变化，先更新项目 `STATUS.md`。
-3. 运行 `python .orbitos/scripts/run-validation.py`。
-4. validation 失败时停止，不刷新 Dashboard；报告失败原因。
-5. 使用 `.orbitos/scripts/write_event.py` 写入完成凭证。
-6. 按实际变化刷新 `今日.md`、`待确认.md`、`下一步.md`；没有变化的页面不写。
-7. 再运行一次 validation，确认最终状态。
-8. 最终 validation 失败时报告 event 路径和失败原因，不把失败结果描述为完成。
+2. 具体项目任务先按 `project-management.md` 分类：当场完成只准备 event；需要跨会话才更新 STATUS；ROADMAP 变化必须已有用户确认。
+3. 如果属于具体项目且项目状态变化，更新 `STATUS.md`；满足已确认的 ROADMAP 完成条件时，同步勾选条件、日期和总体状态。
+4. 运行 `python .orbitos/scripts/run-validation.py`。
+5. validation 失败时停止，不刷新 Dashboard；报告失败原因。
+6. 使用 `.orbitos/scripts/write_event.py` 写入完成凭证。
+7. 按实际变化刷新 `今日.md`、`待确认.md`、`下一步.md`；没有变化的页面不写。
+8. 再运行一次 validation，确认最终状态。
+9. 最终 validation 失败时报告 event 路径和失败原因，不把失败结果描述为完成。
 
 最小示例：
 
@@ -89,10 +90,12 @@ Windows PowerShell 可在同一行执行，或使用反引号换行。
 
 - [ ] 本次存在实质性持久化结果，或用户明确要求同步。
 - [ ] 已确认变更范围、待确认事项和经验检查结果。
+- [ ] 项目任务已分类，ROADMAP 或当前优先级变化已有用户确认。
 
 ### 执行检查
 
 - [ ] 项目状态变化时已先更新项目 `STATUS.md`。
+- [ ] 当场完成的小修改未被写成 STATUS 事项；跨会话事项和 ROADMAP 条件按规则更新。
 - [ ] 写 event 前 validation 已通过。
 - [ ] 已使用 `write_event.py` 生成完成凭证。
 - [ ] 只刷新发生变化的人读视图。
@@ -109,4 +112,5 @@ Windows PowerShell 可在同一行执行，或使用反引号换行。
 - 不手写完整 event YAML。
 - 不在 validation 失败时刷新 Dashboard。
 - 不为了同步而重写没有变化的人读页面。
+- 不把 STATUS 自动提升为 ROADMAP，也不把 ROADMAP 自动展开为 STATUS。
 - 不把完整推理、命令输出或 event 文件列表写入 Dashboard。
