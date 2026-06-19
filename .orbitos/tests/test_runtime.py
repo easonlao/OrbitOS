@@ -58,6 +58,15 @@ def test_runtime(runtime_root):
     writer_script = runtime_root / ".orbitos/scripts/write_event.py"
     validation_script = runtime_root / ".orbitos/scripts/run-validation.py"
 
+    startup_content = (runtime_root / ".orbitos/workflows/startup-sync.md").read_text(encoding="utf-8")
+    startup_execution = startup_content.split("## 执行流程", 1)[1].split("## 异常处理", 1)[0]
+    for project_input in ("AGENTS.md", "README.md", "STATUS.md"):
+        require(project_input not in startup_execution, f"Startup Sync execution reads project input: {project_input}")
+
+    root_agents = (runtime_root / "AGENTS.md").read_text(encoding="utf-8")
+    require(root_agents.count("定位目标工作区域") == 1, "root AGENTS.md semantic routing is missing or duplicated")
+    require(root_agents.count("不全量扫描") == 1, "root AGENTS.md vault-scan boundary is missing or duplicated")
+
     run(["git", "init"], runtime_root)
     run([python, str(init_script)], runtime_root)
 

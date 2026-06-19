@@ -28,6 +28,18 @@ Default behavior:
 - summarize what was changed and what remains
 - do not create temporary workdirs, external repository clones, downloads, or experiment outputs at the OrbitOS root
 
+## Semantic Work Routing
+
+Before reading or modifying task files:
+
+1. Resolve the target work area from explicit paths, project names, referenced files, or the object named by the user.
+2. Starting at the OrbitOS root, read each `AGENTS.md` that lies on the direct path to the target directory.
+3. For `03-项目/{project}/`, check the project root `AGENTS.md` before `README.md` and `STATUS.md`.
+4. If the project router points into a product repository or deeper work area, continue the same path-based lookup there.
+5. When the task changes work area, resolve the path again before acting.
+
+Do not scan the entire vault for `AGENTS.md`. A local file applies only to its directory tree, may add or tighten instructions, and cannot weaken root safety or confirmation boundaries.
+
 Temporary placement:
 
 - If the material should be visible for later user/agent review, put it under `01-收件箱/`.

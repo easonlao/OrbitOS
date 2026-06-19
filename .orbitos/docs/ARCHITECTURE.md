@@ -39,6 +39,7 @@ Active knowledge 只表示当前已经确认的版本。任何语义修改都必
 回答“agent 必须如何行动”。
 
 - 根 `AGENTS.md`：唯一入口和路由。
+- 工作区域 `AGENTS.md`：在已定位目录树内补充项目或仓库局部路由；沿根到目标逐级继承，不得放宽全局硬边界。
 - `.orbitos/rules/`：稳定约束。
 - `.orbitos/workflows/`：执行步骤和异常分支。
 - `.orbitos/schemas/`：机器写入对象结构。
@@ -50,7 +51,7 @@ Active knowledge 只表示当前已经确认的版本。任何语义修改都必
 
 回答“哪些稳定信息需要跨会话快速召回”。
 
-- Hindsight 是可选实现。
+- Hindsight 不是 OrbitOS 运行依赖；工具可用且任务涉及跨会话事实时优先 recall。
 - 适合保存稳定环境事实、长期偏好、确认决策和复用型踩坑。
 - 不保存全部 Markdown、普通进度或原始对话。
 - recall 结果需要用证据平面或当前状态源复核。
