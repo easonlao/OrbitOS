@@ -20,7 +20,8 @@ OrbitOS 是一个以 Obsidian 为人读界面、支持多个 agent 协作的 Mar
 
 - 所有 agent 从根 `AGENTS.md` 进入。
 - agent 开始工作前执行 Startup Sync，完成实质工作后执行 Progress Sync。
-- agent 能读取自己的部署信息、经验和踩坑，但不能读取或修改无关 agent 的档案。
+- agent 冷启动只读取自己的部署信息、轻量 profile 和当前状态摘要；经验、踩坑与详细状态按任务渐进展开。
+- agent 不能读取或修改无关 agent 的档案。
 - 普通对话和工作不要求使用结构化话术；只有持久化结果进入 OrbitOS 时才执行结构化编译与校验。
 
 ### 3.2 内容编译闭环

@@ -112,6 +112,7 @@ Startup Sync -> Natural Work -> Result Compilation -> Validation
 ```
 
 - Startup Sync 只读取状态，不推进任务。
+- Startup Sync 的固定读取链为 registry、当前 agent 轻量 profile、环境报告和 `今日.md`；用户说明、完整经验、其他时间线和项目文件均按任务渐进展开。
 - Natural Work 不要求固定话术或完整状态机。
 - Result Compilation 通过 Progress Sync 把结果编译成最小 event，并刷新必要的人读视图。
 - Validation 是完成门，只检查文件、对象和边界是否稳定。
