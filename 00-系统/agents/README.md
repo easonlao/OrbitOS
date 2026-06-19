@@ -23,7 +23,7 @@ tags:
 ## 当前运行状态
 
 - `.orbitos/agents/registry.yaml` 当前为空。
-- 第一个 agent 注册后，应在这里追加对应入口，并链接到 `00-系统/agents/{agent_id}.md`。
+- 第一个 agent 注册后，应在这里追加对应入口，并链接到 `[[{agent_id}|对应 Agent 档案]]`。
 - 运行时环境差异、定时任务和踩坑只记录到你自己的 runtime，不作为发布模板预置内容。
 
 ## 使用规则

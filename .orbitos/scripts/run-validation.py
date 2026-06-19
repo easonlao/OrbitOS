@@ -4,6 +4,9 @@ import subprocess
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).parent))
+from run_doc_consistency import find_visible_markdown, check_broken_wikilinks, check_legacy_paths
+
 
 ROOT = Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else Path(__file__).resolve().parents[2]
 
@@ -196,6 +199,16 @@ for file_path in visible_files:
             error["message"],
         )
 print_case("visible-markdown.no-internal-wikilinks", True, visible_errors)
+
+
+case_count += 1
+doc_consistency_errors = []
+visible_files = find_visible_markdown(ROOT)
+for issue in check_broken_wikilinks(visible_files, ROOT):
+    add_error(doc_consistency_errors, f"{issue.file}:{issue.line}", issue.detail)
+for issue in check_legacy_paths(visible_files, ROOT):
+    add_error(doc_consistency_errors, f"{issue.file}:{issue.line}", issue.detail)
+print_case("visible-markdown.doc-consistency", True, doc_consistency_errors)
 
 
 case_count += 1

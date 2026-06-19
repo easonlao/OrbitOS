@@ -58,6 +58,30 @@ Before an agent creates a new top-level directory or a new category of generated
 
 If the answer is local user data or runtime state, update `.gitignore` before creating or staging those files.
 
+## Runtime-Only Content
+
+When a file or directory exists in the Runtime working copy but is not part of the Product Repo definition, treat it as a local-only candidate by default.
+
+Examples:
+
+- agent private working directories such as `.codex/`, `.mimocode/`, `.claude/`
+- local app state such as `.obsidian/`
+- caches, session files, indexes, logs, temporary outputs
+
+This is a default boundary signal, not an automatic rule.
+
+Agents must still ask:
+
+1. Is this clearly runtime-only state?
+2. Or is this new product/system content created for the current task?
+
+Use the result:
+
+- if it is clearly runtime-only state, add it to `.gitignore`
+- if it is intentional new product/system content, do not ignore it; stage it into the Product Repo instead
+
+Do not use broad patterns like `.*` to ignore all hidden files or directories. OrbitOS system content includes required dot-paths such as `.orbitos/` and `.gitignore`, so hidden-path handling must stay explicit.
+
 ## Common Placement
 
 - User input goes under `01-收件箱/` and is ignored by Git except `.gitkeep`.

@@ -171,6 +171,66 @@ for (const file of visibleFiles) {
 printCase("visible-markdown.no-internal-wikilinks", true, visibleErrors);
 
 caseCount += 1;
+const docConsistencyErrors = [];
+const wikilinkPattern = /\[\[([^\]|#]+?)(?:#[^\]|]*)?(?:\|[^\]]+)?\]\]/g;
+const excludePatterns = ["00-系统/agents/*.md", "AGENTS.md"];
+function isExcluded(filePath) {
+  const rel = path.relative(root, filePath).replace(/\\/g, "/");
+  return excludePatterns.some((pat) => {
+    const regex = new RegExp("^" + pat.replace(/\*/g, ".*") + "$");
+    return regex.test(rel);
+  });
+}
+function resolveWikilinkTarget(sourceFile, linkTarget) {
+  const sourceDir = path.dirname(sourceFile);
+  const candidates = [
+    path.join(sourceDir, linkTarget),
+    path.join(sourceDir, linkTarget + ".md"),
+    path.join(root, linkTarget),
+    path.join(root, linkTarget + ".md"),
+  ];
+  for (const c of candidates) {
+    if (fs.existsSync(c) && fs.statSync(c).isFile()) return c;
+  }
+  return null;
+}
+for (const file of visibleFiles) {
+  if (isExcluded(file)) continue;
+  const content = fs.readFileSync(file, "utf8");
+  let inCodeBlock = false;
+  for (const [lineIdx, line] of content.split("\n").entries()) {
+    const stripped = line.trim();
+    if (stripped.startsWith("```")) inCodeBlock = !inCodeBlock;
+    if (inCodeBlock || stripped.startsWith("```")) continue;
+    for (const match of line.matchAll(wikilinkPattern)) {
+      const linkTarget = match[1];
+      if (linkTarget.startsWith(".orbitos/") || linkTarget.startsWith(".orbit/")) continue;
+      if (resolveWikilinkTarget(file, linkTarget) === null) {
+        addError(docConsistencyErrors, `${path.relative(root, file)}:${lineIdx + 1}`, `broken wikilink: target '${linkTarget}' not found`);
+      }
+    }
+  }
+}
+const legacyPattern = /(?<!\w)\.orbit\//;
+for (const file of visibleFiles) {
+  if (isExcluded(file)) continue;
+  const content = fs.readFileSync(file, "utf8");
+  let inCodeBlock = false;
+  for (const [lineIdx, line] of content.split("\n").entries()) {
+    const stripped = line.trim();
+    if (stripped.startsWith("```")) {
+      inCodeBlock = !inCodeBlock;
+      continue;
+    }
+    if (inCodeBlock) continue;
+    if (legacyPattern.test(line)) {
+      addError(docConsistencyErrors, `${path.relative(root, file)}:${lineIdx + 1}`, "legacy .orbit/ path");
+    }
+  }
+}
+printCase("visible-markdown.doc-consistency", true, docConsistencyErrors);
+
+caseCount += 1;
 const eventFilenameErrors = [];
 const eventsRoot = path.join(root, ".orbitos/logs/events");
 const eventFilenamePattern = /^20[0-9]{6}_[0-9]{6}_[a-z0-9]+(?:_[a-z0-9]+)*\.yaml$/;
