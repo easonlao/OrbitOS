@@ -24,8 +24,8 @@
 3. 稳定的 agent 执行规则放在 `.orbitos/rules/core/`。
 4. 实现、schema、workflow 和设计文档放在 `.orbitos/`。
 5. 已确认的当前版本系统变化记录在 `00-系统/07-系统变更.md`。
-6. 只有重大且难以回退的架构决策才使用 ADR。
-7. 未经用户明确确认，不得把讨论或脑暴直接提升为规则。
+6. Architecture/Design 记录当前系统，ADR 记录重大决策的背景、备选方案和取舍；创建 ADR 前读取 `.orbitos/rules/core/adr-writing.md`。
+7. 未经用户明确确认，不得把讨论或脑暴直接提升为规则或 ADR。
 8. 修改根 README 前，先读 `.orbitos/rules/core/readme-writing.md`。
 9. 将设计内容提升到 `00-系统/` 前，先读 `.orbitos/rules/core/doc-promotion.md`。
 10. 修改 OrbitOS 内核文件时，执行 `.orbitos/workflows/core-change.md`，并按 `.orbitos/schemas/core-change.schema.yaml` 校验。
@@ -51,6 +51,7 @@
 - `.orbitos/rules/core/markdown-writing.md`：可见 Markdown 编写规则
 - `.orbitos/rules/core/readme-writing.md`：根 README 的受众、内容与链接规则
 - `.orbitos/rules/core/doc-promotion.md`：内部设计如何转为用户系统说明
+- `.orbitos/rules/core/adr-writing.md`：产品仓库 ADR 的触发、位置和更新规则
 - `.orbitos/rules/core/git-management.md`：Git 边界、ignore 与跟踪文件清理
 - `.orbitos/rules/core/versioning.md`：版本号、changelog 分层、commit 规则与 release 流程
 - `.orbitos/rules/core/naming.md`：目录、文件、根目录顺序与 event 命名规则

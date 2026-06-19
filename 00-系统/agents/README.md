@@ -29,7 +29,7 @@ tags:
 ## 使用规则
 
 - 未知 agent 不允许自动注册，必须先向用户确认 `agent_id`、部署位置、局域网 IP、接入方式和 OrbitOS 路径。
-- 已注册 agent 启动时必须读取自己的档案，查看经验、踩坑和待确认来源。
+- 已注册 agent 启动时必须读取自己的轻量档案；完整经验与踩坑按需从经验入口展开。
 - agent 经验先进入单 agent 档案；跨 agent 复用的内容再通过 Rule Evolution 提炼。
 - 运行时能力差异要写清楚，例如 PowerShell 是否可用、Python/Node/Git 是否可用、是否需要 SSH 或映射目录。
 

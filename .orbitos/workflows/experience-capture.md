@@ -20,7 +20,7 @@ Experience Capture 定义 agent 什么时候记录对话内的踩坑、经验和
 ## 目标
 
 - 让 agent 不再只在用户提醒时才记录经验。
-- 把对话里的踩坑和有效做法先落到 agent profile。
+- 把对话里的踩坑和有效做法先落到 agent 经验文件或项目经验文件。
 - 为 Rule Evolution 提供稳定输入。
 - 让用户可以用一句话触发记录。
 
@@ -63,11 +63,22 @@ Experience Capture 定义 agent 什么时候记录对话内的踩坑、经验和
 
 ## 写入位置
 
-默认写入当前 agent profile：
+默认先判断经验属于 agent 还是项目，再决定写入位置。
+
+### Agent 级经验
+
+以下内容默认写入当前 agent 的经验文件：
 
 ```text
-00-系统/agents/{agent_id}.md
+00-系统/agents/{agent_id}-experience.md
 ```
+
+适用内容：
+
+- 跨项目仍成立的执行经验
+- 当前 agent 的环境、工具、路径、shell 或同步坑
+- OrbitOS workflow、schema、validation、Git 边界等系统级经验
+- 会影响该 agent 以后进入 OrbitOS 方式的稳定约束
 
 对应小节：
 
@@ -77,7 +88,37 @@ Experience Capture 定义 agent 什么时候记录对话内的踩坑、经验和
 - `规则候选`
 - `Learned Rule 使用记录`
 
+### 项目级经验
+
+以下内容优先写入项目内：
+
+```text
+03-项目/{project}/docs/LESSONS-LEARNED.md
+```
+
+适用内容：
+
+- 只对某个项目成立的发布经验、验证经验或领域约束
+- 该项目特有的架构边界、配置坑、数据坑或运维坑
+- 离开该项目后复用价值明显下降的经验
+
+如果项目目录已存在但 `docs/LESSONS-LEARNED.md` 尚未建立，可按项目文档规则创建；若当前任务并未进入具体项目范围，则不要擅自新建项目经验文件。
+
+轻量 profile `00-系统/agents/{agent_id}.md` 只保留启动所需信息和经验入口，不应继续膨胀为完整经验日志。
+
 如果当前 agent 没有 profile，先停止并按 Startup Sync 的未知 agent 流程确认身份，不得自行创建。
+
+## 判断原则
+
+用这个问题判断写入位置：
+
+```text
+如果换一个项目，这条经验是否仍然成立？
+```
+
+- 如果答案是“基本成立”，写入 agent 经验文件。
+- 如果答案是“主要只对当前项目成立”，写入项目 `docs/LESSONS-LEARNED.md`。
+- 如果同时有跨项目抽象和项目实例，两边都可记录，但轻量 profile 只保留经验入口或少量启动关注，不复制整段经验细节。
 
 ## 写入格式
 
@@ -105,7 +146,7 @@ Experience Capture 只负责捕获输入。
 - 可验证。
 - 对 OrbitOS 生态有必要。
 
-否则保留在 agent profile，不进入 learned index。
+否则保留在 agent 经验文件或项目 `LESSONS-LEARNED.md`，不进入 learned index。
 
 ## 输出结果
 
@@ -114,8 +155,8 @@ Experience Capture 给 Progress Sync 返回以下结果之一：
 | result | 含义 |
 |---|---|
 | `not_applicable` | 检查后确认不需要记录，原因写入 event checklist |
-| `captured` | 已写入 agent profile，当前不具备 learned 条件 |
-| `candidate_only` | 已写入 agent profile 的规则候选或待观察项，暂不进入 learned index |
+| `captured` | 已写入 agent 经验文件或项目经验文件，当前不具备 learned 条件 |
+| `candidate_only` | 已写入规则候选或待观察项，暂不进入 learned index |
 
 Experience Capture 不直接返回 `learned_updated`；该结果只能由 Rule Evolution 更新 learned index 或 learned 使用反馈后产生。
 
@@ -147,7 +188,8 @@ Progress Sync 前，agent 必须自检：
 ### 执行检查
 
 - [ ] 已判断记录类型：经验、踩坑、待确认来源、规则候选或 learned rule 使用记录。
-- [ ] 已写入 `00-系统/agents/{agent_id}.md` 对应小节。
+- [ ] 已判断这条经验是 agent 级还是项目级。
+- [ ] 已写入 `00-系统/agents/{agent_id}-experience.md` 或 `03-项目/{project}/docs/LESSONS-LEARNED.md`。
 - [ ] 已记录来源、影响和下一步。
 - [ ] 已给出结果：`not_applicable / captured / candidate_only`。
 - [ ] 如内容足够通用，已触发或标记 Rule Evolution。
@@ -164,5 +206,5 @@ Progress Sync 前，agent 必须自检：
 - 不记录长篇推理。
 - 不把普通流水账写成经验。
 - 不把用户未确认的偏好写成系统规则。
-- 不绕过 agent profile 直接写 learned index。
+- 不绕过 agent 经验文件或项目经验文件直接写 learned index。
 - 不把一次性问题强行泛化。

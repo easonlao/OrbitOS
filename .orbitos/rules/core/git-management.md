@@ -77,10 +77,16 @@ Agents must still ask:
 
 Use the result:
 
-- if it is clearly runtime-only state, add it to `.gitignore`
+- if it is clearly runtime-only state and specific to the current runtime or agent tool, prefer `.git/info/exclude`
+- if it is clearly runtime-only state and should be ignored across every runtime, add it to `.gitignore`
 - if it is intentional new product/system content, do not ignore it; stage it into the Product Repo instead
 
 Do not use broad patterns like `.*` to ignore all hidden files or directories. OrbitOS system content includes required dot-paths such as `.orbitos/` and `.gitignore`, so hidden-path handling must stay explicit.
+
+Use this split:
+
+- `.git/info/exclude`: one runtime's private tool state, agent workdirs, sandbox artifacts
+- `.gitignore`: stable shared local-only categories expected across runtimes
 
 ## Common Placement
 

@@ -58,6 +58,7 @@ def test_runtime(runtime_root):
     writer_script = runtime_root / ".orbitos/scripts/write_event.py"
     validation_script = runtime_root / ".orbitos/scripts/run-validation.py"
 
+    run(["git", "init"], runtime_root)
     run([python, str(init_script)], runtime_root)
 
     required_paths = [
@@ -69,6 +70,19 @@ def test_runtime(runtime_root):
     ]
     for path in required_paths:
         require(path.is_file(), f"init-runtime did not create {path.relative_to(runtime_root)}")
+
+    exclude_path = runtime_root / ".git/info/exclude"
+    require(exclude_path.is_file(), "init-runtime did not create .git/info/exclude")
+    exclude_content = exclude_path.read_text(encoding="utf-8")
+    require(".mimocode/" in exclude_content, "init-runtime did not register .mimocode/ local exclude")
+    require(".nova/" in exclude_content, "init-runtime did not register .nova/ local exclude")
+
+    runtime_private_dir = runtime_root / ".mimocode"
+    runtime_private_dir.mkdir(parents=True, exist_ok=True)
+    runtime_private_file = runtime_private_dir / "session.json"
+    runtime_private_file.write_text('{"runtime": true}\n', encoding="utf-8")
+    ignored_check = run(["git", "check-ignore", "-v", ".mimocode/session.json"], runtime_root)
+    require(".git/info/exclude" in ignored_check.stdout, "runtime private workdir is not ignored by local exclude")
 
     inbox_sentinel = runtime_root / "01-收件箱/user-sentinel.md"
     timeline_sentinel = runtime_root / "02-时间线/今日.md"
@@ -85,6 +99,7 @@ def test_runtime(runtime_root):
     require(inbox_sentinel.read_text(encoding="utf-8") == "user content must survive\n", "init-runtime overwrote user inbox content")
     require(timeline_sentinel.read_text(encoding="utf-8") == "timeline content must survive\n", "init-runtime overwrote timeline content")
     require("2026-06-17" in registry_sentinel.read_text(encoding="utf-8"), "init-runtime overwrote registry content")
+    require(exclude_path.read_text(encoding="utf-8") == exclude_content, "init-runtime rewrote local exclude unexpectedly")
 
     writer_command = [
         python,

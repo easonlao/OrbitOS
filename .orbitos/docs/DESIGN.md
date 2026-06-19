@@ -97,8 +97,15 @@
 - `TASKS.md`：当前阶段可执行任务。
 - `OPEN-QUESTIONS.md`：未确认问题、原因、选项和建议。
 - `docs/`：专项调研、评审、handoff 和设计记录。
+- `docs/LESSONS-LEARNED.md`：项目特有的经验、踩坑、验证结论和发布约束；只保留离开该项目后复用价值明显下降的内容。
 - `repo/`：项目实际产品或 release Git 仓库；没有独立发布物的项目可以不创建。
 - 历史 review、handoff 和专项调查保留为证据，但不承担当前状态。
+
+项目经验与 agent 经验分层：
+
+- 跨项目可复用的执行经验进入 `00-系统/agents/{agent_id}.md`。
+- 主要只对当前项目成立的经验进入 `03-项目/{project}/docs/LESSONS-LEARNED.md`。
+- 不要把整段项目踩坑复制进 agent profile；agent profile 只保留抽象后的短经验。
 
 ## 6. Event 设计
 
@@ -124,7 +131,14 @@ Event 默认由 `.orbitos/scripts/write_event.py` 生成。Agent 只提交：
 
 脚本负责生成时间、event ID、actor、默认 checklist 和稳定结构。输出使用 JSON-compatible YAML，既可由现有工具读取，也避免 agent 手写 YAML 时出现缩进、字段和命名漂移。
 
-## 7. Hindsight 设计
+## 7. ADR 设计
+
+- Architecture、Design 和 STATUS 是当前状态镜像；ADR 是不可静默改写的决策历史。
+- ADR 跟随产品仓库版本化；OrbitOS 使用 `.orbitos/docs/adr/`，其他项目遵循各自仓库约定。
+- 只有重大、难回退、存在真实取舍且已由用户确认的决策才创建 ADR。
+- 新决策替代旧决策时创建新 ADR，并将旧记录标记为 `superseded`。
+
+## 8. Hindsight 设计
 
 - Hindsight 是可选长期记忆投影。
 - 不自动复制整个知识库。
@@ -132,14 +146,14 @@ Event 默认由 `.orbitos/scripts/write_event.py` 生成。Agent 只提交：
 - Recall 结果不能直接覆盖项目 STATUS、原件或 active knowledge。
 - 当前正式主 bank、迁移策略和认证边界仍由项目 `OPEN-QUESTIONS.md` 管理。
 
-## 8. Git 与 Runtime 设计
+## 9. Git 与 Runtime 设计
 
 - Runtime 根目录是普通 Git clone。
 - 系统文件被 Git 跟踪并通过 `git pull` 更新。
 - 用户内容、Agent Profile、registry、event、queue、state 和 mutable views 被忽略。
 - 首次 clone 后运行 `python .orbitos/scripts/init-runtime.py`，只创建缺失本地文件，不覆盖已有内容。
 
-## 9. Skills 边界
+## 10. Skills 边界
 
 当前 OrbitOS 不存在专属 Skills 层。
 
@@ -147,7 +161,7 @@ Event 默认由 `.orbitos/scripts/write_event.py` 生成。Agent 只提交：
 - 旧 OrbitOS Skills 已归档，不得作为当前设计依据。
 - Role、Thinking Mode 和 Skills 属于不同资产，未来分别设计，不能混为同一对象。
 
-## 10. 测试分层
+## 11. 测试分层
 
 - `.orbitos/evals/`：验证 schema、规则和反例等局部契约。
 - `run-validation.py`：检查当前 Runtime 的目录、对象和链接边界。
@@ -155,7 +169,7 @@ Event 默认由 `.orbitos/scripts/write_event.py` 生成。Agent 只提交：
 
 内核变更必须通过 Runtime 集成测试后才能 commit 或 push。
 
-## 11. MAP、STATUS 与 Frontmatter
+## 12. MAP、STATUS 与 Frontmatter
 
 - `MAP.md` 只做导航，不写状态。
 - `STATUS.md` 只写当前状态，不写完整历史。

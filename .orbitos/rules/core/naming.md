@@ -162,6 +162,19 @@ STATUS.md
 ROADMAP.md
 ```
 
+Recommended project experience file for long-lived or technical projects:
+
+```text
+docs/LESSONS-LEARNED.md
+```
+
+Architecture decisions use a stable sequence within their owning scope:
+
+```text
+.orbitos/docs/adr/NNNN_short_title.md
+docs/adr/NNNN_short_title.md
+```
+
 Project internals do not need to follow OrbitOS-wide visible directory naming, but project status files should stay stable.
 
 When a project has both local management material and a releasable/product repository, keep them separated:
@@ -182,6 +195,8 @@ Rules:
 
 - Keep current project control files at the project root so humans and agents can find the state without another navigation layer.
 - `docs/` is for supporting development records; it is not the project status source.
+- `docs/LESSONS-LEARNED.md` is the preferred home for project-specific pitfalls, operating constraints, validation lessons, and domain-scoped experience that should stay with the project.
+- Product ADRs stay inside the version-controlled product repository and follow its local convention; use `docs/adr/` only when no stronger convention exists.
 - `repo/` is for release/product code and its own Git history.
 - A project-level `AGENTS.md` may route agents to the canonical development rules inside `repo/`, but must not copy those rules.
 - Do not use symlinks or directory junctions as the routing contract across Windows, Synology, and Linux environments.

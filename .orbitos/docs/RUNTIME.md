@@ -38,11 +38,19 @@ Before running any OrbitOS command, the workspace must contain:
 
 If these paths are missing, the runtime is blocked.
 
-Do not fall back to legacy `.orbit/`.
-
 Do not read another agent's profile when the registry is unavailable.
 
 This usually means the mapped workspace is stale, incomplete, or not synced to the current OrbitOS repository state.
+
+## Local Runtime Excludes
+
+Runtime-only private working directories should prefer local Git excludes over shared repository ignore rules.
+
+- Shared repository `.gitignore` is for stable cross-runtime local categories such as user content, logs, cache, and tracked runtime mutable areas.
+- Runtime-specific agent workdirs such as `.mimocode/` or future local sandbox folders should go to `.git/info/exclude`.
+- `init-runtime.py` maintains the OrbitOS-managed block inside `.git/info/exclude` when Git metadata is available.
+
+This keeps one runtime's private tool state from polluting the Product Repo ignore contract.
 
 ## Standard Commands
 
@@ -68,6 +76,12 @@ Node fallback:
 
 ```powershell
 node .orbitos/scripts/run-validation.mjs
+```
+
+Initialize missing runtime files and local excludes:
+
+```powershell
+python .orbitos/scripts/init-runtime.py
 ```
 
 ## Environment Report
@@ -110,7 +124,6 @@ The agent should report:
 
 - current working directory
 - whether `.orbitos/` exists
-- whether `.orbit/` exists
 - Python / Node / Git / PowerShell availability, if manually checked
 - that validation could not run because scripts were missing
 
