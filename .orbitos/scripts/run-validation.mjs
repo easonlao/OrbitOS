@@ -378,9 +378,23 @@ for (const name of legacySystemManual) {
 printCase("actual.system-manual", true, systemManualErrors);
 
 caseCount += 1;
-const registryErrors = [];
-validateValue(readJsonLike(".orbitos/agents/registry.yaml"), schemas["agent-registry"], "$", registryErrors);
-printCase("actual.agent-registry", true, registryErrors);
+const runtimeTemplateErrors = [];
+const requiredRuntimeTemplates = [
+  ".orbitos/templates/.orbitos/agents/registry.yaml",
+  ".orbitos/templates/01-收件箱/00-粘贴.md",
+  ".orbitos/templates/02-时间线/今日.md",
+  ".orbitos/templates/02-时间线/本周.md",
+];
+for (const relativePath of requiredRuntimeTemplates) {
+  if (!fs.existsSync(path.join(root, relativePath))) {
+    addError(runtimeTemplateErrors, relativePath, "required runtime template is missing");
+  }
+}
+const registryTemplatePath = path.join(root, ".orbitos/templates/.orbitos/agents/registry.yaml");
+if (fs.existsSync(registryTemplatePath)) {
+  validateValue(readJsonLike(".orbitos/templates/.orbitos/agents/registry.yaml"), schemas["agent-registry"], "$", runtimeTemplateErrors);
+}
+printCase("actual.runtime-templates", true, runtimeTemplateErrors);
 
 caseCount += 1;
 const ingestErrors = [];

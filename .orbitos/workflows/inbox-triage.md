@@ -35,7 +35,7 @@ Inbox Triage 是 `01-收件箱/` 的第一轮处理流程。
 - `.orbitos/logs/events/YYYYMMDD_inbox_triage.yaml`
 - `.orbitos/state/lifecycle-index.yaml` 的状态更新
 - `02-时间线/今日.md` 的“收件箱状态”区块
-- 必要时同步 `02-时间线/待确认.md` 和 `02-时间线/下一步.md`
+- 必要时同步 `02-时间线/今日.md` 中的待确认和可继续区块
 
 ## 执行流程
 

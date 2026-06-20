@@ -33,21 +33,22 @@ python .orbitos/scripts/init-runtime.py
 ```
 
 This command only creates missing local files. It does not overwrite existing content.
+It also creates local runtime pages such as `01-收件箱/00-粘贴.md`, `02-时间线/今日.md`, `02-时间线/本周.md`, and the local agent registry.
 
 4. Put anything you want OrbitOS to handle into `01-收件箱/`.
 5. If you want an agent to connect, have it start from `AGENTS.md`; the execution rules live there, not in README.
 
-Your main daily view is:
+After initialization, your main daily view is:
 
-- [Today Dashboard](02-%E6%97%B6%E9%97%B4%E7%BA%BF/%E4%BB%8A%E6%97%A5.md)
+- `02-时间线/今日.md`
 
 If something needs your decision, it appears in:
 
-- [Pending Review](02-%E6%97%B6%E9%97%B4%E7%BA%BF/%E5%BE%85%E7%A1%AE%E8%AE%A4.md)
+- the `Current Review` section inside `02-时间线/今日.md`
 
 If you want to continue from the current state, use:
 
-- [Next Steps](02-%E6%97%B6%E9%97%B4%E7%BA%BF/%E4%B8%8B%E4%B8%80%E6%AD%A5.md)
+- the `Continue` section inside `02-时间线/今日.md`
 
 ## How It Feels To Use
 
@@ -56,7 +57,7 @@ OrbitOS keeps the user-facing path short:
 ```text
 drop material into 01-收件箱/
   -> talk with an agent
-  -> review 今日.md / 待确认.md
+  -> review `02-时间线/今日.md`
   -> confirmed material becomes project, knowledge, resource, or output
 ```
 
@@ -70,7 +71,7 @@ README.md              # English getting-started guide
 README.zh-CN.md        # Chinese getting-started guide
 00-系统/               # User-facing system manual
 01-收件箱/             # Temporary intake for raw material
-02-时间线/             # Today, this week, pending confirmations, and next steps
+02-时间线/             # Today, this week, and other timeline views
 03-项目/               # Project folders, notes, and status
 04-知识/               # Confirmed knowledge worth keeping long term
 05-资源/               # References, attachments, and source material copies

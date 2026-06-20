@@ -419,9 +419,20 @@ print_case("actual.knowledge-directories", True, knowledge_directory_errors)
 
 
 case_count += 1
-registry_errors = []
-validate_value(read_json_like(".orbitos/agents/registry.yaml"), SCHEMAS["agent-registry"], "$", registry_errors)
-print_case("actual.agent-registry", True, registry_errors)
+runtime_template_errors = []
+required_runtime_templates = [
+    ".orbitos/templates/.orbitos/agents/registry.yaml",
+    ".orbitos/templates/01-收件箱/00-粘贴.md",
+    ".orbitos/templates/02-时间线/今日.md",
+    ".orbitos/templates/02-时间线/本周.md",
+]
+for relative_path in required_runtime_templates:
+    if not (ROOT / relative_path).is_file():
+        add_error(runtime_template_errors, relative_path, "required runtime template is missing")
+registry_template_path = ROOT / ".orbitos/templates/.orbitos/agents/registry.yaml"
+if registry_template_path.is_file():
+    validate_value(read_json_like(".orbitos/templates/.orbitos/agents/registry.yaml"), SCHEMAS["agent-registry"], "$", runtime_template_errors)
+print_case("actual.runtime-templates", True, runtime_template_errors)
 
 
 case_count += 1

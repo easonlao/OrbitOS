@@ -50,7 +50,7 @@ Agent 只需要整理：
 4. 运行 `python .orbitos/scripts/run-validation.py`。
 5. validation 失败时停止，不刷新 Dashboard；报告失败原因。
 6. 使用 `.orbitos/scripts/write_event.py` 写入完成凭证。
-7. 按实际变化刷新 `今日.md`、`待确认.md`、`下一步.md`；没有变化的页面不写。
+7. 按实际变化刷新 `今日.md`；只有周视图或其他明确状态页发生变化时才额外更新对应页面。
 8. 再运行一次 validation，确认最终状态。
 9. 最终 validation 失败时报告 event 路径和失败原因，不把失败结果描述为完成。
 

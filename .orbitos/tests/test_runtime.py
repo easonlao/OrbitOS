@@ -74,8 +74,7 @@ def test_runtime(runtime_root):
         runtime_root / ".orbitos/agents/registry.yaml",
         runtime_root / "01-收件箱/00-粘贴.md",
         runtime_root / "02-时间线/今日.md",
-        runtime_root / "02-时间线/待确认.md",
-        runtime_root / "02-时间线/下一步.md",
+        runtime_root / "02-时间线/本周.md",
     ]
     for path in required_paths:
         require(path.is_file(), f"init-runtime did not create {path.relative_to(runtime_root)}")
