@@ -25,12 +25,12 @@ The public repository should contain:
 - `00-系统/` user manual
 - `02-时间线/` dashboard templates and current visible status
 - `.orbitos/AGENTS.md`
-- `.orbitos/docs/`
 - `.orbitos/rules/core/`
 - `.orbitos/schemas/`
 - `.orbitos/workflows/`
 - `.orbitos/scripts/`
 - `.orbitos/evals/`
+- `.orbitos/templates/`
 - directory `.gitkeep` files
 
 The public repository should not contain:

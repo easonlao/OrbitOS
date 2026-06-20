@@ -42,7 +42,7 @@ Meaning:
 
 - `00-系统`: how OrbitOS works and how users read the system.
 - `01-收件箱`: raw inputs and unprocessed material.
-- `02-时间线`: today, this week, pending items, and next actions.
+- `02-时间线`: today, this week, and archived timeline views.
 - `03-项目`: active workspaces and project state.
 - `04-知识`: confirmed, rewritten, human-readable knowledge.
 - `05-资源`: reusable references and supporting materials.
@@ -172,7 +172,6 @@ docs/LESSONS-LEARNED.md
 Architecture decisions use a stable sequence within their owning scope:
 
 ```text
-.orbitos/docs/adr/NNNN_short_title.md
 docs/adr/NNNN_short_title.md
 ```
 
@@ -194,7 +193,7 @@ Rules:
 - Keep current project control files at the project root so humans and agents can find the state without another navigation layer.
 - `docs/` is for supporting development records; it is not the project status source.
 - `docs/LESSONS-LEARNED.md` is the preferred home for project-specific pitfalls, operating constraints, validation lessons, and domain-scoped experience that should stay with the project.
-- Product ADRs stay inside the version-controlled product repository and follow its local convention; use `docs/adr/` only when no stronger convention exists.
+- OrbitOS local design ADRs stay in the project `docs/adr/` layer; product repositories may define their own ADR convention when they truly need product-versioned decision history.
 - `repo/` is for release/product code and its own Git history.
 - A project-level `AGENTS.md` may route agents to the canonical development rules inside `repo/`, but must not copy those rules.
 - Do not use symlinks or directory junctions as the routing contract across Windows, Synology, and Linux environments.

@@ -378,6 +378,13 @@ for (const name of legacySystemManual) {
 printCase("actual.system-manual", true, systemManualErrors);
 
 caseCount += 1;
+const machineLayerErrors = [];
+if (fs.existsSync(path.join(root, ".orbitos/docs"))) {
+  addError(machineLayerErrors, ".orbitos/docs", "runtime machine layer must not contain human-readable design docs");
+}
+printCase("actual.machine-layer-boundary", true, machineLayerErrors);
+
+caseCount += 1;
 const runtimeTemplateErrors = [];
 const requiredRuntimeTemplates = [
   ".orbitos/templates/.orbitos/agents/registry.yaml",

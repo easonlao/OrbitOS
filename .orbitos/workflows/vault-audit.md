@@ -38,7 +38,6 @@ Vault Audit 自检 OrbitOS 最小内核是否保持一致。
 - `01-收件箱/已入库/`
 - `.orbitos/ingest/batches/`
 - `02-时间线/今日.md`
-- `02-时间线/待确认.md`
 
 不判断内容质量，不评价知识卡片深度，不重排项目结构。
 
@@ -50,7 +49,7 @@ Vault Audit 自检 OrbitOS 最小内核是否保持一致。
 4. 校验 batch 是否符合 `.orbitos/schemas/ingest-batch.schema.yaml`。
 5. 检查 `已入库/` 中的文件是否都有 batch 记录。
 6. 检查 batch 记录中的文件是否真实存在。
-7. 检查 `needs_review` 是否能在 `今日.md` 或 `待确认.md` 找到对应待确认投影。
+7. 检查 `needs_review` 是否能在 `今日.md` 找到对应待确认投影。
 8. 输出简短审核结果。
 9. 如有异常，写入 Progress Sync event，并投影到 `今日.md` 的待确认或系统健康。
 

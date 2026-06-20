@@ -419,6 +419,13 @@ print_case("actual.knowledge-directories", True, knowledge_directory_errors)
 
 
 case_count += 1
+machine_layer_errors = []
+if (ROOT / ".orbitos/docs").exists():
+    add_error(machine_layer_errors, ".orbitos/docs", "runtime machine layer must not contain human-readable design docs")
+print_case("actual.machine-layer-boundary", True, machine_layer_errors)
+
+
+case_count += 1
 runtime_template_errors = []
 required_runtime_templates = [
     ".orbitos/templates/.orbitos/agents/registry.yaml",

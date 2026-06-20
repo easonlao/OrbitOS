@@ -58,6 +58,8 @@ def test_runtime(runtime_root):
     writer_script = runtime_root / ".orbitos/scripts/write_event.py"
     validation_script = runtime_root / ".orbitos/scripts/run-validation.py"
 
+    require(not (runtime_root / ".orbitos/docs").exists(), "product repo must not ship .orbitos/docs")
+
     startup_content = (runtime_root / ".orbitos/workflows/startup-sync.md").read_text(encoding="utf-8")
     startup_execution = startup_content.split("## 执行流程", 1)[1].split("## 异常处理", 1)[0]
     for project_input in ("AGENTS.md", "README.md", "STATUS.md"):

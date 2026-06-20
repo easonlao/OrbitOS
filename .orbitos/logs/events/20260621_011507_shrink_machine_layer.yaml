@@ -1,0 +1,95 @@
+{
+  "id": "evt_20260621_011507_codex_shrink_machine_layer",
+  "timestamp": "2026-06-21T01:15:07+08:00",
+  "actor": {
+    "type": "agent",
+    "name": "codex",
+    "agent_id": "codex",
+    "role": null,
+    "device": null
+  },
+  "event_type": "progress_sync",
+  "project": "OrbitOS",
+  "summary": "Shrink .orbitos machine layer and remove local design docs from Product Repo.",
+  "reason": "The runtime layer should keep only executable machine assets; local design docs belong in the project docs layer.",
+  "thinking_modes": [],
+  "inputs": [],
+  "actions": [
+    {
+      "action": "complete_task",
+      "target": "OrbitOS",
+      "result": "completed"
+    }
+  ],
+  "outputs": [],
+  "files_changed": [
+    {
+      "path": ".orbitos/docs/REQUIREMENTS.md",
+      "change_type": "deleted",
+      "purpose": "remove duplicated local design docs from machine layer"
+    },
+    {
+      "path": ".orbitos/docs/ARCHITECTURE.md",
+      "change_type": "deleted",
+      "purpose": "remove duplicated local design docs from machine layer"
+    },
+    {
+      "path": ".orbitos/docs/DESIGN.md",
+      "change_type": "deleted",
+      "purpose": "remove duplicated local design docs from machine layer"
+    },
+    {
+      "path": ".orbitos/AGENTS.md",
+      "change_type": "updated",
+      "purpose": "route design reads to project docs"
+    },
+    {
+      "path": ".orbitos/scripts/run-validation.py",
+      "change_type": "updated",
+      "purpose": "add machine-layer boundary check"
+    },
+    {
+      "path": ".orbitos/tests/test_runtime.py",
+      "change_type": "updated",
+      "purpose": "assert product repo does not ship .orbitos/docs"
+    }
+  ],
+  "review_required": false,
+  "review_items": [],
+  "checklist": [
+    {
+      "item": "task_scope",
+      "status": "done",
+      "note": "Agent confirmed the change stayed within the requested scope."
+    },
+    {
+      "item": "user_content",
+      "status": "done",
+      "note": "No user content was moved, deleted, or archived."
+    },
+    {
+      "item": "formal_artifact",
+      "status": "done",
+      "note": "No unconfirmed formal artifact was promoted."
+    },
+    {
+      "item": "validation",
+      "status": "done",
+      "note": "validation=passed"
+    },
+    {
+      "item": "experience_check",
+      "status": "done",
+      "note": "not_applicable"
+    }
+  ],
+  "next_steps": [],
+  "hindsight": {
+    "used": false,
+    "recall": [],
+    "retain": [],
+    "note": null
+  },
+  "related_events": [],
+  "confidence": "high"
+}

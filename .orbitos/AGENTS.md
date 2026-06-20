@@ -12,7 +12,7 @@
 - 面向系统的 Markdown 规则
 - 稳定的 agent 执行规则
 - 根 README 的定位或编写规则
-- `.orbitos/docs/`、`.orbitos/rules/` 与 `00-系统/` 之间的内容提升
+- 项目本地 `../docs/`、`.orbitos/rules/` 与 `00-系统/` 之间的内容提升
 - 版本、changelog、commit 或 release 规则
 - Git ignore、仓库边界或已跟踪文件清理规则
 - `.orbitos/` 内部内容
@@ -44,11 +44,11 @@
 
 ## 设计文档
 
-- `.orbitos/docs/README.md`：开发文档边界
-- `.orbitos/docs/REQUIREMENTS.md`：已确认需求与约束
-- `.orbitos/docs/ARCHITECTURE.md`：系统分层与对象模型
-- `.orbitos/docs/DESIGN.md`：具体目录与文档设计
-- `.orbitos/docs/RUNTIME.md`：agent 最小运行环境约定
+- `../docs/REQUIREMENTS.md`：已确认需求与约束
+- `../docs/ARCHITECTURE.md`：系统分层与对象模型
+- `../docs/DESIGN.md`：具体目录与文档设计
+- `../docs/RUNTIME.md`：agent 最小运行环境约定
+- `../docs/adr/`：已确认的本地设计决策记录
 
 开发进度属于本地项目管理，不得混入产品设计文档：`ROADMAP.md` 管目标、完成条件和总体状态，`STATUS.md` 管详细现状、判断依据、最多 3 项当前任务和 3 项待确认决策；任务通过路线编号与 ROADMAP 对应。
 

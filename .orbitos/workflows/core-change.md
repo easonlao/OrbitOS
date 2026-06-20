@@ -21,21 +21,21 @@ Core Change 约束 OrbitOS 内核内容的编写和修改。
 
 - 根 `AGENTS.md`
 - `.orbitos/AGENTS.md`
-- `.orbitos/docs/`
 - `.orbitos/rules/`
 - `.orbitos/schemas/`
 - `.orbitos/workflows/`
 - `.orbitos/scripts/`
 - `.orbitos/evals/`
+- 项目本地 `docs/`
 - 目录协议
 - 生命周期规则
 - 写入校验规则
-- 从 `.orbitos/docs/` 提升到 `00-系统/` 的规则
+- 从项目本地 `docs/` 提升到 `00-系统/` 的规则
 
 ## 核心原则
 
 1. 先判断这是内部设计变更，还是用户可见规则变更。
-2. 内部设计先写 `.orbitos/docs/`。
+2. 内部设计先写项目本地 `docs/`。
 3. 稳定执行规则写 `.orbitos/rules/core/`。
 4. 用户可见规则必须经过确认，并改写成用户视角后进入 `00-系统/`。
 5. 每次核心变更必须有 reason。
