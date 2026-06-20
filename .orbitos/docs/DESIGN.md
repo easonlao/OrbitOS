@@ -6,7 +6,7 @@
 |---|---|---|
 | `00-系统/` | 用户系统说明 | 否 |
 | `01-收件箱/` | 临时输入与已入库原件 | 原件是内容证据 |
-| `02-时间线/` | 今日、本周、待确认、下一步 | 否，属于聚合视图 |
+| `02-时间线/` | 今日与本周 | 否，属于聚合视图 |
 | `03-项目/` | 项目内容和项目状态 | 项目 `STATUS.md` 是项目状态源 |
 | `04-知识/` | 草稿与当前确认知识 | active knowledge 是当前认知来源 |
 | `05-资源/` | 已识别、可引用资料 | 否 |
@@ -14,7 +14,25 @@
 | `99-归档/` | 已退出当前视野的对象 | 否 |
 | `.orbitos/` | 控制面与机器运行记录 | event/ingest 对应各自事实 |
 
-## 2. 收件箱设计
+## 2. 区域规则设计
+
+```text
+.orbitos/rules/
+  core/        # 跨区域共同约束
+  areas/       # 每个可见区域的数据契约
+```
+
+区域规则按顶层区域拆分，至少覆盖收件箱、时间线、项目、知识和资源。每份规则只定义：
+
+- 接收的数据和进入条件。
+- 区域内的权威来源。
+- 允许的区域内变化与跨区域出口。
+- 可以生成的人读投影。
+- 必须暂停确认或拒绝的行为。
+
+共同的确认、Event、Git、Markdown 和任务边界继续留在 core rule，不复制到每份区域规则。根 `AGENTS.md` 只保存区域路由；workflow 引用源区域与目标区域规则并实现具体步骤。
+
+## 3. 收件箱设计
 
 ```text
 01-收件箱/
@@ -29,7 +47,7 @@
 - 已入库不等于知识完成，只表示该原件已经处理过且不会被重复当作新输入。
 - 知识转写不得修改已入库原件。
 
-## 3. 知识设计
+## 4. 知识设计
 
 ```text
 04-知识/
@@ -37,14 +55,14 @@
   NN-主题/
 ```
 
-### 3.1 草稿
+### 4.1 草稿
 
 - `lifecycle: draft`。
 - 必须指向至少一个原始证据或已确认来源。
 - 可以包含推测，但必须明确标注。
 - 不作为当前确认知识被其他 agent 无条件引用。
 
-### 3.2 Active Knowledge
+### 4.2 Active Knowledge
 
 - 用户确认后移出草稿箱并改为 `lifecycle: active`。
 - 表达当前最可信综合理解，而不是复制原始材料。
@@ -53,32 +71,30 @@
 - 修改完成并经用户重新确认后，才能移回正式主题目录并恢复 `active`。
 - 错字、格式、链接和不改变语义的维护可由 agent 自动完成，并在实质性维护时留 event。
 
-### 3.3 更新与冲突
+### 4.3 更新与冲突
 
 - 新证据支持现有结论：如需改变正文语义，先把 active 文件移回草稿箱；只补不改变语义的来源链接可以直接维护。
 - 新证据与现有结论冲突：把 active 文件移回草稿箱，保留原结论、新证据和冲突说明，等待用户确认。
 - 结论过时：把文件移回草稿箱，保留来源和变更原因，再由用户确认更新或归档。
 
-## 4. 时间线设计
+## 5. 时间线设计
 
 ```text
 02-时间线/
   今日.md
   本周.md
-  待确认.md
-  下一步.md
   归档/
 ```
 
-- `今日.md`：当天关键变化与当前入口。
+- `今日.md`：当天关键变化、需要用户处理的摘要和可继续入口；内容来自各区域权威来源。
 - `本周.md`：当前 ISO 周的方向性总结，只由 Weekly Review 更新。
-- `待确认.md`：跨区域聚合的用户决策入口，不是事实源。
-- `下一步.md`：当前可执行入口，不保存完整路线图。
 - `归档/`：旧时间视图快照，不等于全局归档。
 
-Startup Sync 默认只读 `今日.md`；`待确认.md` 和 `下一步.md` 是按需展开页，不属于固定冷启动集合。
+待确认与下一步不建立独立页面。待确认保留在所属项目 STATUS 或对应区域权威状态中；当前任务保留在项目 STATUS，长期方向保留在 ROADMAP。`今日.md` 只投影当天真正需要看到的部分，并链接回来源。
 
-## 5. 项目设计
+Startup Sync 默认只读 `今日.md`，再按任务语义进入对应区域与权威来源。
+
+## 6. 项目设计
 
 最小项目结构：
 
@@ -110,7 +126,7 @@ Startup Sync 默认只读 `今日.md`；`待确认.md` 和 `下一步.md` 是按
 - 主要只对当前项目成立的经验进入 `03-项目/{project}/docs/LESSONS-LEARNED.md`。
 - 不要把整段项目踩坑复制进 agent profile；agent profile 只保留抽象后的短经验。
 
-## 6. Event 设计
+## 7. Event 设计
 
 Event 只记录操作事实：
 
@@ -134,14 +150,14 @@ Event 默认由 `.orbitos/scripts/write_event.py` 生成。Agent 只提交：
 
 脚本负责生成时间、event ID、actor、默认 checklist 和稳定结构。输出使用 JSON-compatible YAML，既可由现有工具读取，也避免 agent 手写 YAML 时出现缩进、字段和命名漂移。
 
-## 7. ADR 设计
+## 8. ADR 设计
 
 - Architecture、Design 和 STATUS 是当前状态镜像；ADR 是不可静默改写的决策历史。
 - ADR 跟随产品仓库版本化；OrbitOS 使用 `.orbitos/docs/adr/`，其他项目遵循各自仓库约定。
 - 只有重大、难回退、存在真实取舍且已由用户确认的决策才创建 ADR。
 - 新决策替代旧决策时创建新 ADR，并将旧记录标记为 `superseded`。
 
-## 8. Hindsight 设计
+## 9. Hindsight 设计
 
 - Hindsight 是可选长期记忆投影。
 - 不自动复制整个知识库。
@@ -149,14 +165,14 @@ Event 默认由 `.orbitos/scripts/write_event.py` 生成。Agent 只提交：
 - Recall 结果不能直接覆盖项目 STATUS、原件或 active knowledge。
 - 当前正式主 bank、迁移策略和认证边界仍由项目 `STATUS.md` 的待确认区管理。
 
-## 9. Git 与 Runtime 设计
+## 10. Git 与 Runtime 设计
 
 - Runtime 根目录是普通 Git clone。
 - 系统文件被 Git 跟踪并通过 `git pull` 更新。
 - 用户内容、Agent Profile、registry、event、queue、state 和 mutable views 被忽略。
 - 首次 clone 后运行 `python .orbitos/scripts/init-runtime.py`，只创建缺失本地文件，不覆盖已有内容。
 
-## 10. Skills 边界
+## 11. Skills 边界
 
 当前 OrbitOS 不存在专属 Skills 层。
 
@@ -164,7 +180,7 @@ Event 默认由 `.orbitos/scripts/write_event.py` 生成。Agent 只提交：
 - 旧 OrbitOS Skills 已归档，不得作为当前设计依据。
 - Role、Thinking Mode 和 Skills 属于不同资产，未来分别设计，不能混为同一对象。
 
-## 11. 测试分层
+## 12. 测试分层
 
 - `.orbitos/evals/`：验证 schema、规则和反例等局部契约。
 - `run-validation.py`：检查当前 Runtime 的目录、对象和链接边界。
@@ -172,7 +188,7 @@ Event 默认由 `.orbitos/scripts/write_event.py` 生成。Agent 只提交：
 
 内核变更必须通过 Runtime 集成测试后才能 commit 或 push。
 
-## 12. MAP、README、AGENTS 与 STATUS
+## 13. MAP、README、AGENTS 与 STATUS
 
 - `MAP.md` 是可见区域的人读导航：一句话说明区域用途，只列直属子目录及其用户入口，不下钻到子目录内部文件，也不写原则、规则、状态或目录协议。
 - `README.md` 只服务可独立发布或使用的对象，不是内部项目目录的默认文件；它不承载 Agent 执行规则或当前状态。
