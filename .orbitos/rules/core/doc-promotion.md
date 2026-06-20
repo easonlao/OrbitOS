@@ -4,13 +4,13 @@ This rule defines how OrbitOS design discussion becomes user-facing system docum
 
 ## Core Rule
 
-Design discussion, architecture exploration, implementation details, and unresolved tradeoffs start in the local project `docs/` layer.
+Design discussion, architecture exploration, implementation details, and unresolved tradeoffs start in the project development layer managed outside Product Repo.
 
 Only confirmed, user-facing, stable rules or explanations should be promoted into `00-系统/`.
 
 ## Layer Boundaries
 
-### Local project `docs/`
+### Project development layer
 
 Use this layer for:
 
@@ -56,7 +56,7 @@ It should explain the current system state, not expose raw design debate.
 
 ```text
 discussion / design draft
-  -> ../docs/
+  -> project development layer
   -> user confirmation
   -> rewrite from user perspective
   -> 00-系统/
@@ -73,7 +73,7 @@ repeated need / confirmed operating constraint
   -> .orbitos/rules/core/
 ```
 
-Do not put stable execution rules in the local project `docs/`.
+Do not put stable execution rules in the project development layer.
 
 ## Promotion Requirements
 
@@ -86,7 +86,7 @@ Before moving or summarizing content into `00-系统/`, an agent must check:
 5. Does it point to `.orbitos/` for developer/internal details instead of duplicating them?
 6. Does it avoid creating wikilinks to missing or machine-only files?
 
-If any answer is no, keep the content in the local project `docs/`.
+If any answer is no, keep the content in the project development layer.
 
 ## What Not To Promote
 
@@ -119,5 +119,5 @@ When editing `00-系统/`, first ask:
 Is this a user-facing stable rule, or is it still internal design material?
 ```
 
-If it is internal design material, write or update the local project `docs/` instead.
+If it is internal design material, return to the project-layer router and update the project development documents there instead.
 

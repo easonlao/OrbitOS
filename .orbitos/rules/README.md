@@ -11,6 +11,6 @@ This directory contains rules that agents must follow while operating OrbitOS.
 
 Rules are executable constraints for agents.
 
-Design notes, rationale, alternatives, and planning belong in the local project `docs/` layer, not in `.orbitos/`.
+Design notes, rationale, alternatives, and planning belong in the project development layer managed outside Product Repo, not in `.orbitos/`.
 
 Rule evolution is defined in `.orbitos/workflows/rule-evolution.md`.

@@ -12,7 +12,7 @@
 - 面向系统的 Markdown 规则
 - 稳定的 agent 执行规则
 - 根 README 的定位或编写规则
-- 项目本地 `../docs/`、`.orbitos/rules/` 与 `00-系统/` 之间的内容提升
+- 设计来源、`.orbitos/rules/` 与 `00-系统/` 之间的内容提升
 - 版本、changelog、commit 或 release 规则
 - Git ignore、仓库边界或已跟踪文件清理规则
 - `.orbitos/` 内部内容
@@ -44,11 +44,13 @@
 
 ## 设计文档
 
-- `../docs/REQUIREMENTS.md`：已确认需求与约束
-- `../docs/ARCHITECTURE.md`：系统分层与对象模型
-- `../docs/DESIGN.md`：具体目录与文档设计
-- `../docs/RUNTIME.md`：agent 最小运行环境约定
-- `../docs/adr/`：已确认的本地设计决策记录
+OrbitOS 的人读设计文档由项目层入口管理，不属于 Product Repo 的固定内容。
+
+需要设计上下文时：
+
+1. 回到项目层 `03-项目/OrbitOS/AGENTS.md`。
+2. 由项目层按需路由到本地 `docs/`。
+3. Product Repo 只承载已经落地的规则、workflow、schema、脚本、测试和用户说明。
 
 开发进度属于本地项目管理，不得混入产品设计文档：`ROADMAP.md` 管目标、完成条件和总体状态，`STATUS.md` 管详细现状、判断依据、最多 3 项当前任务和 3 项待确认决策；任务通过路线编号与 ROADMAP 对应。
 

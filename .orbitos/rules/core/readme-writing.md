@@ -63,7 +63,7 @@ The README should include:
   - `AGENTS.md`
 - developer entry:
   - `.orbitos/AGENTS.md`
-  - local project `docs/`
+  - project-layer design docs managed outside Product Repo
   - `.orbitos/rules/`
 - current status and next milestone
 - license
@@ -111,7 +111,6 @@ Use plain code paths for internal files, for example:
 
 ```text
 .orbitos/AGENTS.md
-../docs/ARCHITECTURE.md
 .orbitos/rules/core/git-management.md
 .orbitos/scripts/run-validation.ps1
 ```
