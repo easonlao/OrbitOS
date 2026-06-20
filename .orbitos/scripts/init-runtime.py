@@ -116,21 +116,7 @@ tags:
         write_if_missing(
             "02-时间线/今日.md",
             timeline_frontmatter(title="今日", today=TODAY, now=NOW)
-            + "# 今日\n\n> 首次初始化。让 agent 执行 Startup Sync 后刷新这里。\n\n## 今日总览\n\n- 暂无。\n\n## 待确认\n\n见 [[待确认]]。\n\n## 下一步\n\n见 [[下一步]]。\n",
-        )
-    )
-    results.append(
-        write_if_missing(
-            "02-时间线/待确认.md",
-            timeline_frontmatter(title="待确认", today=TODAY, now=NOW)
-            + "# 待确认\n\n- 暂无。\n",
-        )
-    )
-    results.append(
-        write_if_missing(
-            "02-时间线/下一步.md",
-            timeline_frontmatter(title="下一步", today=TODAY, now=NOW)
-            + "# 下一步\n\n- 接入第一个 agent，并让它从 `AGENTS.md` 开始执行 Startup Sync。\n",
+            + "# 今日\n\n> 首次初始化。让 agent 执行 Startup Sync 后刷新这里。\n\n## 当前判断\n\n- 第一次使用时，先让 agent 执行 Startup Sync。\n- 如果 agent 尚未注册，它应停止并请求你确认 `agent_id` 和部署信息。\n\n## 当前待确认\n\n- 首次使用时，通常需要先确认第一个 agent 的注册信息。\n\n## 今日进展\n\n- 暂无。由 Progress Sync 写入当天关键事实。\n\n## 可继续\n\n- 注册第一个 agent。\n- 把材料放入 `01-收件箱/`。\n- 让 agent 执行 Progress Sync，刷新当前状态。\n\n## 来源\n\n- 机器事实记录保存在 `.orbitos/logs/events/`。\n- 本周回顾见 [[本周]]。\n",
         )
     )
     results.append(
