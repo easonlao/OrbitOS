@@ -131,14 +131,57 @@ Experience Capture 定义 agent 什么时候记录对话内的踩坑、经验和
 规则候选使用：
 
 ```markdown
-- {日期}｜候选：{一句话规则}｜范围：{适用范围}｜证据：{来源}｜下一步：{留在 profile / 进入 learned / 待用户确认}
+- {日期}｜候选：{一句话规则}｜范围：{适用范围}｜证据：{来源}｜下一步：{留在 experience / 进入 learned / 待用户确认}
 ```
 
-## 与 Rule Evolution 的关系
+## 分节生长逻辑
+
+经验文件里的 5 个分节不是并列杂项，而是一条逐步收敛的输入链。
+
+### 经验记录
+
+- 记录已经证明“这样做更稳、更省返工”的有效做法。
+- 允许保留必要上下文，但重点是以后还能复用。
+- 如果后来能被压成一句话规则，可转入 `规则候选`。
+
+### 踩坑
+
+- 记录已经发生的误判、失败、阻塞或返工。
+- 重点是错在哪里、为什么错、下次如何避免。
+- 如果某个坑已经被稳定吸收为经验、规则或系统修复，不应永久留在这里。
+
+### 待确认来源
+
+- 记录还不能当事实写死、但值得继续确认的观察、推测或边界。
+- 一旦得到确认，应立即移出本节：确认后进入经验或规则；证伪后删除并在 event 留痕。
+
+### 规则候选
+
+- 只放已经能压成一句话、但还没进入 learned 的候选规则。
+- 候选必须说明适用范围、证据和下一步。
+- 长期无证据、无复用或已判定不通用时，应回退为普通经验或删除。
+
+### Learned Rule 使用记录
+
+- 只记录当前 agent 实际使用某条 learned rule 的结果。
+- 这里不是规则定义区，而是反馈区。
+- 有了稳定反馈后，再回写 `.orbitos/rules/learned/INDEX.md` 的 `last_used / result / evidence`。
+
+## 清理与收缩
+
+经验文件应持续收缩，不能无限累积。
+
+- 已被系统修复或已进入 learned / core 的旧踩坑，应删除或合并为更高层经验。
+- 已确认或已证伪的“待确认来源”应及时清空，不长期挂着。
+- 规则候选长期没有证据、没有复用或已判定不通用时，应回退或删除。
+- 同类重复记录优先合并，不为每次相同失误保留多条近义项。
+- 需要保留的完整历史证据已经在 event 中存在；经验文件只保留仍有指导价值的摘要。
+
+## 与其他 Workflow 的关系
 
 Experience Capture 只负责捕获输入。
 
-如果捕获内容满足以下条件，再执行 `.orbitos/workflows/rule-evolution.md`：
+如果捕获内容满足以下条件，再交给 `.orbitos/workflows/agent-self-check.md` 或 `.orbitos/workflows/learned-review.md` 继续处理：
 
 - 足够通用。
 - 原子化。
@@ -150,7 +193,7 @@ Experience Capture 只负责捕获输入。
 
 ## 输出结果
 
-Experience Capture 给 Progress Sync 返回以下结果之一：
+Experience Capture 本身不要求 Progress Sync 触发；它只在被调用时返回以下结果之一：
 
 | result | 含义 |
 |---|---|
@@ -158,31 +201,14 @@ Experience Capture 给 Progress Sync 返回以下结果之一：
 | `captured` | 已写入 agent 经验文件或项目经验文件，当前不具备 learned 条件 |
 | `candidate_only` | 已写入规则候选或待观察项，暂不进入 learned index |
 
-Experience Capture 不直接返回 `learned_updated`；该结果只能由 Rule Evolution 更新 learned index 或 learned 使用反馈后产生。
-
-## Progress Sync 要求
-
-Progress Sync 前，agent 必须自检：
-
-```text
-本次工作是否产生经验、踩坑、纠正、失败、返工、规则候选或 learned rule 使用反馈？
-```
-
-如果答案是“是”：
-
-1. 执行 Experience Capture。
-2. 必要时执行 Rule Evolution。
-3. 把需要用户确认的事项投影到 `今日.md`。
-4. 在 event 中记录本次 capture 动作。
-
-如果答案是“否”，Progress Sync 仍应在 event checklist 中记录 `experience_check: not_applicable` 和跳过原因。
+Experience Capture 不直接返回 `learned_updated`；该结果只能由 learned review 更新 learned index 或 learned 使用反馈后产生。
 
 ## 执行清单
 
 ### 进入检查
 
 - [ ] 已确认出现自动触发或用户触发条件。
-- [ ] 已确认当前 agent 已注册并有 agent profile。
+- [ ] 已确认当前 agent 已注册，并有轻量 profile 与 experience 文件。
 - [ ] 已判断本次内容不是普通流水账或隐藏推理。
 
 ### 执行检查

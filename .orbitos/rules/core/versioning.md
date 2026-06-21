@@ -68,28 +68,27 @@ OrbitOS has a working system baseline: workspace skeleton, user README, Dashboar
 
 ## Changelog Layers
 
-OrbitOS keeps two changelog layers.
+OrbitOS keeps two change-history layers.
 
-### Full Internal Changelog
+### Full Project Changelog
 
 Path:
 
 ```text
-.orbitos/CHANGELOG.md
+03-项目/OrbitOS/CHANGELOG.md
 ```
 
 Purpose:
 
-- full release history
-- detailed change groups
-- implementation and protocol changes
+- full version history
+- landed architecture and protocol changes
 - migration notes
 - validation notes
-- prior releases
+- prior releases or milestones
 
-This is the source of truth for release history.
+This is the source of truth for OrbitOS change history.
 
-### User-Facing Current Release Changelog
+### User-Facing Current Release Summary
 
 Path:
 
@@ -101,7 +100,7 @@ Purpose:
 
 - show only the current release summary
 - keep Obsidian reading lightweight
-- point to `.orbitos/CHANGELOG.md` for full history
+- point to project-layer `CHANGELOG.md` for full history
 
 Do not copy all historical release notes into `00-系统/07-系统变更.md`.
 
@@ -155,7 +154,7 @@ python .orbitos/tests/test_runtime.py
 
 Validation and the Runtime integration test must both pass before commit or push.
 
-8. Update `.orbitos/CHANGELOG.md` with full release notes.
+8. Update project-layer `CHANGELOG.md` with full release notes.
 9. Update `00-系统/07-系统变更.md` with only the current release summary.
 10. Write a release event under `.orbitos/logs/events/`.
 11. Commit with a release commit message.
@@ -174,7 +173,7 @@ git push origin vX.Y.Z
 
 ## Release Notes Structure
 
-Use this structure in `.orbitos/CHANGELOG.md`:
+Use this structure in project-layer `CHANGELOG.md`:
 
 ```markdown
 ## vX.Y.Z - YYYY-MM-DD
@@ -212,7 +211,7 @@ Agents preparing version or release changes must:
 
 - follow `.orbitos/workflows/core-change.md`
 - validate core changes against `.orbitos/schemas/core-change.schema.yaml`
-- update `.orbitos/CHANGELOG.md`
+- update project-layer `CHANGELOG.md`
 - update `00-系统/07-系统变更.md`
 - write an event log
 - run `.orbitos/tests/test_runtime.py` and stop if it fails

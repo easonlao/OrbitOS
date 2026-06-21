@@ -1,8 +1,8 @@
 # Learned Rules Index
 
-Learned rules are usable rules extracted from agent experience.
+Learned rules are reusable rules extracted from agent experience.
 
-They are not core rules. Agents may use them, but effects and evidence should be tracked.
+They are not core rules. Keep usage, effects, and evidence traceable.
 
 ## Table
 
@@ -13,16 +13,14 @@ They are not core rules. Agents may use them, but effects and evidence should be
 ## Status
 
 - `active`: usable by agents.
-- `watching`: usable with caution; evidence is still thin.
-- `conflict`: conflicts with a rule, event, or observed result.
+- `watching`: usable with caution.
+- `conflict`: conflicts with rule, event, or observed result.
 - `deprecated`: no longer recommended.
 - `promoted_to_core`: already moved into `.orbitos/rules/core/`.
 
 ## Rule Boundary
 
-Keep each rule atomic.
-
-Long explanations, examples, and evidence should stay in:
+Keep each rule atomic. Long explanations and evidence should stay in:
 
 - `00-系统/agents/{agent_id}.md`
 - `.orbitos/logs/events/`

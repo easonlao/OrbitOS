@@ -59,11 +59,6 @@ def build_event(args, now):
             "status": "done" if args.validation == "passed" else "skipped",
             "note": f"validation={args.validation}",
         },
-        {
-            "item": "experience_check",
-            "status": "done",
-            "note": args.experience_check,
-        },
     ]
 
     return {
@@ -139,16 +134,6 @@ def build_parser():
     parser.add_argument("--user-content-changed", action="store_true")
     parser.add_argument(
         "--validation", choices=["passed", "not_required"], required=True
-    )
-    parser.add_argument(
-        "--experience-check",
-        default="not_applicable",
-        choices=[
-            "not_applicable",
-            "captured",
-            "candidate_only",
-            "learned_updated",
-        ],
     )
     parser.add_argument("--dry-run", action="store_true")
     return parser

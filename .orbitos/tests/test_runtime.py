@@ -126,8 +126,6 @@ def test_runtime(runtime_root):
         "updated:.orbitos/workflows/progress-sync.md:integration test",
         "--validation",
         "passed",
-        "--experience-check",
-        "not_applicable",
     ]
     writer_result = run(writer_command, runtime_root)
     event_path = runtime_root / writer_result.stdout.strip()

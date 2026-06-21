@@ -38,17 +38,7 @@ It also creates local runtime pages such as `01-收件箱/00-粘贴.md`, `02-时
 4. Put anything you want OrbitOS to handle into `01-收件箱/`.
 5. If you want an agent to connect, have it start from `AGENTS.md`; the execution rules live there, not in README.
 
-After initialization, your main daily view is:
-
-- `02-时间线/今日.md`
-
-If something needs your decision, it appears in:
-
-- the `Current Review` section inside `02-时间线/今日.md`
-
-If you want to continue from the current state, use:
-
-- the `Continue` section inside `02-时间线/今日.md`
+After initialization, your main daily view is `02-时间线/今日.md`; it shows what needs your decision and what you can continue.
 
 ## How It Feels To Use
 

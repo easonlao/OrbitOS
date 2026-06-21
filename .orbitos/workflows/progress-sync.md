@@ -38,7 +38,6 @@ Agent 只需要整理：
 - 实际变更文件及变更类型。
 - 是否存在待确认事项。
 - validation 结果。
-- experience check 结果。
 
 时间、event ID、actor、默认 checklist 和空置扩展字段由脚本生成。
 
@@ -64,8 +63,7 @@ python .orbitos/scripts/write_event.py \
   --reason "减少手写 event 的格式错误和 agent 执行负担。" \
   --project OrbitOS \
   --file "updated:.orbitos/workflows/progress-sync.md:收缩同步流程" \
-  --validation passed \
-  --experience-check not_applicable
+  --validation passed
 ```
 
 Windows PowerShell 可在同一行执行，或使用反引号换行。
@@ -74,7 +72,6 @@ Windows PowerShell 可在同一行执行，或使用反引号换行。
 
 - 有待确认事项时使用 `--review-required`，并至少提供一个 `--review-item`。
 - 移动、删除或归档用户内容时增加 `--user-content-changed`；该动作仍必须事先获得用户确认。
-- `captured / candidate_only / learned_updated` 只表示经验检查结果；对应内容仍按 Experience Capture 或 Rule Evolution 处理。
 - 使用 Hindsight 时，以 `--hindsight-recall` 或 `--hindsight-retain` 记录引用；Hindsight 不是 Progress Sync 必需项。
 
 ## 人读投影
@@ -89,7 +86,7 @@ Windows PowerShell 可在同一行执行，或使用反引号换行。
 ### 进入检查
 
 - [ ] 本次存在实质性持久化结果，或用户明确要求同步。
-- [ ] 已确认变更范围、待确认事项和经验检查结果。
+- [ ] 已确认变更范围和待确认事项。
 - [ ] 项目任务已分类，ROADMAP 或当前优先级变化已有用户确认。
 
 ### 执行检查

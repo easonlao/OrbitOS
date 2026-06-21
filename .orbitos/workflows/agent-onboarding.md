@@ -15,14 +15,14 @@ tags:
 
 Agent Onboarding 用于把一个真实 agent 接入 OrbitOS。
 
-它不是 Startup Sync，也不是知识库初始化。它只在用户确认 agent 身份后，登记部署信息、创建 Agent Profile，并验证新 agent 以后能通过 Startup Sync 进入系统。
+它不是 Startup Sync，也不是知识库初始化。它只在用户确认 agent 身份后，登记部署信息、创建档案文件，并验证新 agent 以后能通过 Startup Sync 进入系统。
 
 ## 目标
 
 - 确认稳定 `agent_id`。
 - 记录 agent 的部署位置、局域网 IP、接入方式和 OrbitOS 路径。
 - 更新机器可读 registry。
-- 创建人读 Agent Profile。
+- 创建人读轻量 Agent Profile 与独立经验文件。
 - 让后续 Startup Sync 能识别该 agent。
 
 ## 触发条件
@@ -48,83 +48,39 @@ Agent Onboarding 用于把一个真实 agent 接入 OrbitOS。
 3. 读取 `.orbitos/agents/registry.yaml`，确认 `agent_id` 未重复。
 4. 更新 `.orbitos/agents/registry.yaml`。
 5. 创建 `00-系统/agents/{agent_id}.md`。
-6. 在 Agent Profile 中保留以下区块：
-   - 基本信息
-   - 部署信息
-   - 最近工作
-   - 待确认来源
-   - 经验记录
-   - 踩坑
-   - 规则候选
-   - Learned Rule 使用记录
-7. 运行 validation eval：
+6. 创建 `00-系统/agents/{agent_id}-experience.md`。
+7. 用模板创建轻量 Agent Profile，并填充占位字段。
+8. 用模板创建经验文件，并保留默认分节。
+9. 运行 validation eval：
    - 优先：`python .orbitos/scripts/run-validation.py`
    - fallback：`node .orbitos/scripts/run-validation.mjs`
    - Windows 本地也可使用 PowerShell wrapper：`pwsh -ExecutionPolicy Bypass -File .orbitos/scripts/run-validation.ps1`
    - 三者都不可用时，才允许手动校验，并在 event checklist 中标记 `skipped`。
-8. 执行 Progress Sync，写入 event，并刷新 `今日.md` 的 Agents 状态和 `00-系统/agents/README.md`。
+10. 执行 Progress Sync，写入 event，并刷新 `今日.md` 的 Agents 状态和 `00-系统/agents/README.md`。
 
-## Agent Profile 模板
+## 轻量 Agent Profile 模板
 
-新建 `00-系统/agents/{agent_id}.md` 时使用以下结构：
+模板源文件：
 
-```markdown
----
-title: {display_name} Agent 档案
-area: system
-purpose: status
-lifecycle: active
-created: YYYY-MM-DD
-updated: YYYY-MM-DD
-tags:
-  - orbitos
-  - agent
-  - {agent_id}
----
+- `.orbitos/templates/.orbitos/agents/profile.template.md`
 
-# {display_name} Agent 档案
+使用要求：
 
-## 基本信息
+- 新建 `00-系统/agents/{agent_id}.md` 时直接复制该模板并替换占位字段。
+- 不在 workflow 中手写第二份模板正文。
+- 轻量 profile 只填写启动所需信息，不回填完整经验。
 
-| 字段 | 内容 |
-|---|---|
-| agent_id | `{agent_id}` |
-| 显示名 | {display_name} |
+## Agent Experience 模板
 
-## 部署信息
+模板源文件：
 
-| 字段 | 内容 |
-|---|---|
-| deployment.location | {deployment.location} |
-| deployment.lan_ip | `{deployment.lan_ip}` |
-| deployment.access | {deployment.access} |
-| deployment.orbitos_path | `{deployment.orbitos_path}` |
-| notes | {deployment.notes} |
+- `.orbitos/templates/.orbitos/agents/experience.template.md`
 
-## 最近工作
+使用要求：
 
-- 暂无。
-
-## 待确认来源
-
-- 暂无。
-
-## 经验记录
-
-- 暂无。
-
-## 踩坑
-
-- 暂无。
-
-## 规则候选
-
-- 暂无。
-
-## Learned Rule 使用记录
-
-- 暂无。
-```
+- 新建 `00-系统/agents/{agent_id}-experience.md` 时直接复制该模板并替换占位字段。
+- 默认保留 `经验记录 / 踩坑 / 待确认来源 / 规则候选 / Learned Rule 使用记录` 五个分节。
+- 分节定义与流转逻辑由 `.orbitos/workflows/experience-capture.md` 和 `.orbitos/workflows/rule-evolution.md` 负责，不在本页重复展开。
 
 ## 用户提示词
 
@@ -149,7 +105,7 @@ tags:
 - [ ] 已收集最小部署信息。
 - [ ] 已确认 `agent_id` 未重复。
 - [ ] 已更新 registry。
-- [ ] 已创建 Agent Profile。
+- [ ] 已创建轻量 Agent Profile 与经验文件。
 - [ ] 已把未知 IP、未知路径或接入限制写入待确认来源。
 
 ### 退出检查
