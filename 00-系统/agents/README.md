@@ -4,7 +4,7 @@ area: system
 purpose: status
 lifecycle: active
 created: 2026-06-12
-updated: 2026-06-17
+updated: 2026-06-21
 tags:
   - orbitos
   - agents
@@ -15,6 +15,11 @@ tags:
 这里是你查看已接入 Agent 及其运行状态的入口。Agent 的执行规则不放在本页，而由根 `AGENTS.md` 和对应 workflow 管理。
 
 当前仓库是发布模板，不预置任何真实 agent。第一次使用时，请让 agent 先执行 Startup Sync；如果它不在 registry 中，必须先向你确认 `agent_id`、部署位置、局域网 IP、接入方式和 OrbitOS 路径，再按 agent-onboarding workflow 注册。
+
+## 交接入口
+
+- `BOARD.md`：Agent 之间需要继续交接的索引。
+- `handoff/`：每次交接的标准文件模板与归档位置。
 
 ## 当前 Agents
 

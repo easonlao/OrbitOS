@@ -10,6 +10,7 @@ from run_doc_consistency import (
     check_forbidden_statements,
     check_legacy_paths,
     find_visible_markdown,
+    resolve_wikilink_target,
 )
 
 
@@ -109,6 +110,11 @@ def validate_lifecycle(value, errors):
 
 
 INTERNAL_WIKILINK_PATTERN = re.compile(r"\[\[[^\]]*(?:^|/|\\|\.\.)\.orbitos(?:/|\\)[^\]]*\]\]")
+WIKILINK_TARGET_PATTERN = re.compile(r"\[\[([^\]|#]+?)(?:#[^\]|]*)?(?:\|[^\]]+)?\]\]")
+SOURCE_HEADING_PATTERN = re.compile(r"^##\s*(?:来源|Source)\s*$", re.IGNORECASE)
+SOURCE_LINK_PATTERN = re.compile(r"\[\[[^\]]+\]\]|\[[^\]]+\]\([^)]+\)")
+DRAFT_LIFECYCLE_PATTERN = re.compile(r"^lifecycle:\s*draft\s*$", re.IGNORECASE | re.MULTILINE)
+ACTIVE_LIFECYCLE_PATTERN = re.compile(r"^lifecycle:\s*active\s*$", re.IGNORECASE | re.MULTILINE)
 
 
 def markdown_internal_wikilink_errors(full_path):
@@ -117,6 +123,146 @@ def markdown_internal_wikilink_errors(full_path):
     for match in INTERNAL_WIKILINK_PATTERN.finditer(content):
         line = content[: match.start()].count("\n") + 1
         add_error(errors, f"line {line}", "Obsidian wikilink must not point to .orbitos/")
+    return errors
+
+
+def knowledge_source_errors(full_path):
+    if not full_path.is_file():
+        return []
+    if full_path.name == "MAP.md":
+        return []
+
+    content = full_path.read_text(encoding="utf-8")
+    lines = []
+    in_code_block = False
+    for line_num, line in enumerate(content.splitlines(), 1):
+        if line.strip().startswith("```"):
+            in_code_block = not in_code_block
+            continue
+        if not in_code_block:
+            lines.append((line_num, line))
+
+    source_start = None
+    for index, (_line_num, line) in enumerate(lines):
+        if SOURCE_HEADING_PATTERN.match(line.strip()):
+            source_start = index
+            break
+
+    errors = []
+    rel = full_path.relative_to(ROOT)
+    if source_start is None:
+        add_error(errors, str(rel), "knowledge file is missing a 来源 section")
+        return errors
+
+    source_lines = []
+    for line_num, line in lines[source_start + 1:]:
+        if line.strip().startswith("## "):
+            break
+        source_lines.append((line_num, line))
+
+    source_text = "\n".join(line for _line_num, line in source_lines)
+    if not SOURCE_LINK_PATTERN.search(source_text):
+        add_error(errors, str(rel), "knowledge 来源 section must contain at least one traceable link")
+
+    return errors
+
+
+def source_targets(full_path):
+    if not full_path.is_file():
+        return set()
+    content = full_path.read_text(encoding="utf-8")
+    lines = []
+    in_code_block = False
+    for _line_num, line in enumerate(content.splitlines(), 1):
+        if line.strip().startswith("```"):
+            in_code_block = not in_code_block
+            continue
+        if not in_code_block:
+            lines.append(line)
+
+    source_start = None
+    for index, line in enumerate(lines):
+        if SOURCE_HEADING_PATTERN.match(line.strip()):
+            source_start = index
+            break
+    if source_start is None:
+        return set()
+
+    targets = set()
+    for line in lines[source_start + 1:]:
+        if line.strip().startswith("## "):
+            break
+        for match in WIKILINK_TARGET_PATTERN.finditer(line):
+            resolved = resolve_wikilink_target(full_path, match.group(1), ROOT)
+            if resolved is not None:
+                targets.add(resolved.resolve())
+    return targets
+
+
+def markdown_lifecycle(full_path):
+    if not full_path.is_file():
+        return None
+    content = full_path.read_text(encoding="utf-8")
+    if DRAFT_LIFECYCLE_PATTERN.search(content):
+        return "draft"
+    if ACTIVE_LIFECYCLE_PATTERN.search(content):
+        return "active"
+    return None
+
+
+def is_markdown_linked_from(target_file, candidate_files):
+    target_file = target_file.resolve()
+    for candidate in candidate_files:
+        if candidate.resolve() == target_file:
+            continue
+        if not candidate.is_file():
+            continue
+        try:
+            content = candidate.read_text(encoding="utf-8")
+        except OSError:
+            continue
+        in_code_block = False
+        for line in content.splitlines():
+            if line.strip().startswith("```"):
+                in_code_block = not in_code_block
+                continue
+            if in_code_block:
+                continue
+            for match in WIKILINK_TARGET_PATTERN.finditer(line):
+                resolved = resolve_wikilink_target(candidate, match.group(1), ROOT)
+                if resolved is not None and resolved.resolve() == target_file:
+                    return True
+    return False
+
+
+def orphan_draft_errors(draft_files, projection_files):
+    errors = []
+    for draft in draft_files:
+        if markdown_lifecycle(draft) != "draft":
+            continue
+        if not is_markdown_linked_from(draft, projection_files):
+            add_error(
+                errors,
+                str(draft.relative_to(ROOT)),
+                "draft knowledge file is not projected from a user-visible entry",
+            )
+    return errors
+
+
+def omitted_conflict_errors(knowledge_files):
+    errors = []
+    active_files = [path for path in knowledge_files if markdown_lifecycle(path) == "active"]
+    source_map = {}
+    for file_path in active_files:
+        for target in source_targets(file_path):
+            source_map.setdefault(target, []).append(file_path)
+    for target, file_paths in sorted(source_map.items(), key=lambda item: str(item[0])):
+        if len(file_paths) > 1:
+            add_error(
+                errors,
+                str(target.relative_to(ROOT)),
+                "same source is referenced by multiple active knowledge files; possible omitted conflict",
+            )
     return errors
 
 
@@ -200,6 +346,35 @@ for case_path in sorted(doc_consistency_case_root.glob("*.md")):
     print_case(case_path.name, ".valid." in case_path.name, errors)
 
 
+knowledge_source_case_root = ROOT / ".orbitos/evals/knowledge-source"
+for case_path in sorted(knowledge_source_case_root.glob("*.md")):
+    case_count += 1
+    errors = knowledge_source_errors(case_path)
+    print_case(case_path.name, ".valid." in case_path.name, errors)
+
+
+knowledge_orphan_case_root = ROOT / ".orbitos/evals/knowledge-orphan-draft"
+for case_path in sorted(knowledge_orphan_case_root.glob("*.md")):
+    case_count += 1
+    projection_files = [path for path in knowledge_orphan_case_root.glob("*.md") if path != case_path]
+    errors = orphan_draft_errors([case_path], projection_files)
+    print_case(case_path.name, ".valid." in case_path.name, errors)
+
+
+knowledge_omitted_conflict_case_root = ROOT / ".orbitos/evals/knowledge-omitted-conflict"
+for case_path in sorted(knowledge_omitted_conflict_case_root.glob("*.md")):
+    case_count += 1
+    errors = omitted_conflict_errors(list(knowledge_omitted_conflict_case_root.glob("*.md")))
+    print_case(case_path.name, ".valid." in case_path.name, errors)
+
+
+knowledge_omitted_conflict_valid_root = ROOT / ".orbitos/evals/knowledge-omitted-conflict-valid"
+for case_path in sorted(knowledge_omitted_conflict_valid_root.glob("*.md")):
+    case_count += 1
+    errors = omitted_conflict_errors(list(knowledge_omitted_conflict_valid_root.glob("*.md")))
+    print_case(case_path.name, ".valid." in case_path.name, errors)
+
+
 case_count += 1
 visible_files = [
     ROOT / "AGENTS.md",
@@ -229,6 +404,41 @@ for issue in check_legacy_paths(visible_files, ROOT):
 for issue in check_forbidden_statements(visible_files, ROOT):
     add_error(doc_consistency_errors, f"{issue.file}:{issue.line}", issue.detail)
 print_case("visible-markdown.doc-consistency", True, doc_consistency_errors)
+
+
+case_count += 1
+knowledge_source_errors_list = []
+knowledge_files = [
+    path
+    for path in (ROOT / "04-知识").rglob("*.md")
+    if path.is_file() and path.name != "MAP.md"
+]
+for file_path in knowledge_files:
+    for error in knowledge_source_errors(file_path):
+        add_error(
+            knowledge_source_errors_list,
+            error["path"],
+            error["message"],
+        )
+print_case("actual.knowledge-sources", True, knowledge_source_errors_list)
+
+
+case_count += 1
+knowledge_orphan_errors_list = []
+draft_dir = ROOT / "04-知识/00-草稿箱"
+projection_files = []
+for candidate in [ROOT / "02-时间线/今日.md", ROOT / "02-时间线/待确认.md", ROOT / "03-项目/OrbitOS/STATUS.md"]:
+    if candidate.is_file():
+        projection_files.append(candidate)
+if draft_dir.exists():
+    draft_files = [path for path in draft_dir.glob("*.md") if path.is_file() and path.name != ".gitkeep"]
+    knowledge_orphan_errors_list.extend(orphan_draft_errors(draft_files, projection_files))
+print_case("actual.knowledge-orphan-drafts", True, knowledge_orphan_errors_list)
+
+
+case_count += 1
+knowledge_omitted_conflict_errors_list = omitted_conflict_errors(knowledge_files)
+print_case("actual.knowledge-omitted-conflicts", True, knowledge_omitted_conflict_errors_list)
 
 
 case_count += 1
