@@ -266,6 +266,161 @@ def omitted_conflict_errors(knowledge_files):
     return errors
 
 
+def handoff_structure_errors():
+    errors = []
+    required_paths = [
+        ROOT / "00-系统/agents/BOARD.md",
+        ROOT / "00-系统/agents/handoff/TEMPLATE.md",
+        ROOT / "00-系统/agents/handoff/archive/.gitkeep",
+    ]
+    for path in required_paths:
+        if not path.is_file():
+            add_error(errors, str(path.relative_to(ROOT)), "handoff structure file is missing")
+
+    board_path = ROOT / "00-系统/agents/BOARD.md"
+    if board_path.is_file():
+        board = board_path.read_text(encoding="utf-8")
+        for term in ["Agent 交接板", "不记录用户确认事项", "不记录项目总状态", "最近完成的 handoff", "handoff/archive/", "handoff/"]:
+            if term not in board:
+                add_error(errors, "00-系统/agents/BOARD.md", f"handoff board is missing required term: {term}")
+
+    template_path = ROOT / "00-系统/agents/handoff/TEMPLATE.md"
+    if template_path.is_file():
+        template = template_path.read_text(encoding="utf-8")
+        for term in [
+            "## 任务",
+            "## 当前阶段",
+            "## 交给谁",
+            "## 已完成",
+            "## 未完成",
+            "## 风险与阻塞",
+            "## 审核结论",
+            "## 接手方异议",
+            "## 需要继续做什么",
+            "## Suggested skills",
+            "## 最后确认",
+            "[ ] 我已阅读并确认这个 hand-off，准备接手。",
+        ]:
+            if term not in template:
+                add_error(errors, "00-系统/agents/handoff/TEMPLATE.md", f"handoff template is missing required term: {term}")
+
+    doc_requirements = {
+        ROOT / "00-系统/agents/README.md": ["BOARD.md", "handoff/"],
+        ROOT / "00-系统/04-Agent协作.md": ["agents/BOARD", "agents/handoff/", "最后确认", "审核"],
+        ROOT / "00-系统/02-日常协作.md": ["agents/handoff/", "最后确认", "审核"],
+        ROOT / "00-系统/00-开始使用.md": ["agents/BOARD.md"],
+        ROOT / "00-系统/07-系统变更.md": ["agents/BOARD.md", "agents/handoff/", "审核"],
+    }
+    for doc_path, terms in doc_requirements.items():
+        if not doc_path.is_file():
+            add_error(errors, str(doc_path.relative_to(ROOT)), "handoff routing document is missing")
+            continue
+        content = doc_path.read_text(encoding="utf-8")
+        for term in terms:
+            if term not in content:
+                add_error(errors, str(doc_path.relative_to(ROOT)), f"handoff routing document is missing required term: {term}")
+
+    return errors
+
+
+def agent_collaboration_evidence_errors():
+    errors = []
+    registry_path = ROOT / ".orbitos/agents/registry.yaml"
+    if not registry_path.is_file():
+        return errors
+
+    registry = read_json_like(".orbitos/agents/registry.yaml")
+    agents = registry.get("agents", []) if isinstance(registry, dict) else []
+    if not agents:
+        return errors
+
+    if len(agents) < 4:
+        add_error(errors, ".orbitos/agents/registry.yaml", "multi-agent registry evidence is incomplete")
+
+    required_agent_ids = {"codex", "nova", "hermes", "mimo"}
+    seen_agent_ids = set()
+    deployment_paths = set()
+
+    for agent in agents if isinstance(agents, list) else []:
+        if not isinstance(agent, dict):
+            continue
+        agent_id = agent.get("agent_id")
+        if isinstance(agent_id, str):
+            seen_agent_ids.add(agent_id)
+        else:
+            add_error(errors, ".orbitos/agents/registry.yaml", "registry entry is missing agent_id")
+
+        deployment = agent.get("deployment", {})
+        if not isinstance(deployment, dict):
+            add_error(errors, ".orbitos/agents/registry.yaml", f"{agent_id or 'unknown'} deployment is invalid")
+            continue
+        orbitos_path = deployment.get("orbitos_path")
+        if isinstance(orbitos_path, str) and orbitos_path.strip():
+            deployment_paths.add(orbitos_path)
+        else:
+            add_error(errors, ".orbitos/agents/registry.yaml", f"{agent_id or 'unknown'} deployment is missing orbitos_path")
+
+        profile_ref = agent.get("profile_ref")
+        if not isinstance(profile_ref, str) or not profile_ref.strip():
+            add_error(errors, ".orbitos/agents/registry.yaml", f"{agent_id or 'unknown'} profile_ref is missing")
+            continue
+        profile_path = ROOT / profile_ref
+        if not profile_path.is_file():
+            add_error(errors, profile_ref, "agent profile is missing")
+            continue
+        profile_text = profile_path.read_text(encoding="utf-8")
+        for term in ["## 经验入口", "## 启动关注"]:
+            if term not in profile_text:
+                add_error(errors, profile_ref, f"agent profile is missing required section: {term}")
+
+    missing_ids = required_agent_ids - seen_agent_ids
+    if missing_ids:
+        add_error(errors, ".orbitos/agents/registry.yaml", f"missing registered agents: {', '.join(sorted(missing_ids))}")
+
+    if len(deployment_paths) < 3:
+        add_error(errors, ".orbitos/agents/registry.yaml", "deployment path diversity is not yet validated")
+
+    return errors
+
+
+def agent_event_evidence_errors():
+    errors = []
+    registry_path = ROOT / ".orbitos/agents/registry.yaml"
+    if not registry_path.is_file():
+        return errors
+
+    registry = read_json_like(".orbitos/agents/registry.yaml")
+    agents = registry.get("agents", []) if isinstance(registry, dict) else []
+    if not agents:
+        return errors
+
+    events_root = ROOT / ".orbitos/logs/events"
+    if not events_root.exists():
+        return errors
+
+    event_texts = []
+    for event_path in sorted(events_root.glob("*.yaml")):
+        try:
+            event_texts.append((event_path.name, event_path.read_text(encoding="utf-8")))
+        except OSError:
+            continue
+
+    for agent_id in ["codex", "nova", "hermes", "mimo"]:
+        if not any(
+            f"agent_id: {agent_id}" in text or f'"agent_id": "{agent_id}"' in text
+            for _name, text in event_texts
+        ):
+            add_error(errors, agent_id, "no event evidence found for registered agent")
+
+    if not any("scheduled_task_boundary" in name or "scheduled_task_boundary" in text for name, text in event_texts):
+        add_error(errors, "scheduled_task_boundary", "scheduled task boundary evidence is missing from events")
+
+    if not any("experience_check" in text and "captured" in text for _name, text in event_texts):
+        add_error(errors, "experience_check", "experience capture evidence is missing from events")
+
+    return errors
+
+
 def walk_markdown(full_path):
     if not full_path.exists():
         return []
@@ -439,6 +594,21 @@ print_case("actual.knowledge-orphan-drafts", True, knowledge_orphan_errors_list)
 case_count += 1
 knowledge_omitted_conflict_errors_list = omitted_conflict_errors(knowledge_files)
 print_case("actual.knowledge-omitted-conflicts", True, knowledge_omitted_conflict_errors_list)
+
+
+case_count += 1
+handoff_structure_errors_list = handoff_structure_errors()
+print_case("actual.agent-handoff-structure", True, handoff_structure_errors_list)
+
+
+case_count += 1
+agent_collaboration_evidence_errors_list = agent_collaboration_evidence_errors()
+print_case("actual.agent-collaboration-evidence", True, agent_collaboration_evidence_errors_list)
+
+
+case_count += 1
+agent_event_evidence_errors_list = agent_event_evidence_errors()
+print_case("actual.agent-event-evidence", True, agent_event_evidence_errors_list)
 
 
 case_count += 1

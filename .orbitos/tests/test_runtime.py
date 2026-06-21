@@ -3,6 +3,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 
@@ -110,6 +111,25 @@ def test_runtime(runtime_root):
     require(timeline_sentinel.read_text(encoding="utf-8") == "timeline content must survive\n", "init-runtime overwrote timeline content")
     require("2026-06-17" in registry_sentinel.read_text(encoding="utf-8"), "init-runtime overwrote registry content")
     require(exclude_path.read_text(encoding="utf-8") == exclude_content, "init-runtime rewrote local exclude unexpectedly")
+
+    codex_profile = runtime_root / "00-系统/agents/codex.md"
+    nova_profile = runtime_root / "00-系统/agents/nova.md"
+
+    def append_marker(path, marker):
+        with path.open("a", encoding="utf-8") as handle:
+            handle.write(marker)
+
+    codex_marker = "\n- runtime smoke: codex private state append\n"
+    nova_marker = "\n- runtime smoke: nova private state append\n"
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        futures = [
+            executor.submit(append_marker, codex_profile, codex_marker),
+            executor.submit(append_marker, nova_profile, nova_marker),
+        ]
+        for future in futures:
+            future.result()
+    require(codex_marker in codex_profile.read_text(encoding="utf-8"), "codex private state write did not persist")
+    require(nova_marker in nova_profile.read_text(encoding="utf-8"), "nova private state write did not persist")
 
     writer_command = [
         python,

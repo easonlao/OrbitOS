@@ -28,6 +28,7 @@ tags:
 - 需要跨 Agent 继续的工作先生成 handoff 文档。
 - 接手方只读对应 handoff 文档，再继续执行。
 - handoff 完成后把文件移入 `handoff/archive/`。
+- handoff 必须经过审核把关后才能定版；提交方 A 负责写出结果，接手方 B 可以表达不同意见，最终由审核结论收口。
 
 ## handoff 入口
 
