@@ -37,6 +37,7 @@ The public repository should not contain:
 
 - raw inbox content
 - personal notes
+- runtime-local collaboration preferences, including `00-系统/08-本地协作偏好.md`
 - processed resource files
 - Obsidian output drafts
 - archived local vault snapshots
@@ -66,6 +67,7 @@ Examples:
 
 - agent private working directories such as `.codex/`, `.mimocode/`, `.claude/`
 - local app state such as `.obsidian/`
+- runtime-local user guidance such as `00-系统/08-本地协作偏好.md`
 - caches, session files, indexes, logs, temporary outputs
 
 This is a default boundary signal, not an automatic rule.

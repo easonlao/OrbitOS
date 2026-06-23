@@ -129,6 +129,12 @@ def main():
             read_template(".orbitos/rules/learned/INDEX.md"),
         )
     )
+    results.append(
+        write_if_missing(
+            "00-系统/08-本地协作偏好.md",
+            read_template("00-系统/08-本地协作偏好.TEMPLATE.md").format(today=TODAY),
+        )
+    )
     results.append(ensure_local_excludes(ROOT))
 
     for status, path in results:
