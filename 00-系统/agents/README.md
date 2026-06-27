@@ -19,7 +19,8 @@ tags:
 ## 交接入口
 
 - `BOARD.md`：Agent 之间需要继续交接的索引。
-- `handoff/`：每次交接的标准文件模板与归档位置。
+- `handoff/`：每次交接的实例区与归档位置。
+- `.orbitos/templates/00-系统/agents/handoff/TEMPLATE.md`：handoff 模板源。
 
 ## 当前 Agents
 

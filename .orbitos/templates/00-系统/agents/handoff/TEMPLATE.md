@@ -1,17 +1,17 @@
 ---
-title: Hand-off Template
+title: <交接标题>
 area: system
-purpose: handoff
-lifecycle: active
-created: 2026-06-21
-updated: 2026-06-21
+purpose: record
+lifecycle: draft
+created: YYYY-MM-DD
+updated: YYYY-MM-DD
 tags:
   - orbitos
   - agents
   - handoff
 ---
 
-# Hand-off
+# <交接标题>
 
 ## 任务
 

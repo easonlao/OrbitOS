@@ -391,6 +391,7 @@ const requiredRuntimeTemplates = [
   ".orbitos/templates/01-收件箱/00-粘贴.md",
   ".orbitos/templates/02-时间线/今日.md",
   ".orbitos/templates/02-时间线/本周.md",
+  ".orbitos/templates/00-系统/agents/handoff/TEMPLATE.md",
 ];
 for (const relativePath of requiredRuntimeTemplates) {
   if (!fs.existsSync(path.join(root, relativePath))) {

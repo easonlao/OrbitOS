@@ -270,7 +270,7 @@ def handoff_structure_errors():
     errors = []
     required_paths = [
         ROOT / "00-系统/agents/BOARD.md",
-        ROOT / "00-系统/agents/handoff/TEMPLATE.md",
+        ROOT / ".orbitos/templates/00-系统/agents/handoff/TEMPLATE.md",
         ROOT / "00-系统/agents/handoff/archive/.gitkeep",
     ]
     for path in required_paths:
@@ -284,7 +284,7 @@ def handoff_structure_errors():
             if term not in board:
                 add_error(errors, "00-系统/agents/BOARD.md", f"handoff board is missing required term: {term}")
 
-    template_path = ROOT / "00-系统/agents/handoff/TEMPLATE.md"
+    template_path = ROOT / ".orbitos/templates/00-系统/agents/handoff/TEMPLATE.md"
     if template_path.is_file():
         template = template_path.read_text(encoding="utf-8")
         for term in [
@@ -302,14 +302,14 @@ def handoff_structure_errors():
             "[ ] 我已阅读并确认这个 hand-off，准备接手。",
         ]:
             if term not in template:
-                add_error(errors, "00-系统/agents/handoff/TEMPLATE.md", f"handoff template is missing required term: {term}")
+                add_error(errors, ".orbitos/templates/00-系统/agents/handoff/TEMPLATE.md", f"handoff template is missing required term: {term}")
 
     doc_requirements = {
-        ROOT / "00-系统/agents/README.md": ["BOARD.md", "handoff/"],
-        ROOT / "00-系统/04-Agent协作.md": ["agents/BOARD", "agents/handoff/", "最后确认", "审核"],
-        ROOT / "00-系统/02-日常协作.md": ["agents/handoff/", "最后确认", "审核"],
+        ROOT / "00-系统/agents/README.md": ["BOARD.md", "handoff/", ".orbitos/templates/00-系统/agents/handoff/TEMPLATE.md"],
+        ROOT / "00-系统/04-Agent协作.md": ["agents/BOARD", "00-系统/agents/handoff/", ".orbitos/templates/00-系统/agents/handoff/TEMPLATE.md", "最后确认", "审核"],
+        ROOT / "00-系统/02-日常协作.md": ["00-系统/agents/handoff/", ".orbitos/templates/00-系统/agents/handoff/TEMPLATE.md", "最后确认", "审核"],
         ROOT / "00-系统/00-开始使用.md": ["agents/BOARD.md"],
-        ROOT / "00-系统/07-系统变更.md": ["agents/BOARD.md", "agents/handoff/", "审核"],
+        ROOT / "00-系统/07-系统变更.md": ["agents/BOARD.md", "00-系统/agents/handoff/", ".orbitos/templates/00-系统/agents/handoff/TEMPLATE.md", "审核"],
     }
     for doc_path, terms in doc_requirements.items():
         if not doc_path.is_file():
@@ -812,6 +812,7 @@ required_runtime_templates = [
     ".orbitos/templates/01-收件箱/00-粘贴.md",
     ".orbitos/templates/02-时间线/今日.md",
     ".orbitos/templates/02-时间线/本周.md",
+    ".orbitos/templates/00-系统/agents/handoff/TEMPLATE.md",
 ]
 for relative_path in required_runtime_templates:
     if not (ROOT / relative_path).is_file():
