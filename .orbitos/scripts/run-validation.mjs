@@ -107,6 +107,10 @@ function walkMarkdown(fullPath, out = []) {
 }
 
 const wikilinkPattern = /\[\[([^\]|#]+?)(?:#[^\]|]*)?(?:\|[^\]]+)?\]\]/g;
+const sourceHeadingPattern = /^##\s*(?:来源|Source)\s*$/i;
+const sourceLinkPattern = /\[\[[^\]]+\]\]|\[[^\]]+\]\([^)]+\)/;
+const draftLifecyclePattern = /^lifecycle:\s*draft\s*$/im;
+const activeLifecyclePattern = /^lifecycle:\s*active\s*$/im;
 const legacyPatterns = [
   [/(?<!\w)\.orbit[\\/]/, "legacy .orbit/ path"],
   [/(?<![\w-])02-日记[\\/]/, "legacy 02-日记/ directory"],
@@ -137,6 +141,75 @@ function resolveWikilinkTarget(sourceFile, linkTarget) {
     path.join(root, `${linkTarget}.md`),
   ];
   return candidates.find((candidate) => fs.existsSync(candidate) && fs.statSync(candidate).isFile()) ?? null;
+}
+
+function markdownLifecycle(fullPath) {
+  if (!fs.existsSync(fullPath) || !fs.statSync(fullPath).isFile()) return null;
+  const content = fs.readFileSync(fullPath, "utf8");
+  if (draftLifecyclePattern.test(content)) return "draft";
+  if (activeLifecyclePattern.test(content)) return "active";
+  return null;
+}
+
+function knowledgeSourceErrors(fullPath) {
+  if (!fs.existsSync(fullPath) || !fs.statSync(fullPath).isFile()) return [];
+  if (path.basename(fullPath) === "MAP.md") return [];
+
+  const content = fs.readFileSync(fullPath, "utf8");
+  const lines = [];
+  let inCodeBlock = false;
+  for (const line of content.split("\n")) {
+    if (line.trim().startsWith("```")) {
+      inCodeBlock = !inCodeBlock;
+      continue;
+    }
+    if (!inCodeBlock) lines.push(line);
+  }
+
+  let sourceStart = null;
+  for (const [index, line] of lines.entries()) {
+    if (sourceHeadingPattern.test(line.trim())) {
+      sourceStart = index;
+      break;
+    }
+  }
+
+  const errors = [];
+  const rel = path.relative(root, fullPath);
+  if (sourceStart === null) {
+    addError(errors, rel, "knowledge file is missing a 来源 section");
+    return errors;
+  }
+
+  const sourceLines = [];
+  for (const line of lines.slice(sourceStart + 1)) {
+    if (line.trim().startsWith("## ")) break;
+    sourceLines.push(line);
+  }
+
+  const sourceText = sourceLines.join("\n");
+  if (!sourceLinkPattern.test(sourceText)) {
+    addError(errors, rel, "knowledge 来源 section must contain at least one traceable link");
+  }
+
+  if (markdownLifecycle(fullPath) === "active") {
+    const inboxRoot = path.resolve(root, "01-收件箱");
+    const ingestedRoot = path.resolve(root, "01-收件箱/已入库");
+    for (const match of sourceText.matchAll(wikilinkPattern)) {
+      const rawTarget = match[1].replace(/\\/g, "/");
+      const target = rawTarget.startsWith("01-收件箱/")
+        ? path.resolve(root, rawTarget)
+        : path.resolve(path.dirname(fullPath), rawTarget);
+      const targetWithinInbox = target === inboxRoot || target.startsWith(`${inboxRoot}${path.sep}`);
+      const targetWithinIngested = target === ingestedRoot || target.startsWith(`${ingestedRoot}${path.sep}`);
+      if (targetWithinInbox && !targetWithinIngested) {
+        addError(errors, rel, "active knowledge must not cite raw inbox files outside 01-收件箱/已入库/");
+        break;
+      }
+    }
+  }
+
+  return errors;
 }
 
 function checkDocumentConsistency(files) {
@@ -224,6 +297,13 @@ for (const name of fs.readdirSync(docConsistencyCaseRoot).filter((item) => item.
   printCase(name, name.includes(".valid."), errors);
 }
 
+const knowledgeSourceCaseRoot = path.join(root, ".orbitos/evals/knowledge-source");
+for (const name of fs.readdirSync(knowledgeSourceCaseRoot).filter((item) => item.endsWith(".md")).sort()) {
+  caseCount += 1;
+  const errors = knowledgeSourceErrors(path.join(knowledgeSourceCaseRoot, name));
+  printCase(name, name.includes(".valid."), errors);
+}
+
 caseCount += 1;
 const visibleFiles = [
   path.join(root, "AGENTS.md"),
@@ -243,6 +323,18 @@ printCase("visible-markdown.no-internal-wikilinks", true, visibleErrors);
 caseCount += 1;
 const docConsistencyErrors = checkDocumentConsistency(visibleFiles);
 printCase("visible-markdown.doc-consistency", true, docConsistencyErrors);
+
+caseCount += 1;
+const knowledgeSourceErrorsList = [];
+const knowledgeRoot = path.join(root, "04-知识");
+if (fs.existsSync(knowledgeRoot)) {
+  for (const file of walkMarkdown(knowledgeRoot).filter((item) => path.basename(item) !== "MAP.md")) {
+    for (const error of knowledgeSourceErrors(file)) {
+      addError(knowledgeSourceErrorsList, error.path, error.message);
+    }
+  }
+}
+printCase("actual.knowledge-sources", true, knowledgeSourceErrorsList);
 
 caseCount += 1;
 const documentSemanticsErrors = [];

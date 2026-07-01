@@ -164,6 +164,29 @@ def knowledge_source_errors(full_path):
     if not SOURCE_LINK_PATTERN.search(source_text):
         add_error(errors, str(rel), "knowledge 来源 section must contain at least one traceable link")
 
+    if markdown_lifecycle(full_path) == "active":
+        inbox_root = (ROOT / "01-收件箱").resolve()
+        ingested_root = (ROOT / "01-收件箱/已入库").resolve()
+        for match in WIKILINK_TARGET_PATTERN.finditer(source_text):
+            raw_target = match.group(1).replace("\\", "/")
+            if raw_target.startswith("01-收件箱/"):
+                target = (ROOT / raw_target).resolve()
+            else:
+                target = (full_path.parent / raw_target).resolve()
+            try:
+                target.relative_to(inbox_root)
+            except ValueError:
+                continue
+            try:
+                target.relative_to(ingested_root)
+            except ValueError:
+                add_error(
+                    errors,
+                    str(rel),
+                    "active knowledge must not cite raw inbox files outside 01-收件箱/已入库/",
+                )
+                break
+
     return errors
 
 
