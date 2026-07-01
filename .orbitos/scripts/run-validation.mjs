@@ -231,7 +231,7 @@ const visibleFiles = [
   path.join(root, "README.zh-CN.md"),
   ...walkMarkdown(path.join(root, "00-系统")),
   ...walkMarkdown(path.join(root, "02-时间线")),
-];
+].filter((file) => fs.existsSync(file) && fs.statSync(file).isFile());
 const visibleErrors = [];
 for (const file of visibleFiles) {
   for (const error of markdownInternalWikilinkErrors(file)) {

@@ -538,6 +538,7 @@ visible_files = [
     *walk_markdown(ROOT / "00-系统"),
     *walk_markdown(ROOT / "02-时间线"),
 ]
+visible_files = [path for path in visible_files if path.is_file()]
 visible_errors = []
 for file_path in visible_files:
     for error in markdown_internal_wikilink_errors(file_path):
@@ -582,7 +583,7 @@ case_count += 1
 knowledge_orphan_errors_list = []
 draft_dir = ROOT / "04-知识/00-草稿箱"
 projection_files = []
-for candidate in [ROOT / "02-时间线/今日.md", ROOT / "02-时间线/待确认.md", ROOT / "03-项目/OrbitOS/STATUS.md"]:
+for candidate in [ROOT / "02-时间线/今日.md", ROOT / "03-项目/OrbitOS/STATUS.md"]:
     if candidate.is_file():
         projection_files.append(candidate)
 if draft_dir.exists():
