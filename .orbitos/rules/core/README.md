@@ -15,6 +15,5 @@ Current core rules:
 - `naming.md`: directory, file, root order, and event filename rules.
 - `doc-promotion.md`: promotion rules from internal design to user-facing system docs.
 - `workflow-writing.md`: workflow checklist and audit rules.
-- `adr-writing.md`: product repository architecture decision record rules.
 - `task-boundary.md`: default scope and self-check rules for agent actions.
 - `scheduled-task-boundary.md`: unattended scheduled task boundary and delivery rules.
