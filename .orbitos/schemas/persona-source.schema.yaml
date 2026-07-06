@@ -1,0 +1,106 @@
+# OrbitOS Dynamic Persona Layer — Source of Truth schema
+#
+# 本 schema 描述「动态人物档案主源」的规范结构。主源是唯一事实来源（single source of truth），
+# 位于当前 Runtime 的 00-系统/人物档案.md，属于 runtime-local 用户建模，不进入 Product Repo 的通用规则。
+#
+# 四个概念分区（zone）：
+#   1. baseline   —— 稳定基线身份与类型信息（改动需用户确认）
+#   2. hypotheses —— 由 MBTI 与问卷推导的默认偏好假设（假设，非已确认事实）
+#   3. confirmed  —— 由真实行为证据支撑的已确认模式
+#   4. suggestions—— 当行为证据与基线/假设冲突时生成的开放校准建议（只建议，不改写稳定基线）
+#
+# 投影（协作偏好 / 状态摘要 / 方向候选）都是从主源派生的视图，不得成为独立真相源。
+
+title: OrbitOS Dynamic Persona Source
+type: object
+required:
+  - mbti_type
+  - mbti_confidence
+  - baseline_status
+  - zones
+properties:
+  mbti_type:
+    type: ["string", "null"]
+    description: 首次基线生成的 MBTI 类型，如 INTJ；未基线前为 null。
+  mbti_confidence:
+    type: string
+    enum: [hypothesis, confirmed]
+    description: MBTI 结果当前的可信定位。首版永远是 hypothesis，不是终局真相。
+  baseline_status:
+    type: string
+    enum: [pending, seeded, confirmed]
+    description: 基线状态。pending=尚未运行首次问卷；seeded=已生成种子待用户确认；confirmed=用户已确认。
+  source_of_truth:
+    type: boolean
+    description: 恒为 true，标记本对象是人物层主源，投影不得反向覆盖它。
+  zones:
+    type: object
+    required: [baseline, hypotheses, confirmed, suggestions]
+    properties:
+      baseline:
+        type: object
+        description: 稳定基线身份与类型信息。
+        required: [identity, type_note]
+        properties:
+          identity:
+            type: string
+            description: 用户自我描述或问卷归纳的稳定底色（一句话）。
+          type_note:
+            type: string
+            description: MBTI 类型的人类可读解释，说明其作为起点种子的作用。
+      hypotheses:
+        type: array
+        description: 默认偏好假设列表；每条都是假设，可被后续证据覆盖。
+        items:
+          type: object
+          required: [id, statement, derived_from, confidence]
+          properties:
+            id:
+              type: string
+            statement:
+              type: string
+              description: 一条默认协作/产出假设。
+            derived_from:
+              type: string
+              description: 推导来源，如 mbti:INTJ 或 questionnaire:q3。
+            confidence:
+              type: string
+              enum: [hypothesis, tentative]
+      confirmed:
+        type: array
+        description: 由真实行为证据支撑的已确认模式。
+        items:
+          type: object
+          required: [id, statement, evidence]
+          properties:
+            id:
+              type: string
+            statement:
+              type: string
+            evidence:
+              type: string
+              description: 支撑该模式的证据引用（可见区域或 event）。
+      suggestions:
+        type: array
+        description: 开放校准建议；系统只在此生成，不静默改写 baseline/hypotheses 的稳定部分。
+        items:
+          type: object
+          required: [id, observation, contradicts, suggestion, evidence, status]
+          properties:
+            id:
+              type: string
+            observation:
+              type: string
+              description: 观测到的行为证据。
+            contradicts:
+              type: string
+              description: 与哪条基线/假设冲突。
+            suggestion:
+              type: string
+              description: 给用户的校准建议（非自动改写）。
+            evidence:
+              type: string
+            status:
+              type: string
+              enum: [open, accepted, dismissed]
+              description: 用户对建议的处理状态；默认 open，需用户确认才改变主源稳定部分。
