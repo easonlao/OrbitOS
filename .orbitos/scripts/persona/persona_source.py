@@ -1,7 +1,7 @@
 """Dynamic Persona Layer — shared source model.
 
 The persona source is the single source of truth for the OrbitOS dynamic
-persona layer. It lives as a runtime-local Markdown file (00-系统/人物档案.md)
+persona layer. It lives as a runtime-local Markdown file (00-系统/09-人物档案.md)
 with YAML frontmatter metadata and four clearly delimited body zones:
 
   1. 基线身份与类型 (baseline)        — stable; changes need user confirmation

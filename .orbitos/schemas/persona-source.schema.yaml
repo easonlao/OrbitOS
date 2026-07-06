@@ -1,7 +1,7 @@
 # OrbitOS Dynamic Persona Layer — Source of Truth schema
 #
 # 本 schema 描述「动态人物档案主源」的规范结构。主源是唯一事实来源（single source of truth），
-# 位于当前 Runtime 的 00-系统/人物档案.md，属于 runtime-local 用户建模，不进入 Product Repo 的通用规则。
+# 位于当前工作副本的 00-系统/09-人物档案.md，属于 runtime-local 用户建模，不进入 Product Repo 的通用规则。
 #
 # 四个概念分区（zone）：
 #   1. baseline   —— 稳定基线身份与类型信息（改动需用户确认）

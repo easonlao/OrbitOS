@@ -2,7 +2,7 @@
 
 These tests verify externally visible behavior and boundary preservation:
 
-- baseline seam: completed questionnaire + MBTI -> one coherent persona source
+- baseline seam: completed questionnaire + MBTI seed -> one coherent persona source
   with explicit hypothesis fields (not scattered notes).
 - calibration seam: evidence contradicts baseline -> reviewable suggestion, and
   the stable persona source is NOT silently overwritten.
@@ -58,7 +58,7 @@ def _build_synthetic_runtime(root: Path) -> None:
 
 
 def test_baseline_seam(runtime_root: Path) -> None:
-    source_path = runtime_root / "00-系统/人物档案.md"
+    source_path = runtime_root / "00-系统/09-人物档案.md"
     baseline.build_baseline(
         source_path, "测试用户：系统型建设者", SAMPLE_ANSWERS,
         created="2026-07-06", updated="2026-07-06",
@@ -80,7 +80,7 @@ def test_baseline_seam(runtime_root: Path) -> None:
 
 
 def test_calibration_seam(runtime_root: Path) -> None:
-    source_path = runtime_root / "00-系统/人物档案.md"
+    source_path = runtime_root / "00-系统/09-人物档案.md"
     # ensure a seeded baseline first
     baseline.build_baseline(
         source_path, "测试用户", SAMPLE_ANSWERS,
@@ -110,7 +110,7 @@ def test_calibration_seam(runtime_root: Path) -> None:
 
 
 def test_projection_seam(runtime_root: Path) -> None:
-    source_path = runtime_root / "00-系统/人物档案.md"
+    source_path = runtime_root / "00-系统/09-人物档案.md"
     baseline.build_baseline(
         source_path, "测试用户", SAMPLE_ANSWERS,
         created="2026-07-06", updated="2026-07-06",
@@ -137,7 +137,7 @@ def test_projection_seam(runtime_root: Path) -> None:
 
 def test_runtime_local_boundary() -> None:
     # The runtime-local persona source must NOT be shipped in the product repo.
-    _require(not (SOURCE_ROOT / "00-系统/人物档案.md").exists(),
+    _require(not (SOURCE_ROOT / "00-系统/09-人物档案.md").exists(),
              "runtime-local persona source must not leak into the product repo")
 
 
