@@ -6,8 +6,8 @@ These tests verify externally visible behavior and boundary preservation:
   with explicit hypothesis fields (not scattered notes).
 - calibration seam: evidence contradicts baseline -> reviewable suggestion, and
   the stable persona source is NOT silently overwritten.
-- projection seam: collaboration/state/direction conclusions become derived views
-  that stay distinct and are marked as projections, not separate truth sources.
+- projection seam: only the local collaboration preference page receives a durable
+  visible projection; separate state/direction Markdown pages are not generated.
 - boundary: the runtime-local persona source must NOT leak into the product repo.
 - confidence: hypotheses and MBTI result are explicitly hypothesis-level.
 
@@ -131,14 +131,8 @@ def test_projection_seam(runtime_root: Path) -> None:
 
     state_path = runtime_root / "00-系统/人物状态投影.md"
     direction_path = runtime_root / "00-系统/人物方向候选.md"
-    _require(state_path.is_file(), "state projection view must be created")
-    _require("派生视图" in state_path.read_text(encoding="utf-8"),
-             "state view must be marked as a derived projection")
-
-    # three projection types stay distinct
-    _require(state_path.read_text(encoding="utf-8") != direction_path.read_text(encoding="utf-8")
-             or direction_path.read_text(encoding="utf-8").count("方向") >= 0,
-             "state and direction projections must remain distinct types")
+    _require(not state_path.exists(), "separate state projection page should not be generated")
+    _require(not direction_path.exists(), "separate direction projection page should not be generated")
 
 
 def test_runtime_local_boundary() -> None:

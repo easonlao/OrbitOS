@@ -1,8 +1,9 @@
-"""Dynamic Persona Layer — projections (#9 collaboration, #10 state + direction).
+"""Dynamic Persona Layer — minimal visible projections.
 
-These functions project persona conclusions into derived views. Every projection
-is explicitly derived from the persona source and must NOT become an independent
-truth source. Stable baseline changes still require user confirmation elsewhere.
+The dynamic persona layer keeps the visible surface intentionally small.
+The persona source remains the only durable source of truth, and the only
+long-lived derived visible target is the local collaboration preference page.
+Stable baseline changes still require user confirmation elsewhere.
 """
 
 from __future__ import annotations
@@ -68,60 +69,13 @@ def project_collaboration(source: PersonaSource, collab_path: Path) -> bool:
     return True
 
 
-def project_state(source: PersonaSource, out_path: Path) -> None:
-    """Write a derived state-summary view (not the source of truth)."""
-    out_path = Path(out_path)
-    open_sugs = sum(
-        1 for ln in (source.zones.get("suggestions") or "").splitlines()
-        if ln.strip().startswith("-") and "状态：open" in ln
-    )
-    content = (
-        "---\n"
-        "title: 人物状态投影\n"
-        "area: system\n"
-        "purpose: persona-projection\n"
-        "lifecycle: active\n"
-        "tags:\n  - orbitos\n  - persona\n  - projection\n"
-        "---\n\n"
-        "# 人物状态投影（派生视图）\n\n"
-        f"{DERIVED_MARK}\n\n"
-        f"- MBTI 种子：{source.mbti_type}（可信度：{source.frontmatter.get('mbti_confidence')}）\n"
-        f"- 基线状态：{source.baseline_status}\n"
-        f"- 开放校准建议数：{open_sugs}\n"
-        "- 说明：本视图只反映主源当前状态，不反向覆盖主源；稳定基线改动需经用户确认。\n"
-    )
-    out_path.write_text(content, encoding="utf-8")
-
-
-def project_direction(source: PersonaSource, out_path: Path) -> int:
-    """Route strong output-direction signals into a candidate view.
-
-    Returns the number of routed signals.
-    """
-    out_path = Path(out_path)
-    signals = _collect_direction_signals(source)
-    if not signals:
-        return 0
-    bullets = "\n".join(f"- {s}" for s in signals)
-    content = (
-        "---\n"
-        "title: 人物方向候选\n"
-        "area: system\n"
-        "purpose: persona-projection\n"
-        "lifecycle: active\n"
-        "tags:\n  - orbitos\n  - persona\n  - projection\n"
-        "---\n\n"
-        "# 人物方向候选（路由视图）\n\n"
-        f"{DERIVED_MARK}\n\n"
-        "以下信号值得考虑转为知识候选或项目候选（进入对应下游流，而非困在人物文档）：\n\n"
-        f"{bullets}\n"
-    )
-    out_path.write_text(content, encoding="utf-8")
-    return len(signals)
-
-
 def run_projections(source, runtime: Path) -> bool:
-    """Run all three projections from a loaded source or a source path."""
+    """Project persona conclusions into the minimal visible surface.
+
+    The current user-facing design keeps only two long-lived visible files:
+    the persona source and the local collaboration preference page.
+    Separate state / direction Markdown pages are intentionally not generated.
+    """
     if isinstance(source, (str, Path)):
         source = PersonaSource.load(Path(source))
     runtime = Path(runtime)
@@ -129,19 +83,17 @@ def run_projections(source, runtime: Path) -> bool:
         raise ValueError("target file is not marked as persona source_of_truth")
     changed = False
     changed |= project_collaboration(source, runtime / "00-系统" / "08-本地协作偏好.md")
-    project_state(source, runtime / "00-系统" / "人物状态投影.md")
-    project_direction(source, runtime / "00-系统" / "人物方向候选.md")
     return changed
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Project persona conclusions into views.")
+    parser = argparse.ArgumentParser(description="Project persona conclusions into minimal visible targets.")
     parser.add_argument("--source", required=True)
     parser.add_argument("--runtime", required=True, help="OrbitOS runtime root")
-    parser.add_argument("--all", action="store_true", help="run all projections")
+    parser.add_argument("--all", action="store_true", help="reserved for compatibility; currently equals collaboration projection")
     parser.add_argument("--collab", action="store_true")
-    parser.add_argument("--state", action="store_true")
-    parser.add_argument("--direction", action="store_true")
+    parser.add_argument("--state", action="store_true", help="deprecated no-op; separate state pages are no longer generated")
+    parser.add_argument("--direction", action="store_true", help="deprecated no-op; separate direction pages are no longer generated")
     args = parser.parse_args()
 
     source = PersonaSource.load(Path(args.source))
@@ -155,12 +107,8 @@ def main() -> int:
         changed |= project_collaboration(
             source, runtime / "00-系统" / "08-本地协作偏好.md"
         )
-    if args.state or do_all:
-        project_state(source, runtime / "00-系统" / "人物状态投影.md")
-    if args.direction or do_all:
-        project_direction(source, runtime / "00-系统" / "人物方向候选.md")
 
-    print(f"projections done (collab_modified={changed})")
+    print(f"projections done (collab_modified={changed}, separate_pages_generated=False)")
     return 0
 
 
