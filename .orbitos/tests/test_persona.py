@@ -1,17 +1,10 @@
-"""Dynamic Persona Layer - seam tests (#6..#10).
+"""Dynamic Persona Layer - seam tests.
 
-These tests verify externally visible behavior and boundary preservation:
-
-- baseline seam: completed questionnaire + MBTI seed -> one coherent persona source
-  with explicit hypothesis fields (not scattered notes).
-- calibration seam: evidence contradicts baseline -> reviewable suggestion, and
-  the stable persona source is NOT silently overwritten.
-- projection seam: only the local collaboration preference page receives a durable
-  visible projection; separate state/direction Markdown pages are not generated.
-- boundary: the runtime-local persona source must NOT leak into the product repo.
-- confidence: hypotheses and MBTI result are explicitly hypothesis-level.
-
-Run with: python .orbitos/tests/test_persona.py
+These tests verify the current intended lifecycle:
+- baseline seed generation writes one coherent runtime-local source
+- calibration only appends reviewable suggestions and never rewrites baseline
+- updates only happen after explicit confirmation and refresh the collaboration projection
+- runtime-local source does not leak into the product repo
 """
 
 import sys
@@ -25,9 +18,11 @@ import baseline  # noqa: E402
 import calibrate  # noqa: E402
 import mbti  # noqa: E402
 import project  # noqa: E402
+import update  # noqa: E402
 from persona_source import PersonaSource  # noqa: E402
 
-SOURCE_ROOT = Path(__file__).resolve().parents[2]
+CURRENT_ROOT = Path(__file__).resolve().parents[2]
+PRODUCT_REPO_ROOT = CURRENT_ROOT if (CURRENT_ROOT / "AGENTS.md").exists() and (CURRENT_ROOT / "00-系统").exists() and (CURRENT_ROOT / ".orbitos").exists() and not (CURRENT_ROOT / "03-项目/OrbitOS/repo").exists() else CURRENT_ROOT / "03-项目/OrbitOS/repo"
 
 SAMPLE_ANSWERS = {
     "ei1": 2, "ei2": 2, "ei3": 2, "ei4": -2, "ei5": 2, "ei6": 2,
@@ -55,39 +50,35 @@ def _build_synthetic_runtime(root: Path) -> None:
     (root / "02-时间线/今日.md").write_text("# 今日\n", encoding="utf-8")
 
 
+def _write_collab_file(runtime_root: Path) -> Path:
+    collab_path = runtime_root / "00-系统/08-本地协作偏好.md"
+    collab_path.write_text(
+        "---\ntitle: 本地协作偏好\n---\n\n# 本地协作偏好\n\n## 默认合作方式\n\n- 你定方向。\n",
+        encoding="utf-8",
+    )
+    return collab_path
+
+
 def test_baseline_seam(runtime_root: Path) -> None:
     source_path = runtime_root / "00-系统/09-人物档案.md"
     baseline.build_baseline(
-        source_path, "测试用户：系统型建设者", SAMPLE_ANSWERS,
-        created="2026-07-06", updated="2026-07-06",
+        source_path,
+        "测试用户：系统型建设者",
+        SAMPLE_ANSWERS,
+        created="2026-07-06",
+        updated="2026-07-06",
     )
     src = PersonaSource.load(source_path)
     _require(src.is_source_of_truth(), "persona source must be marked source_of_truth")
     _require(src.mbti_type == "INTJ", f"expected INTJ, got {src.mbti_type}")
-    _require(
-        src.frontmatter.get("mbti_confidence") == "hypothesis",
-        "MBTI result must be hypothesis-level, not confirmed truth",
-    )
-    _require(
-        src.frontmatter.get("mbti_questionnaire_version") == "mbti-seed-v2",
-        "questionnaire version must be persisted",
-    )
-    _require(src.frontmatter.get("mbti_answered") == 24, "full baseline should persist answered count")
+    _require(src.frontmatter.get("mbti_confidence") == "hypothesis", "MBTI result must be hypothesis-level")
+    _require(src.frontmatter.get("mbti_questionnaire_version") == "mbti-seed-v2", "questionnaire version must be persisted")
+    _require(src.frontmatter.get("mbti_answered") == 24, "answered count must be persisted")
     _require(src.baseline_status == "seeded", "baseline status should be seeded")
     for zone in ("baseline", "hypotheses", "confirmed", "suggestions"):
         _require(zone in src.zones, f"zone missing: {zone}")
-    _require(
-        "confidence=hypothesis" in src.zones["hypotheses"],
-        "hypotheses must be explicitly hypothesis-level",
-    )
-    _require(
-        src.zones["hypotheses"].count("- [h") == 4,
-        "expected 4 default hypotheses derived from MBTI seed",
-    )
-    _require(
-        "24 题、5 档倾向问卷" in src.zones["baseline"],
-        "baseline note should describe the current questionnaire shape",
-    )
+    _require("24 题、5 档倾向问卷" in src.zones["baseline"], "baseline note should describe the questionnaire shape")
+    _require(src.zones["hypotheses"].count("- [h") == 4, "expected 4 default hypotheses")
 
 
 def test_mbti_score_scale() -> None:
@@ -117,10 +108,7 @@ def test_mbti_score_scale() -> None:
 
 def test_calibration_seam(runtime_root: Path) -> None:
     source_path = runtime_root / "00-系统/09-人物档案.md"
-    baseline.build_baseline(
-        source_path, "测试用户", SAMPLE_ANSWERS,
-        created="2026-07-06", updated="2026-07-06",
-    )
+    baseline.build_baseline(source_path, "测试用户", SAMPLE_ANSWERS, created="2026-07-06", updated="2026-07-06")
     for i in range(4):
         (runtime_root / "03-项目" / f"proj{i}").mkdir(parents=True, exist_ok=True)
     for i in range(8):
@@ -128,54 +116,58 @@ def test_calibration_seam(runtime_root: Path) -> None:
 
     src_before = PersonaSource.load(source_path)
     stable_baseline_before = src_before.zones["baseline"]
-
     added = calibrate.run_calibration(source_path, runtime_root, dry_run=False)
-    _require(added >= 1, "calibration should produce at least one suggestion under contradictory evidence")
-
+    _require(added >= 1, "calibration should produce at least one suggestion")
     src_after = PersonaSource.load(source_path)
-    _require(
-        src_after.zones["baseline"] == stable_baseline_before,
-        "calibration must NOT rewrite the stable baseline zone",
-    )
-    _require(
-        "cal_parallelism" in src_after.zones["suggestions"],
-        "calibration suggestion must land in the open-suggestions zone",
-    )
-    _require(
-        src_after.zones["confirmed"] == src_before.zones["confirmed"],
-        "calibration must not fabricate confirmed patterns",
-    )
+    _require(src_after.zones["baseline"] == stable_baseline_before, "calibration must not rewrite the stable baseline zone")
+    _require("cal_parallelism" in src_after.zones["suggestions"], "calibration suggestion must land in the suggestions zone")
+    _require(src_after.zones["confirmed"] == src_before.zones["confirmed"], "calibration must not fabricate confirmed patterns")
 
 
 def test_projection_seam(runtime_root: Path) -> None:
     source_path = runtime_root / "00-系统/09-人物档案.md"
-    baseline.build_baseline(
-        source_path, "测试用户", SAMPLE_ANSWERS,
-        created="2026-07-06", updated="2026-07-06",
-    )
-    collab_path = runtime_root / "00-系统/08-本地协作偏好.md"
-    collab_path.write_text(
-        "---\ntitle: 本地协作偏好\n---\n\n# 本地协作偏好\n\n## 默认合作方式\n\n- 你定方向。\n",
-        encoding="utf-8",
-    )
-
+    collab_path = _write_collab_file(runtime_root)
+    baseline.build_baseline(source_path, "测试用户", SAMPLE_ANSWERS, created="2026-07-06", updated="2026-07-06")
     project.run_projections(source_path, runtime_root)
-
     collab_text = collab_path.read_text(encoding="utf-8")
     _require("人物档案派生" in collab_text, "collab projection must be written into local prefs")
     _require("非独立真相" in collab_text, "collab projection must be marked derived")
+    _require(not (runtime_root / "00-系统/人物状态投影.md").exists(), "legacy state projection page should not be generated")
+    _require(not (runtime_root / "00-系统/人物方向候选.md").exists(), "legacy direction projection page should not be generated")
 
-    state_path = runtime_root / "00-系统/人物状态投影.md"
-    direction_path = runtime_root / "00-系统/人物方向候选.md"
-    _require(not state_path.exists(), "separate state projection page should not be generated")
-    _require(not direction_path.exists(), "separate direction projection page should not be generated")
+
+def test_update_seam(runtime_root: Path) -> None:
+    source_path = runtime_root / "00-系统/09-人物档案.md"
+    collab_path = _write_collab_file(runtime_root)
+    baseline.build_baseline(source_path, "测试用户", SAMPLE_ANSWERS, created="2026-07-06", updated="2026-07-06")
+
+    update.apply_update(source_path, runtime_root, confirm_baseline=True)
+    src = PersonaSource.load(source_path)
+    _require(src.baseline_status == "confirmed", "baseline confirmation should persist")
+
+    for i in range(4):
+        (runtime_root / "03-项目" / f"proj{i}").mkdir(parents=True, exist_ok=True)
+    for i in range(8):
+        (runtime_root / "01-收件箱" / f"item{i}.md").write_text("x", encoding="utf-8")
+    calibrate.run_calibration(source_path, runtime_root, dry_run=False)
+
+    update.apply_update(
+        source_path,
+        runtime_root,
+        accept_suggestion="cal_parallelism",
+        confirmed_statement="用户在复杂任务里长期保留多个并行方向，需要开放式节奏支持。",
+        evidence="03-项目/, 01-收件箱/",
+        note="用户确认这条建议成立",
+    )
+    src = PersonaSource.load(source_path)
+    _require("[confirmed_cal_parallelism]" in src.zones["confirmed"], "accepted suggestion should become a confirmed pattern")
+    _require("状态：accepted" in src.zones["suggestions"], "accepted suggestion status should persist")
+    collab_text = collab_path.read_text(encoding="utf-8")
+    _require("人物档案派生" in collab_text, "collaboration projection should refresh after update")
 
 
 def test_runtime_local_boundary() -> None:
-    _require(
-        not (SOURCE_ROOT / "00-系统/09-人物档案.md").exists(),
-        "runtime-local persona source must not leak into the product repo",
-    )
+    _require(not (PRODUCT_REPO_ROOT / "00-系统/09-人物档案.md").exists(), "runtime-local persona source must not leak into the product repo")
 
 
 def run_persona_tests(runtime_root=None) -> str:
@@ -188,12 +180,14 @@ def run_persona_tests(runtime_root=None) -> str:
             test_mbti_score_scale()
             test_calibration_seam(root)
             test_projection_seam(root)
+            test_update_seam(root)
     else:
         _build_synthetic_runtime(runtime_root)
         test_baseline_seam(runtime_root)
         test_mbti_score_scale()
         test_calibration_seam(runtime_root)
         test_projection_seam(runtime_root)
+        test_update_seam(runtime_root)
     test_runtime_local_boundary()
     return "persona seam tests passed"
 

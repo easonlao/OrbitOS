@@ -9,8 +9,8 @@ with YAML frontmatter metadata and four clearly delimited body zones:
   3. 证据支撑模式   (confirmed)       — patterns backed by real behavior evidence
   4. 开放校准建议   (suggestions)     — calibration suggestions only; never auto-rewrite
 
-Projections (collaboration prefs / state summary / direction candidates) are
-derived views and must not become independent truth sources.
+Only the local collaboration preference page may receive a long-lived derived
+projection. Projections must not become independent truth sources.
 """
 
 from __future__ import annotations
@@ -27,6 +27,7 @@ ZONE_HEADING_HINTS = {
     "confirmed": "证据支撑",
     "suggestions": "开放校准建议",
 }
+SUGGESTION_STATUS_PATTERN = re.compile(r"状态：(open|accepted|dismissed)")
 
 
 def _parse_scalar(raw: str):
@@ -103,7 +104,6 @@ class PersonaSource:
     frontmatter: dict = field(default_factory=dict)
     zones: dict = field(default_factory=lambda: {k: "" for k in ZONE_KEYS})
 
-    # ----- load / save -----
     @classmethod
     def load(cls, path: Path) -> "PersonaSource":
         path = Path(path)
@@ -141,7 +141,6 @@ class PersonaSource:
         path = Path(path)
         body_parts = []
         for key in ZONE_KEYS:
-            hint = ZONE_HEADING_HINTS[key]
             title = {
                 "baseline": "一、基线身份与类型（stable baseline）",
                 "hypotheses": "二、默认偏好假设（default hypotheses）",
@@ -154,7 +153,6 @@ class PersonaSource:
         text = _serialize_frontmatter(self.frontmatter) + "\n\n" + body + "\n"
         path.write_text(text, encoding="utf-8")
 
-    # ----- helpers -----
     @property
     def mbti_type(self) -> Optional[str]:
         return self.frontmatter.get("mbti_type")
@@ -166,13 +164,38 @@ class PersonaSource:
     def is_source_of_truth(self) -> bool:
         return self.frontmatter.get("source_of_truth", False) is True
 
-    def add_suggestion(self, suggestion: dict) -> None:
-        """Append a calibration suggestion to zone 4 only.
+    def zone_lines(self, key: str) -> list[str]:
+        return [line for line in (self.zones.get(key) or "").splitlines() if line.strip()]
 
-        Calibration must never rewrite the stable baseline (zone 1) or the
-        confirmed patterns (zone 3). This method is the only sanctioned write
-        path for the calibration loop.
-        """
+    def set_zone_lines(self, key: str, lines: list[str]) -> None:
+        self.zones[key] = "\n".join(lines).strip() if lines else ""
+
+    def set_baseline_status(self, status: str) -> None:
+        self.frontmatter["baseline_status"] = status
+
+    def set_identity(self, identity: str) -> None:
+        lines = self.zone_lines("baseline")
+        replaced = False
+        for index, line in enumerate(lines):
+            if line.startswith("- 稳定底色："):
+                lines[index] = f"- 稳定底色：{identity}"
+                replaced = True
+                break
+        if not replaced:
+            lines.insert(0, f"- 稳定底色：{identity}")
+        self.set_zone_lines("baseline", lines)
+
+    def add_confirmed_pattern(self, pattern_id: str, statement: str, evidence: str) -> None:
+        line = f"- [{pattern_id}] {statement}（evidence={evidence}）"
+        lines = self.zone_lines("confirmed")
+        if any(f"[{pattern_id}]" in item for item in lines):
+            return
+        if lines == ["（暂无；待行为证据支撑后填入）"] or lines == ["（暂无）"]:
+            lines = []
+        lines.append(line)
+        self.set_zone_lines("confirmed", lines)
+
+    def add_suggestion(self, suggestion: dict) -> None:
         sid = suggestion.get("id", "sug")
         line = (
             f"- [{sid}] 观测：{suggestion.get('observation', '')} "
@@ -186,3 +209,22 @@ class PersonaSource:
 
     def has_suggestion(self, sid: str) -> bool:
         return f"[{sid}]" in (self.zones.get("suggestions") or "")
+
+    def set_suggestion_status(self, sid: str, status: str, note: str | None = None) -> None:
+        lines = self.zone_lines("suggestions")
+        updated = False
+        for index, line in enumerate(lines):
+            if f"[{sid}]" not in line:
+                continue
+            new_line = SUGGESTION_STATUS_PATTERN.sub(f"状态：{status}", line, count=1)
+            if note:
+                if "｜处理：" in new_line:
+                    new_line = re.sub(r"｜处理：[^｜]+", f"｜处理：{note}", new_line, count=1)
+                else:
+                    new_line = new_line + f" ｜处理：{note}"
+            lines[index] = new_line
+            updated = True
+            break
+        if not updated:
+            raise ValueError(f"suggestion not found: {sid}")
+        self.set_zone_lines("suggestions", lines)
