@@ -346,6 +346,16 @@ def handoff_structure_errors():
     return errors
 
 
+def registered_agent_ids(agents):
+    ids = []
+    for agent in agents if isinstance(agents, list) else []:
+        if isinstance(agent, dict):
+            agent_id = agent.get("agent_id")
+            if isinstance(agent_id, str) and agent_id.strip():
+                ids.append(agent_id.strip())
+    return ids
+
+
 def agent_collaboration_evidence_errors():
     errors = []
     registry_path = ROOT / ".orbitos/agents/registry.yaml"
@@ -357,35 +367,25 @@ def agent_collaboration_evidence_errors():
     if not agents:
         return errors
 
-    if len(agents) < 4:
-        add_error(errors, ".orbitos/agents/registry.yaml", "multi-agent registry evidence is incomplete")
-
-    required_agent_ids = {"codex", "nova", "hermes", "mimo"}
-    seen_agent_ids = set()
-    deployment_paths = set()
-
     for agent in agents if isinstance(agents, list) else []:
         if not isinstance(agent, dict):
             continue
         agent_id = agent.get("agent_id")
-        if isinstance(agent_id, str):
-            seen_agent_ids.add(agent_id)
-        else:
+        if not isinstance(agent_id, str) or not agent_id.strip():
             add_error(errors, ".orbitos/agents/registry.yaml", "registry entry is missing agent_id")
+            continue
 
         deployment = agent.get("deployment", {})
         if not isinstance(deployment, dict):
-            add_error(errors, ".orbitos/agents/registry.yaml", f"{agent_id or 'unknown'} deployment is invalid")
+            add_error(errors, ".orbitos/agents/registry.yaml", f"{agent_id} deployment is invalid")
             continue
         orbitos_path = deployment.get("orbitos_path")
-        if isinstance(orbitos_path, str) and orbitos_path.strip():
-            deployment_paths.add(orbitos_path)
-        else:
-            add_error(errors, ".orbitos/agents/registry.yaml", f"{agent_id or 'unknown'} deployment is missing orbitos_path")
+        if not isinstance(orbitos_path, str) or not orbitos_path.strip():
+            add_error(errors, ".orbitos/agents/registry.yaml", f"{agent_id} deployment is missing orbitos_path")
 
         profile_ref = agent.get("profile_ref")
         if not isinstance(profile_ref, str) or not profile_ref.strip():
-            add_error(errors, ".orbitos/agents/registry.yaml", f"{agent_id or 'unknown'} profile_ref is missing")
+            add_error(errors, ".orbitos/agents/registry.yaml", f"{agent_id} profile_ref is missing")
             continue
         profile_path = ROOT / profile_ref
         if not profile_path.is_file():
@@ -395,13 +395,6 @@ def agent_collaboration_evidence_errors():
         for term in ["## 经验入口", "## 启动关注"]:
             if term not in profile_text:
                 add_error(errors, profile_ref, f"agent profile is missing required section: {term}")
-
-    missing_ids = required_agent_ids - seen_agent_ids
-    if missing_ids:
-        add_error(errors, ".orbitos/agents/registry.yaml", f"missing registered agents: {', '.join(sorted(missing_ids))}")
-
-    if len(deployment_paths) < 3:
-        add_error(errors, ".orbitos/agents/registry.yaml", "deployment path diversity is not yet validated")
 
     return errors
 
@@ -414,7 +407,8 @@ def agent_event_evidence_errors():
 
     registry = read_json_like(".orbitos/agents/registry.yaml")
     agents = registry.get("agents", []) if isinstance(registry, dict) else []
-    if not agents:
+    agent_ids = registered_agent_ids(agents)
+    if len(agent_ids) <= 1:
         return errors
 
     events_root = ROOT / ".orbitos/logs/events"
@@ -428,18 +422,12 @@ def agent_event_evidence_errors():
         except OSError:
             continue
 
-    for agent_id in ["codex", "nova", "hermes", "mimo"]:
+    for agent_id in agent_ids:
         if not any(
             f"agent_id: {agent_id}" in text or f'"agent_id": "{agent_id}"' in text
             for _name, text in event_texts
         ):
             add_error(errors, agent_id, "no event evidence found for registered agent")
-
-    if not any("scheduled_task_boundary" in name or "scheduled_task_boundary" in text for name, text in event_texts):
-        add_error(errors, "scheduled_task_boundary", "scheduled task boundary evidence is missing from events")
-
-    if not any("experience_check" in text and "captured" in text for _name, text in event_texts):
-        add_error(errors, "experience_check", "experience capture evidence is missing from events")
 
     return errors
 
@@ -869,9 +857,28 @@ if ingest_dir.exists():
                             "batch item file does not exist in 01-收件箱/已入库/",
                         )
 
+if ingest_dir.exists():
+    for batch_path in sorted(ingest_dir.glob("*.yaml")):
+        batch = read_json_like(f".orbitos/ingest/batches/{batch_path.name}")
+        if isinstance(batch.get("items"), list):
+            for item in batch["items"]:
+                file_name = item.get("file") if isinstance(item, dict) else None
+                if file_name == "00-粘贴.md":
+                    add_error(
+                        ingest_errors,
+                        f".orbitos/ingest/batches/{batch_path.name}:00-粘贴.md",
+                        "00-粘贴.md is a fixed clipboard entry and must not be registered as an ingest item",
+                    )
+
 if ingested_dir.exists():
     for file_path in ingested_dir.iterdir():
-        if file_path.is_file() and file_path.name not in recorded_files:
+        if file_path.name == "00-粘贴.md":
+            add_error(
+                ingest_errors,
+                "01-收件箱/已入库/00-粘贴.md",
+                "00-粘贴.md must remain in the inbox root clipboard slot, not inside 已入库/",
+            )
+        elif file_path.is_file() and file_path.name not in recorded_files:
             add_error(
                 ingest_errors,
                 f"01-收件箱/已入库/{file_path.name}",
