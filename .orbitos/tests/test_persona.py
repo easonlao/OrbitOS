@@ -82,6 +82,10 @@ def test_baseline_seam(runtime_root: Path) -> None:
 
 
 def test_mbti_score_scale() -> None:
+    spec = mbti.questionnaire_spec()
+    _require(spec["asking_constraints"]["mode"] == "single_question", "questionnaire should enforce single-question mode")
+    _require("prompt" in spec["questions"][0], "questionnaire questions should expose canonical prompts")
+    _require("请只回复一个值：-2 / -1 / 0 / 1 / 2。" in spec["questions"][0]["prompt"], "canonical prompt should constrain the answer format")
     result = mbti.score(
         {
             "ei1": "strong_right",

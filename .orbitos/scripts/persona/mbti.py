@@ -18,6 +18,32 @@ from typing import Optional
 
 QUESTIONNAIRE_VERSION = "mbti-seed-v2"
 
+ASKING_CONSTRAINTS = {
+    "mode": "single_question",
+    "identity_prompt": "请先用一句话描述你认为自己相对稳定的底色。我会把这句话作为人物模块的初始 identity。",
+    "intro": "下面开始 24 题、5 档倾向问卷。它只用于生成 MBTI 种子假设，不是官方 MBTI，也不是最终人格定论。",
+    "answer_instruction": "每题只回复一个值：-2 / -1 / 0 / 1 / 2。",
+    "answer_scale": [
+        "-2 = 明显偏左",
+        "-1 = 略偏左",
+        "0 = 中间 / 视情况",
+        "1 = 略偏右",
+        "2 = 明显偏右",
+    ],
+    "must_do": [
+        "先收集 identity，再进入 24 题问卷",
+        "一次只问 1 题，并标明当前题号",
+        "直接使用脚本导出的标准题面，不自行改写题意",
+        "用户答案不合法时，只重问当前题，不推进下一题",
+    ],
+    "must_not": [
+        "不得在提问时解释人格理论",
+        "不得擅自补充示例、诱导语或题外分析",
+        "不得把用户答案即时解释成人格结论",
+        "不得一次混问多题，除非用户明确要求批量回答",
+    ],
+}
+
 DICHOTOMIES = [
     ("E", "I", "ei"),
     ("S", "N", "sn"),
@@ -87,13 +113,29 @@ def normalize_answer(value) -> Optional[int]:
 
 
 def questionnaire_spec() -> dict:
+    questions = []
+    total = len(QUESTIONS)
+    for index, item in enumerate(QUESTIONS, start=1):
+        enriched = dict(item)
+        enriched["prompt"] = render_question_prompt(item, index=index, total=total)
+        questions.append(enriched)
     return {
         "version": QUESTIONNAIRE_VERSION,
         "type": "mbti_seed",
         "question_count": len(QUESTIONS),
         "scale": ANSWER_SCALE,
-        "questions": QUESTIONS,
+        "asking_constraints": ASKING_CONSTRAINTS,
+        "questions": questions,
     }
+
+
+def render_question_prompt(question: dict, *, index: int, total: int) -> str:
+    return (
+        f"第 {index}/{total} 题\n"
+        f"- 左侧：{question['text_left']}\n"
+        f"- 右侧：{question['text_right']}\n"
+        "请只回复一个值：-2 / -1 / 0 / 1 / 2。"
+    )
 
 
 def score(answers: dict[str, int | str]) -> dict:
