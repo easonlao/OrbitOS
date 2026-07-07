@@ -6,13 +6,17 @@ and is not a clinical or definitive classification. It exists only as a
 low-cost, recognizable starting seed; the dynamic persona layer treats the
 result as a hypothesis, never as final truth.
 
-Licensing note: the items below are original forced-choice statements authored
-for personal onboarding. They are not copied from any proprietary assessment.
+Licensing note: the items below are original statements authored for personal
+onboarding. They are not copied from any proprietary assessment.
 """
 
 from __future__ import annotations
 
+import argparse
+import json
 from typing import Optional
+
+QUESTIONNAIRE_VERSION = "mbti-seed-v2"
 
 DICHOTOMIES = [
     ("E", "I", "ei"),
@@ -21,82 +25,135 @@ DICHOTOMIES = [
     ("J", "P", "jp"),
 ]
 
-# Each question leans to pole_a (text_a) or pole_b (text_b).
+ANSWER_SCALE = [
+    {"value": -2, "label": "strong_left", "display": "明显偏左"},
+    {"value": -1, "label": "lean_left", "display": "略偏左"},
+    {"value": 0, "label": "neutral", "display": "中间 / 视情况"},
+    {"value": 1, "label": "lean_right", "display": "略偏右"},
+    {"value": 2, "label": "strong_right", "display": "明显偏右"},
+]
+
 QUESTIONS: list[dict] = [
-    # E / I
-    {"id": "ei1", "a": "E", "text_a": "我倾向通过和人讨论来理清想法", "text_b": "我倾向先自己想清楚再开口"},
-    {"id": "ei2", "a": "E", "text_a": "一周密集社交后我觉得被充电", "text_b": "一周密集社交后我需要独处回血"},
-    {"id": "ei3", "a": "E", "text_a": "遇到事我习惯先说出来", "text_b": "遇到事我习惯先消化再表达"},
-    {"id": "ei4", "a": "I", "text_a": "我在安静环境里产出更高", "text_b": "我在有点热闹的环境里更来劲"},
-    {"id": "ei5", "a": "E", "text_a": "我思考时常需要外部反馈", "text_b": "我思考时常需要内部确认"},
-    {"id": "ei6", "a": "I", "text_a": "深交几个人的关系对我更重要", "text_b": "认识很多人的圈子对我更重要"},
-    # S / N
-    {"id": "sn1", "a": "S", "text_a": "我更信任已经验证过的经验", "text_b": "我更信任可能性和新模式"},
-    {"id": "sn2", "a": "S", "text_a": "我关注具体、可落地的细节", "text_b": "我关注整体脉络和远景"},
-    {"id": "sn3", "a": "N", "text_a": "我常从现有信息联想到其它方向", "text_b": "我常把现有信息压实到执行"},
-    {"id": "sn4", "a": "S", "text_a": "实操步骤清晰时我最踏实", "text_b": "方向有想象力时我最来劲"},
-    {"id": "sn5", "a": "N", "text_a": "我容易对重复机械的工作失去耐心", "text_b": "我能在重复里保持稳定产出"},
-    {"id": "sn6", "a": "S", "text_a": "我偏好一步到位的稳妥方案", "text_b": "我偏好可迭代试错的灵活方案"},
-    # T / F
-    {"id": "tf1", "a": "T", "text_a": "做决定时我先看逻辑对不对", "text_b": "做决定时我先看人的感受"},
-    {"id": "tf2", "a": "F", "text_a": "我怕伤到人而不敢直说", "text_b": "我怕误导人而坚持直说"},
-    {"id": "tf3", "a": "T", "text_a": "我更欣赏犀利的论证", "text_b": "我更欣赏照顾周全的表达"},
-    {"id": "tf4", "a": "F", "text_a": "协作里关系顺不顺畅我很在意", "text_b": "协作里结论对不对我很在意"},
-    {"id": "tf5", "a": "T", "text_a": "批评我时直接点出问题最好", "text_b": "批评我时先肯定再点问题最好"},
-    {"id": "tf6", "a": "F", "text_a": "我常替对方处境着想", "text_b": "我常先站在事情本身立场"},
-    # J / P
-    {"id": "jp1", "a": "J", "text_a": "我偏好提前计划好再动手", "text_b": "我偏好边做边调整"},
-    {"id": "jp2", "a": "P", "text_a": "我享受保留开放选项", "text_b": "我享受把事情定下来"},
-    {"id": "jp3", "a": "J", "text_a": "deadline 前我习惯提前收尾", "text_b": "deadline 前我常最后冲刺"},
-    {"id": "jp4", "a": "P", "text_a": "结构化太强会让我束手束脚", "text_b": "没有结构我会不安"},
-    {"id": "jp5", "a": "J", "text_a": "清单和进度让我安心", "text_b": "清单和进度让我觉得被束缚"},
-    {"id": "jp6", "a": "P", "text_a": "我常同时留几个方向在跑", "text_b": "我常一次只推进一个方向"},
+    {"id": "ei1", "axis": "ei", "left_pole": "E", "text_left": "我倾向通过和人讨论来理清想法", "text_right": "我倾向先自己想清楚再开口"},
+    {"id": "ei2", "axis": "ei", "left_pole": "E", "text_left": "一周密集社交后我觉得被充电", "text_right": "一周密集社交后我需要独处回血"},
+    {"id": "ei3", "axis": "ei", "left_pole": "E", "text_left": "遇到事我习惯先说出来", "text_right": "遇到事我习惯先消化再表达"},
+    {"id": "ei4", "axis": "ei", "left_pole": "I", "text_left": "我在安静环境里产出更高", "text_right": "我在有点热闹的环境里更来劲"},
+    {"id": "ei5", "axis": "ei", "left_pole": "E", "text_left": "我思考时常需要外部反馈", "text_right": "我思考时常需要内部确认"},
+    {"id": "ei6", "axis": "ei", "left_pole": "I", "text_left": "深交几个人的关系对我更重要", "text_right": "认识很多人的圈子对我更重要"},
+    {"id": "sn1", "axis": "sn", "left_pole": "S", "text_left": "我更信任已经验证过的经验", "text_right": "我更信任可能性和新模式"},
+    {"id": "sn2", "axis": "sn", "left_pole": "S", "text_left": "我关注具体、可落地的细节", "text_right": "我关注整体脉络和远景"},
+    {"id": "sn3", "axis": "sn", "left_pole": "N", "text_left": "我常从现有信息联想到其它方向", "text_right": "我常把现有信息压实到执行"},
+    {"id": "sn4", "axis": "sn", "left_pole": "S", "text_left": "实操步骤清晰时我最踏实", "text_right": "方向有想象力时我最来劲"},
+    {"id": "sn5", "axis": "sn", "left_pole": "N", "text_left": "我容易对重复机械的工作失去耐心", "text_right": "我能在重复里保持稳定产出"},
+    {"id": "sn6", "axis": "sn", "left_pole": "S", "text_left": "我偏好一步到位的稳妥方案", "text_right": "我偏好可迭代试错的灵活方案"},
+    {"id": "tf1", "axis": "tf", "left_pole": "T", "text_left": "做决定时我先看逻辑对不对", "text_right": "做决定时我先看人的感受"},
+    {"id": "tf2", "axis": "tf", "left_pole": "F", "text_left": "我怕伤到人而不敢直说", "text_right": "我怕误导人而坚持直说"},
+    {"id": "tf3", "axis": "tf", "left_pole": "T", "text_left": "我更欣赏犀利的论证", "text_right": "我更欣赏照顾周全的表达"},
+    {"id": "tf4", "axis": "tf", "left_pole": "F", "text_left": "协作里关系顺不顺畅我很在意", "text_right": "协作里结论对不对我很在意"},
+    {"id": "tf5", "axis": "tf", "left_pole": "T", "text_left": "批评我时直接点出问题最好", "text_right": "批评我时先肯定再点问题最好"},
+    {"id": "tf6", "axis": "tf", "left_pole": "F", "text_left": "我常替对方处境着想", "text_right": "我常先站在事情本身立场"},
+    {"id": "jp1", "axis": "jp", "left_pole": "J", "text_left": "我偏好提前计划好再动手", "text_right": "我偏好边做边调整"},
+    {"id": "jp2", "axis": "jp", "left_pole": "P", "text_left": "我享受保留开放选项", "text_right": "我享受把事情定下来"},
+    {"id": "jp3", "axis": "jp", "left_pole": "J", "text_left": "deadline 前我习惯提前收尾", "text_right": "deadline 前我常最后冲刺"},
+    {"id": "jp4", "axis": "jp", "left_pole": "P", "text_left": "结构化太强会让我束手束脚", "text_right": "没有结构我会不安"},
+    {"id": "jp5", "axis": "jp", "left_pole": "J", "text_left": "清单和进度让我安心", "text_right": "清单和进度让我觉得被束缚"},
+    {"id": "jp6", "axis": "jp", "left_pole": "P", "text_left": "我常同时留几个方向在跑", "text_right": "我常一次只推进一个方向"},
 ]
 
 QUESTION_BY_ID = {q["id"]: q for q in QUESTIONS}
 
 
-def score(answers: dict[str, str]) -> dict:
-    """Score questionnaire answers into an MBTI type.
+def normalize_answer(value) -> Optional[int]:
+    if isinstance(value, int) and value in (-2, -1, 0, 1, 2):
+        return value
+    if isinstance(value, str):
+        raw = value.strip().lower()
+        mapping = {
+            "a": -2,
+            "b": 2,
+            "-2": -2,
+            "-1": -1,
+            "0": 0,
+            "1": 1,
+            "2": 2,
+            "strong_left": -2,
+            "lean_left": -1,
+            "neutral": 0,
+            "lean_right": 1,
+            "strong_right": 2,
+        }
+        return mapping.get(raw)
+    return None
 
-    answers: {question_id: "a" | "b"}
-    Returns dict with keys: type, ties (list of dichotomy letters that tied),
-    counts (per dichotomy pole counts), valid (bool).
-    """
+
+def questionnaire_spec() -> dict:
+    return {
+        "version": QUESTIONNAIRE_VERSION,
+        "type": "mbti_seed",
+        "question_count": len(QUESTIONS),
+        "scale": ANSWER_SCALE,
+        "questions": QUESTIONS,
+    }
+
+
+def score(answers: dict[str, int | str]) -> dict:
+    """Score questionnaire answers into an MBTI seed."""
     counts: dict[str, int] = {}
+    dimension_scores: dict[str, int] = {}
     for pole_a, pole_b, _ in DICHOTOMIES:
         counts[pole_a] = 0
         counts[pole_b] = 0
+    for _, _, axis in DICHOTOMIES:
+        dimension_scores[axis] = 0
+
     answered = 0
-    for qid, choice in answers.items():
+    neutral_answers = 0
+    for qid, raw_value in answers.items():
         q = QUESTION_BY_ID.get(qid)
-        if q is None or choice not in ("a", "b"):
+        value = normalize_answer(raw_value)
+        if q is None or value is None:
             continue
         answered += 1
-        leaned = q["a"] if choice == "a" else _opposite(q["a"])
-        counts[leaned] += 1
+        if value == 0:
+            neutral_answers += 1
+            continue
+        left_pole = q["left_pole"]
+        right_pole = _opposite(left_pole)
+        leaned = left_pole if value < 0 else right_pole
+        counts[leaned] += abs(value)
+        dimension_scores[q["axis"]] += _axis_score(q["axis"], left_pole, value)
 
     type_letters = []
     ties = []
-    for pole_a, pole_b, _ in DICHOTOMIES:
-        a, b = counts[pole_a], counts[pole_b]
-        if a > b:
+    for pole_a, pole_b, axis in DICHOTOMIES:
+        axis_score = dimension_scores[axis]
+        if axis_score > 0:
             type_letters.append(pole_a)
-        elif b > a:
+        elif axis_score < 0:
             type_letters.append(pole_b)
         else:
-            type_letters.append(pole_a)  # tie-break default (conservative)
+            type_letters.append(pole_a)
             ties.append(pole_a)
+
     return {
+        "version": QUESTIONNAIRE_VERSION,
         "type": "".join(type_letters),
         "ties": ties,
         "counts": counts,
-        "valid": answered >= 12,
+        "dimension_scores": dimension_scores,
+        "answered": answered,
+        "neutral_answers": neutral_answers,
+        "valid": answered >= 18,
     }
 
 
 def _opposite(pole: str) -> str:
     return {"E": "I", "I": "E", "S": "N", "N": "S", "T": "F", "F": "T", "J": "P", "P": "J"}[pole]
+
+
+def _axis_score(axis: str, left_pole: str, value: int) -> int:
+    pole_a = next(p[0] for p in DICHOTOMIES if p[2] == axis)
+    return -value if left_pole == pole_a else value
 
 
 def explain(mbti_type: str) -> str:
@@ -141,3 +198,16 @@ def derive_hypotheses(mbti_type: str) -> list[dict]:
             }
         )
     return hyps
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="MBTI seed questionnaire helpers.")
+    parser.add_argument("--print-json", action="store_true", help="print the questionnaire spec as JSON")
+    args = parser.parse_args()
+    if args.print_json:
+        print(json.dumps(questionnaire_spec(), ensure_ascii=False, indent=2))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

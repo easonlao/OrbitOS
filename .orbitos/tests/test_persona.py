@@ -1,4 +1,4 @@
-"""Dynamic Persona Layer — seam tests (#6..#10).
+"""Dynamic Persona Layer - seam tests (#6..#10).
 
 These tests verify externally visible behavior and boundary preservation:
 
@@ -29,12 +29,11 @@ from persona_source import PersonaSource  # noqa: E402
 
 SOURCE_ROOT = Path(__file__).resolve().parents[2]
 
-# Answers that deterministically produce INTJ (to exercise the J detector).
 SAMPLE_ANSWERS = {
-    "ei1": "b", "ei2": "b", "ei3": "b", "ei4": "a", "ei5": "b", "ei6": "b",
-    "sn1": "b", "sn2": "b", "sn3": "a", "sn4": "b", "sn5": "a", "sn6": "b",
-    "tf1": "a", "tf2": "b", "tf3": "a", "tf4": "b", "tf5": "a", "tf6": "b",
-    "jp1": "a", "jp2": "b", "jp3": "a", "jp4": "b", "jp5": "a", "jp6": "b",
+    "ei1": 2, "ei2": 2, "ei3": 2, "ei4": -2, "ei5": 2, "ei6": 2,
+    "sn1": 2, "sn2": 2, "sn3": -2, "sn4": 2, "sn5": -2, "sn6": 2,
+    "tf1": -2, "tf2": 2, "tf3": -2, "tf4": 2, "tf5": -2, "tf6": 2,
+    "jp1": -2, "jp2": 2, "jp3": -2, "jp4": 2, "jp5": -2, "jp6": 2,
 }
 
 
@@ -53,7 +52,6 @@ def _build_synthetic_runtime(root: Path) -> None:
         ".orbitos/logs/events",
     ]:
         (root / d).mkdir(parents=True, exist_ok=True)
-    # minimal files so evidence collection does not crash
     (root / "02-时间线/今日.md").write_text("# 今日\n", encoding="utf-8")
 
 
@@ -66,27 +64,63 @@ def test_baseline_seam(runtime_root: Path) -> None:
     src = PersonaSource.load(source_path)
     _require(src.is_source_of_truth(), "persona source must be marked source_of_truth")
     _require(src.mbti_type == "INTJ", f"expected INTJ, got {src.mbti_type}")
-    _require(src.frontmatter.get("mbti_confidence") == "hypothesis",
-             "MBTI result must be hypothesis-level, not confirmed truth")
+    _require(
+        src.frontmatter.get("mbti_confidence") == "hypothesis",
+        "MBTI result must be hypothesis-level, not confirmed truth",
+    )
+    _require(
+        src.frontmatter.get("mbti_questionnaire_version") == "mbti-seed-v2",
+        "questionnaire version must be persisted",
+    )
+    _require(src.frontmatter.get("mbti_answered") == 24, "full baseline should persist answered count")
     _require(src.baseline_status == "seeded", "baseline status should be seeded")
     for zone in ("baseline", "hypotheses", "confirmed", "suggestions"):
         _require(zone in src.zones, f"zone missing: {zone}")
-    # hypotheses must carry confidence=hypothesis (not treated as final truth)
-    _require("confidence=hypothesis" in src.zones["hypotheses"],
-             "hypotheses must be explicitly hypothesis-level")
-    # not scattered: single file, four zones present
-    _require(src.zones["hypotheses"].count("- [h") == 4,
-             "expected 4 default hypotheses derived from MBTI seed")
+    _require(
+        "confidence=hypothesis" in src.zones["hypotheses"],
+        "hypotheses must be explicitly hypothesis-level",
+    )
+    _require(
+        src.zones["hypotheses"].count("- [h") == 4,
+        "expected 4 default hypotheses derived from MBTI seed",
+    )
+    _require(
+        "24 题、5 档倾向问卷" in src.zones["baseline"],
+        "baseline note should describe the current questionnaire shape",
+    )
+
+
+def test_mbti_score_scale() -> None:
+    result = mbti.score(
+        {
+            "ei1": "strong_right",
+            "ei2": "lean_right",
+            "ei3": "neutral",
+            "ei4": "strong_left",
+            "sn1": "2",
+            "sn2": "1",
+            "sn3": "-2",
+            "tf1": "-2",
+            "jp1": "-1",
+            "jp2": "2",
+            "jp3": "a",
+            "jp4": "b",
+            "jp5": -2,
+            "jp6": 2,
+        }
+    )
+    _require(result["version"] == "mbti-seed-v2", "score result should expose questionnaire version")
+    _require(result["answered"] == 14, "compatible labels should count as answered")
+    _require(result["neutral_answers"] == 1, "neutral answers should be counted separately")
+    _require(result["dimension_scores"]["jp"] != 0, "dimension score should reflect weighted answers")
 
 
 def test_calibration_seam(runtime_root: Path) -> None:
     source_path = runtime_root / "00-系统/09-人物档案.md"
-    # ensure a seeded baseline first
     baseline.build_baseline(
         source_path, "测试用户", SAMPLE_ANSWERS,
         created="2026-07-06", updated="2026-07-06",
     )
-    # craft contradictory evidence: many parallel projects + open inbox
     for i in range(4):
         (runtime_root / "03-项目" / f"proj{i}").mkdir(parents=True, exist_ok=True)
     for i in range(8):
@@ -99,14 +133,18 @@ def test_calibration_seam(runtime_root: Path) -> None:
     _require(added >= 1, "calibration should produce at least one suggestion under contradictory evidence")
 
     src_after = PersonaSource.load(source_path)
-    # HARD RULE: stable baseline must not be silently overwritten
-    _require(src_after.zones["baseline"] == stable_baseline_before,
-             "calibration must NOT rewrite the stable baseline zone")
-    _require("cal_parallelism" in src_after.zones["suggestions"],
-             "calibration suggestion must land in the open-suggestions zone")
-    # confirmed patterns zone must remain untouched by calibration
-    _require(src_after.zones["confirmed"] == src_before.zones["confirmed"],
-             "calibration must not fabricate confirmed patterns")
+    _require(
+        src_after.zones["baseline"] == stable_baseline_before,
+        "calibration must NOT rewrite the stable baseline zone",
+    )
+    _require(
+        "cal_parallelism" in src_after.zones["suggestions"],
+        "calibration suggestion must land in the open-suggestions zone",
+    )
+    _require(
+        src_after.zones["confirmed"] == src_before.zones["confirmed"],
+        "calibration must not fabricate confirmed patterns",
+    )
 
 
 def test_projection_seam(runtime_root: Path) -> None:
@@ -115,7 +153,6 @@ def test_projection_seam(runtime_root: Path) -> None:
         source_path, "测试用户", SAMPLE_ANSWERS,
         created="2026-07-06", updated="2026-07-06",
     )
-    # a local collaboration preference file must exist for the collab projection
     collab_path = runtime_root / "00-系统/08-本地协作偏好.md"
     collab_path.write_text(
         "---\ntitle: 本地协作偏好\n---\n\n# 本地协作偏好\n\n## 默认合作方式\n\n- 你定方向。\n",
@@ -124,7 +161,6 @@ def test_projection_seam(runtime_root: Path) -> None:
 
     project.run_projections(source_path, runtime_root)
 
-    # collaboration projection is derived, not a separate truth source
     collab_text = collab_path.read_text(encoding="utf-8")
     _require("人物档案派生" in collab_text, "collab projection must be written into local prefs")
     _require("非独立真相" in collab_text, "collab projection must be marked derived")
@@ -136,9 +172,10 @@ def test_projection_seam(runtime_root: Path) -> None:
 
 
 def test_runtime_local_boundary() -> None:
-    # The runtime-local persona source must NOT be shipped in the product repo.
-    _require(not (SOURCE_ROOT / "00-系统/09-人物档案.md").exists(),
-             "runtime-local persona source must not leak into the product repo")
+    _require(
+        not (SOURCE_ROOT / "00-系统/09-人物档案.md").exists(),
+        "runtime-local persona source must not leak into the product repo",
+    )
 
 
 def run_persona_tests(runtime_root=None) -> str:
@@ -148,11 +185,13 @@ def run_persona_tests(runtime_root=None) -> str:
             root.mkdir(parents=True, exist_ok=True)
             _build_synthetic_runtime(root)
             test_baseline_seam(root)
+            test_mbti_score_scale()
             test_calibration_seam(root)
             test_projection_seam(root)
     else:
         _build_synthetic_runtime(runtime_root)
         test_baseline_seam(runtime_root)
+        test_mbti_score_scale()
         test_calibration_seam(runtime_root)
         test_projection_seam(runtime_root)
     test_runtime_local_boundary()

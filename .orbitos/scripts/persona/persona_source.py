@@ -37,6 +37,8 @@ def _parse_scalar(raw: str):
         return True
     if raw.lower() == "false":
         return False
+    if re.fullmatch(r"-?\d+", raw):
+        return int(raw)
     if raw.startswith("[") and raw.endswith("]"):
         inner = raw[1:-1].strip()
         if not inner:
