@@ -58,11 +58,11 @@ def build_baseline(
         source.frontmatter["mbti_confidence"] = "hypothesis"
         source.frontmatter["mbti_questionnaire_version"] = result["version"]
         source.frontmatter["mbti_answered"] = result["answered"]
-        source.frontmatter["mbti_neutral_answers"] = result["neutral_answers"]
+        source.frontmatter["mbti_uncertain_answers"] = result["uncertain_answers"]
         source.frontmatter["baseline_status"] = "seeded"
         type_note = (
             f"MBTI 种子类型：{mbti_type}（{mbti.explain(mbti_type)}）。"
-            f"本次使用 24 题、5 档倾向问卷生成初始定调；"
+            f"本次使用 24 题、5 档垂直选项问卷生成初始定调；"
             f"这只是一个低成本、强可读的起始假设，不是终局真相；"
             f"后续真实行为证据优先于该假设，个体差异可覆盖类型假设。"
             + (
@@ -81,7 +81,7 @@ def build_baseline(
         source.frontmatter["mbti_type"] = None
         source.frontmatter["mbti_confidence"] = "hypothesis"
         source.frontmatter["baseline_status"] = "pending"
-        source.zones["baseline"] = f"- 稳定底色：{identity}\n\n（待首次 24 题、5 档倾向基线问卷生成 MBTI 种子）"
+        source.zones["baseline"] = f"- 稳定底色：{identity}\n\n（待首次 24 题、5 档垂直选项基线问卷生成 MBTI 种子）"
         source.zones["hypotheses"] = "（待生成）"
         source.zones["confirmed"] = "（暂无）"
         source.zones["suggestions"] = "（暂无）"
@@ -94,7 +94,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Generate the dynamic persona baseline seed.")
     parser.add_argument("--source", required=True, help="path to the persona source Markdown")
     parser.add_argument("--identity", default="（待填写）", help="one-line stable self description")
-    parser.add_argument("--answers", help="path to JSON file mapping question_id -> -2|-1|0|1|2")
+    parser.add_argument("--answers", help="path to JSON file mapping question_id -> 1|2|3|4|5")
     parser.add_argument("--created", help="ISO date for created field (default today)")
     parser.add_argument("--updated", help="ISO date for updated field (default today)")
     args = parser.parse_args()

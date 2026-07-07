@@ -77,7 +77,7 @@ def test_baseline_seam(runtime_root: Path) -> None:
     _require(src.baseline_status == "seeded", "baseline status should be seeded")
     for zone in ("baseline", "hypotheses", "confirmed", "suggestions"):
         _require(zone in src.zones, f"zone missing: {zone}")
-    _require("24 题、5 档倾向问卷" in src.zones["baseline"], "baseline note should describe the questionnaire shape")
+    _require("24 题、5 档垂直选项问卷" in src.zones["baseline"], "baseline note should describe the questionnaire shape")
     _require(src.zones["hypotheses"].count("- [h") == 4, "expected 4 default hypotheses")
 
 
@@ -85,16 +85,17 @@ def test_mbti_score_scale() -> None:
     spec = mbti.questionnaire_spec()
     _require(spec["asking_constraints"]["mode"] == "single_question", "questionnaire should enforce single-question mode")
     _require("prompt" in spec["questions"][0], "questionnaire questions should expose canonical prompts")
-    _require("请只回复一个值：-2 / -1 / 0 / 1 / 2。" in spec["questions"][0]["prompt"], "canonical prompt should constrain the answer format")
+    _require("请只回复数字 1 / 2 / 3 / 4 / 5。" in spec["questions"][0]["prompt"], "canonical prompt should constrain the answer format")
+    _require("不确定 / 看情况" in spec["questions"][0]["prompt"], "canonical prompt should expose an explicit middle option")
     result = mbti.score(
         {
             "ei1": "strong_right",
             "ei2": "lean_right",
             "ei3": "neutral",
             "ei4": "strong_left",
-            "sn1": "2",
-            "sn2": "1",
-            "sn3": "-2",
+            "sn1": "5",
+            "sn2": "4",
+            "sn3": "1",
             "tf1": "-2",
             "jp1": "-1",
             "jp2": "2",
@@ -106,7 +107,7 @@ def test_mbti_score_scale() -> None:
     )
     _require(result["version"] == "mbti-seed-v2", "score result should expose questionnaire version")
     _require(result["answered"] == 14, "compatible labels should count as answered")
-    _require(result["neutral_answers"] == 1, "neutral answers should be counted separately")
+    _require(result["uncertain_answers"] == 1, "uncertain answers should be counted separately")
     _require(result["dimension_scores"]["jp"] != 0, "dimension score should reflect weighted answers")
 
 
