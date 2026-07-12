@@ -103,13 +103,13 @@
       "description": "为什么发生这件事。记录触发来源或决策依据，不写长篇推理。"
     },
     "execution_mode": {
-      "type": "string",
-      "enum": ["direct", "delegated", "confirm_first"],
+      "type": ["string", "null"],
+      "enum": ["direct", "delegated", "confirm_first", null],
       "description": "可选执行模式事实。保留以兼容已有事件；当前完成记录不强制填写。"
     },
     "execution_reality": {
-      "type": "string",
-      "enum": ["automatic", "manual_supported", "concept_only"],
+      "type": ["string", "null"],
+      "enum": ["automatic", "manual_supported", "concept_only", null],
       "description": "可选执行现实性事实。保留以兼容已有事件；当前完成记录不强制填写。"
     },
     "thinking_modes": {
