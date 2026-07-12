@@ -19,7 +19,7 @@ tags:
 
 1. 根据用户点名的项目、路径或对象定位目标项目，不扫描整个项目区。
 2. 读取项目 `AGENTS.md` 了解目标、架构和特殊规则，再读取 `STATUS.md` 了解当前状态与任务。
-3. 如果项目根下存在 `repo/`，将其视为代码型项目：项目 `AGENTS.md` 仍是入口，`repo/` 只是切换到代码型项目生命周期协议的识别条件，不替代项目层状态源。
+3. 如果项目根下存在 `repo/`，将其视为代码型项目：项目 `AGENTS.md` 仍是入口；Engineering 模块为 `ready` 时才切换到 `.orbitos/modules/engineering/workflows/code-project.md`，`repo/` 不替代项目层状态源。
 4. 只有任务涉及长期路线或完成条件时才读取 `ROADMAP.md`；进入更深目录时继续读取路径上的 `AGENTS.md`。
 
 ## 项目判定与初始化
@@ -46,6 +46,8 @@ tags:
 5. 初始化完成后，再进入普通项目流，不得跳过项目入口直接落到 `repo/`。
 
 对带 `repo/` 的代码型项目，`repo/` 是产品仓库边界，不是项目存在本身的证明；项目入口和项目状态源仍在项目层。
+
+代码型项目建立或进入后，Engineering 模块为 `ready` 时按 `.orbitos/modules/engineering/workflows/code-project.md` 进入 Matt Pocock Skills 的工程管理路径；未就绪时明确报告安装或配置缺口。OrbitOS 只负责项目入口、状态源与推荐路由，不复制或改写该技能包的具体流程。
 
 ## 任务进入与流转
 

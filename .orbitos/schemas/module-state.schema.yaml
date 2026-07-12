@@ -1,0 +1,40 @@
+{
+  "type": "object",
+  "required": ["version", "modules"],
+  "additionalProperties": false,
+  "properties": {
+    "version": {"type": "integer"},
+    "modules": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["state"],
+        "additionalProperties": false,
+        "properties": {
+          "state": {
+            "type": "string",
+            "enum": ["installed_disabled", "enabled_unconfigured", "ready", "blocked", "disabled"]
+          },
+          "blockers": {
+            "type": "array",
+            "items": {"type": "string"}
+          },
+          "configured_at": {"type": "string"}
+        }
+      }
+    },
+    "legacy_visible_domains": {
+      "type": "array",
+      "description": "仅用于迁移前已存在且必须保留的用户可见域。它不是可安装模块，也不能授权创建新目录。",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "reason"],
+        "properties": {
+          "path": {"type": "string", "enum": ["06-资源", "07-输出"]},
+          "reason": {"type": "string"}
+        }
+      }
+    }
+  }
+}

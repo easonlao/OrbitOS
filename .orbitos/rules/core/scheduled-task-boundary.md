@@ -85,14 +85,33 @@ If validation fails:
 3. report the failed command and full reason
 4. do not attempt broad repair
 
+## Dashboard Projection Exception
+
+The automation catalog may explicitly allow a task to update a named managed
+block in `02-时间线/今日.md` or `02-时间线/本周.md`. This is a narrow
+projection exception, not permission to refresh an entire Dashboard page.
+
+- System Check may update only the `orbitos:system-health` marker block in
+  `今日.md`, including when validation fails.
+- Today Refresh may update only sections declared machine-managed by its task
+  contract; it must preserve user-authored or manually maintained sections.
+- Weekly Review may update the current ISO week's `本周.md`; it must stop at a
+  week boundary and may not archive, rename, or replace a prior week without
+  a user-confirmed run.
+- Dashboard projection does not require an event. It must never be used to
+  conceal a failed validation or to make a repair.
+
 ## Delivery Rules
 
-Default delivery:
+The default user-facing delivery location is the Dashboard, not a separate
+notification channel:
 
-- success with no action: local only
-- validation/runtime failure: notify user
-- daily summary: notify user only if explicitly configured
-- review-needed item: notify user or write to the agreed review location
+- normal System Check: update its local health block and remain silent
+- failed System Check: record the failure in the health block and remain silent
+  unless the scheduler owner explicitly configures a notification
+- Today Refresh and Weekly Review: write their agreed Dashboard projection
+- review-needed item: write only to the agreed Dashboard location or report it
+  through an explicitly configured channel
 
 Do not spam the user with normal successful watchdog runs.
 
@@ -120,7 +139,8 @@ Boundary:
 - do not modify registry
 - do not modify Agent Profiles
 - do not modify system rules
-- do not write OrbitOS files unless this task explicitly allows Progress Sync
+- do not write OrbitOS files unless this task explicitly declares a managed
+  Dashboard projection path
 ```
 
 ## Progress Sync

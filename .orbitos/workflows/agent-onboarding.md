@@ -22,7 +22,7 @@ Agent Onboarding 用于把一个真实 agent 接入 OrbitOS。
 - 确认稳定 `agent_id`。
 - 记录 agent 的部署位置、局域网 IP、接入方式和 OrbitOS 路径。
 - 更新机器可读 registry。
-- 创建人读轻量 Agent Profile 与独立经验文件。
+- 创建人读轻量 Agent Profile。
 - 让后续 Startup Sync 能识别该 agent。
 
 ## 触发条件
@@ -43,20 +43,18 @@ Agent Onboarding 用于把一个真实 agent 接入 OrbitOS。
 
 ## 执行流程
 
-1. 读取 `.orbitos/AGENTS.md`。
+1. 读取根 `AGENTS.md`。
 2. 读取 `.orbitos/schemas/agent-registry.schema.yaml`。
 3. 读取 `.orbitos/agents/registry.yaml`，确认 `agent_id` 未重复。
 4. 更新 `.orbitos/agents/registry.yaml`。
 5. 创建 `00-系统/agents/{agent_id}.md`。
-6. 创建 `00-系统/agents/{agent_id}-experience.md`。
-7. 用模板创建轻量 Agent Profile，并填充占位字段。
-8. 用模板创建经验文件，并保留默认分节。
-9. 运行 validation eval：
+6. 用模板创建轻量 Agent Profile，并填充占位字段。
+7. 运行 validation eval：
    - 优先：`python .orbitos/scripts/run-validation.py`
    - fallback：`node .orbitos/scripts/run-validation.mjs`
    - Windows 本地也可使用 PowerShell wrapper：`pwsh -ExecutionPolicy Bypass -File .orbitos/scripts/run-validation.ps1`
    - 三者都不可用时，才允许手动校验，并在 event checklist 中标记 `skipped`。
-10. 执行 Progress Sync，写入 event，并刷新 `今日.md` 的 Agents 状态和 `00-系统/agents/README.md`。
+8. 执行 Progress Sync，写入 event，并按实际变化刷新人读视图。
 
 ## 轻量 Agent Profile 模板
 
@@ -70,17 +68,6 @@ Agent Onboarding 用于把一个真实 agent 接入 OrbitOS。
 - 不在 workflow 中手写第二份模板正文。
 - 轻量 profile 只填写启动所需信息，不回填完整经验。
 
-## Agent Experience 模板
-
-模板源文件：
-
-- `.orbitos/templates/.orbitos/agents/experience.template.md`
-
-使用要求：
-
-- 新建 `00-系统/agents/{agent_id}-experience.md` 时直接复制该模板并替换占位字段。
-- 默认保留 `经验记录 / 踩坑 / 待确认来源 / 规则候选 / Learned Rule 使用记录` 五个分节。
-- 分节定义与流转逻辑由 `.orbitos/workflows/experience-capture.md` 和 `.orbitos/workflows/rule-evolution.md` 负责，不在本页重复展开。
 
 ## 用户提示词
 
@@ -98,23 +85,23 @@ Agent Onboarding 用于把一个真实 agent 接入 OrbitOS。
 
 - [ ] 已确认当前 workflow 是新 agent 接入，而不是普通 Startup Sync。
 - [ ] 已确认用户明确给出或确认 `agent_id`。
-- [ ] 已读取 `.orbitos/AGENTS.md` 和 agent registry schema。
+- [ ] 已读取根 `AGENTS.md` 和 agent registry schema。
 
 ### 执行检查
 
 - [ ] 已收集最小部署信息。
 - [ ] 已确认 `agent_id` 未重复。
 - [ ] 已更新 registry。
-- [ ] 已创建轻量 Agent Profile 与经验文件。
+- [ ] 已创建轻量 Agent Profile。
 - [ ] 已把未知 IP、未知路径或接入限制写入待确认来源。
 
 ### 退出检查
 
 - [ ] 已运行 validation eval；如 Python 不可用，已尝试 Node fallback 或 PowerShell wrapper，并记录手动校验范围。
 - [ ] 已执行 Progress Sync 并写入 event。
-- [ ] 已刷新 `今日.md` 的 Agents 状态。
-- [ ] 已刷新 `00-系统/agents/README.md`。
+- [ ] 只刷新了实际发生变化的人读视图。
 - [ ] 已给用户一段可复用的新 agent 接入提示词。
+- [ ] 已说明：若该 agent 具备外部调度能力，用户可按 Automation 模块配置只读知识库检查；未自动创建定时任务。
 
 ## 禁止
 

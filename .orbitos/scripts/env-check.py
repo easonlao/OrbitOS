@@ -38,7 +38,6 @@ def command_version(command, args):
 def root_valid(root):
     required = [
         root / "AGENTS.md",
-        root / ".orbitos" / "AGENTS.md",
         root / ".orbitos" / "scripts" / "run-validation.py",
     ]
     return all(path.exists() for path in required)

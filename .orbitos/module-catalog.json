@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "modules": {
+    "automation": {
+      "package_path": ".orbitos/module-packages/automation",
+      "readiness": "immediate"
+    },
+    "collaboration": {
+      "package_path": ".orbitos/module-packages/collaboration",
+      "readiness": "immediate"
+    },
+    "engineering": {
+      "package_path": ".orbitos/module-packages/engineering",
+      "readiness": "manual_configuration"
+    },
+    "hindsight": {
+      "package_path": ".orbitos/module-packages/hindsight",
+      "readiness": "manual_configuration"
+    },
+    "persona": {
+      "package_path": ".orbitos/module-packages/persona",
+      "readiness": "persona_source"
+    },
+    "reading": {
+      "package_path": ".orbitos/module-packages/reading",
+      "readiness": "immediate",
+      "required_paths": [
+        "README.md",
+        "workflows/reading-prepare.md",
+        "skills/echo-reading/book-ingest/SKILL.md",
+        "skills/echo-reading/chapter-split/SKILL.md",
+        "skills/echo-reading/annotate/SKILL.md",
+        "skills/echo-reading/unit-video/SKILL.md"
+      ],
+      "visible_paths": [
+        "05-阅读"
+      ]
+    }
+  }
+}

@@ -45,6 +45,7 @@ Exceptions:
 - `inbox`
 - `project`
 - `knowledge`
+- `reading`
 - `resource`
 - `output`
 - `archive`
@@ -107,7 +108,6 @@ Use plain code paths for internal files, including:
 - schemas
 - scripts
 - logs
-- queues
 
 This prevents Obsidian from creating blank files from accidental clicks.
 

@@ -1,0 +1,28 @@
+{
+  "type": "object",
+  "required": ["version", "modules"],
+  "additionalProperties": false,
+  "properties": {
+    "version": {"type": "integer"},
+    "modules": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["package_path", "readiness"],
+        "additionalProperties": false,
+        "properties": {
+          "package_path": {"type": "string", "pattern": "^\\.orbitos/module-packages/[a-z0-9-]+$"},
+          "readiness": {"type": "string", "enum": ["immediate", "manual_configuration", "persona_source"]},
+          "visible_paths": {
+            "type": "array",
+            "items": {"type": "string", "pattern": "^[0-9]{2}-[^/]+$"}
+          },
+          "required_paths": {
+            "type": "array",
+            "items": {"type": "string"}
+          }
+        }
+      }
+    }
+  }
+}

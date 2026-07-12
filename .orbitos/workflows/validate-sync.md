@@ -15,15 +15,15 @@ tags:
 
 Validate Sync 是所有写入型 workflow 的前置校验层。
 
-它的目标不是让 agent 写更多内容，而是防止半成品、缺字段、非法状态跳转被投影到 Obsidian 人读视图。
+它的目标不是让 agent 写更多内容，而是防止半成品、缺字段或目录边界错误被投影到 Obsidian 人读视图。
 
 ## 触发条件
 
 以下动作前必须执行 Validate Sync：
 
 - 写入 `.orbitos/logs/events/*.yaml`
-- 写入 `.orbitos/queues/**/*.yaml`
-- 更新 `.orbitos/state/lifecycle-index.yaml`
+- 写入 `.orbitos/ingest/batches/*.yaml`
+- 写入或更新受管理的 Markdown 状态对象
 - 刷新 `02-时间线/今日.md`
 - 刷新其他实际存在的人读状态页，例如 `02-时间线/本周.md`
 
@@ -32,10 +32,9 @@ Validate Sync 是所有写入型 workflow 的前置校验层。
 | 对象 | Schema |
 |---|---|
 | event | `.orbitos/schemas/event.schema.yaml` |
-| lifecycle item | `.orbitos/schemas/lifecycle.schema.yaml` |
-| inbox triage queue | `.orbitos/schemas/inbox-triage.schema.yaml` |
+
 | inbox ingest batch | `.orbitos/schemas/ingest-batch.schema.yaml` |
-| validation report | `.orbitos/schemas/validation-report.schema.yaml` |
+
 
 ## 执行顺序
 
@@ -50,9 +49,8 @@ Validate Sync 是所有写入型 workflow 的前置校验层。
 校验失败时：
 
 1. 不刷新任何人读状态页，例如 `今日.md` 或 `本周.md`。
-2. 写入 validation report。
-3. 尽量写入最小 `validation_failed` event。
-4. 把系统校验失败投影到 `02-时间线/今日.md` 的待确认或系统健康区块。
+2. 尽量写入最小 `validation_failed` event。
+3. 向用户报告失败项和未覆盖风险；不自动修复。
 
 如果连完整 event 都无法生成，允许写 fallback event，但必须包含：
 

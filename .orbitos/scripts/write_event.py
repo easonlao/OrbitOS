@@ -9,6 +9,16 @@ ROOT = Path(__file__).resolve().parents[2]
 EVENTS_DIR = ROOT / ".orbitos" / "logs" / "events"
 SLUG_PATTERN = re.compile(r"^[a-z0-9]+(?:_[a-z0-9]+)*$")
 CHANGE_TYPES = {"created", "updated", "deleted", "moved", "renamed"}
+THINKING_MODES = {
+    "5W1H",
+    "苏格拉底提问",
+    "SWOT 分析",
+    "第一性原理",
+    "反向推导",
+    "金字塔原理",
+    "六顶思考帽",
+    "批判性思维",
+}
 
 
 def parse_file_change(value):
@@ -22,6 +32,15 @@ def parse_file_change(value):
         "change_type": parts[0],
         "purpose": parts[2] if len(parts) == 3 and parts[2] else None,
     }
+
+
+def parse_thinking_mode(value):
+    mode, separator, purpose = value.partition(":")
+    if mode not in THINKING_MODES or not separator or not purpose.strip():
+        raise argparse.ArgumentTypeError(
+            "thinking mode must be MODE:PURPOSE and MODE must be a registered OrbitOS thinking mode"
+        )
+    return {"mode": mode, "purpose": purpose.strip()}
 
 
 def build_event(args, now):
@@ -61,7 +80,13 @@ def build_event(args, now):
         },
     ]
 
-    return {
+    thinking = None
+    if args.thinking_mode:
+        thinking = {"outcome": "selected", "modes": args.thinking_mode}
+    elif args.thinking_bypassed:
+        thinking = {"outcome": "bypassed", "modes": []}
+
+    event = {
         "id": f"evt_{compact_time}_{args.agent_id}_{args.slug}",
         "timestamp": timestamp,
         "actor": {
@@ -75,7 +100,7 @@ def build_event(args, now):
         "project": args.project,
         "summary": args.summary,
         "reason": args.reason,
-        "thinking_modes": [],
+        "thinking_modes": [item["mode"] for item in args.thinking_mode],
         "inputs": [],
         "actions": [
             {
@@ -99,6 +124,9 @@ def build_event(args, now):
         "related_events": [],
         "confidence": "high",
     }
+    if thinking:
+        event["thinking"] = thinking
+    return event
 
 
 def build_parser():
@@ -132,6 +160,9 @@ def build_parser():
     parser.add_argument("--hindsight-recall", action="append", default=[])
     parser.add_argument("--hindsight-retain", action="append", default=[])
     parser.add_argument("--user-content-changed", action="store_true")
+    thinking_group = parser.add_mutually_exclusive_group()
+    thinking_group.add_argument("--thinking-mode", action="append", default=[], type=parse_thinking_mode)
+    thinking_group.add_argument("--thinking-bypassed", action="store_true")
     parser.add_argument(
         "--validation", choices=["passed", "not_required"], required=True
     )
@@ -146,6 +177,8 @@ def main():
         parser.error("slug must use lowercase snake_case")
     if args.review_required and not args.review_item:
         parser.error("--review-required needs at least one --review-item")
+    if len(args.thinking_mode) > 2:
+        parser.error("at most two thinking modes can be recorded")
 
     now = datetime.now().astimezone()
     event = build_event(args, now)

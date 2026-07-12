@@ -67,6 +67,9 @@ def validate_value(value, schema, path_text, errors):
     if "enum" in schema and value not in schema["enum"]:
         add_error(errors, path_text, "value is not in enum")
 
+    if "maxItems" in schema and isinstance(value, list) and len(value) > schema["maxItems"]:
+        add_error(errors, path_text, f"array exceeds maxItems={schema['maxItems']}")
+
     if "string" in types and isinstance(value, str) and "pattern" in schema:
         if not re.match(schema["pattern"], value):
             add_error(errors, path_text, "value does not match pattern")
@@ -79,7 +82,8 @@ def validate_value(value, schema, path_text, errors):
             if name not in value:
                 add_error(errors, f"{path_text}.{name}", "missing required field")
 
-        if schema.get("additionalProperties") is False:
+        additional_properties = schema.get("additionalProperties", True)
+        if additional_properties is False:
             for name in value:
                 if name not in properties:
                     add_error(errors, f"{path_text}.{name}", "additional property is not allowed")
@@ -87,6 +91,11 @@ def validate_value(value, schema, path_text, errors):
         for name, prop_schema in properties.items():
             if name in value:
                 validate_value(value[name], prop_schema, f"{path_text}.{name}", errors)
+
+        if isinstance(additional_properties, dict):
+            for name, item in value.items():
+                if name not in properties:
+                    validate_value(item, additional_properties, f"{path_text}.{name}", errors)
 
     if "array" in types and isinstance(value, list) and "items" in schema:
         for index, item in enumerate(value):
@@ -442,11 +451,11 @@ def walk_markdown(full_path):
 
 SCHEMAS = {
     "event": read_json_like(".orbitos/schemas/event.schema.yaml"),
-    "inbox-triage": read_json_like(".orbitos/schemas/inbox-triage.schema.yaml"),
     "ingest-batch": read_json_like(".orbitos/schemas/ingest-batch.schema.yaml"),
     "lifecycle": read_json_like(".orbitos/schemas/lifecycle.schema.yaml"),
-    "core-change": read_json_like(".orbitos/schemas/core-change.schema.yaml"),
     "agent-registry": read_json_like(".orbitos/schemas/agent-registry.schema.yaml"),
+    "module-catalog": read_json_like(".orbitos/schemas/module-catalog.schema.yaml"),
+    "module-state": read_json_like(".orbitos/schemas/module-state.schema.yaml"),
 }
 
 failure_count = 0
@@ -467,12 +476,8 @@ def print_case(name, expected_valid, errors):
 def schema_name_for_case(name):
     if name.startswith("ingest-batch."):
         return "ingest-batch"
-    if name.startswith("inbox-triage."):
-        return "inbox-triage"
     if name.startswith("agent-registry."):
         return "agent-registry"
-    if name.startswith("core-change."):
-        return "core-change"
     if name.startswith("event."):
         return "event"
     if name.startswith("lifecycle."):
@@ -647,9 +652,6 @@ else:
 root_agents = (ROOT / "AGENTS.md").read_text(encoding="utf-8")
 if "document-semantics.md" not in root_agents:
     add_error(document_semantics_errors, "AGENTS.md", "root Agent router does not expose document semantics rule")
-internal_agents = (ROOT / ".orbitos/AGENTS.md").read_text(encoding="utf-8")
-if "document-semantics.md" not in internal_agents or "固定角色 Markdown" not in internal_agents:
-    add_error(document_semantics_errors, ".orbitos/AGENTS.md", "internal development router does not require document semantics for fixed-role Markdown")
 project_management_path = ROOT / ".orbitos/rules/core/project-management.md"
 if not project_management_path.is_file():
     add_error(document_semantics_errors, ".orbitos/rules/core/project-management.md", "shared project management rule is missing")
@@ -665,8 +667,24 @@ for sync_term in ["用户不需要主动说出同步命令", "project-management
         add_error(document_semantics_errors, sync_term, "Progress Sync does not enforce project task flow")
 if "project-management.md" not in root_agents:
     add_error(document_semantics_errors, "AGENTS.md", "root Agent router does not expose project management rule")
-if "project-management.md" not in internal_agents:
-    add_error(document_semantics_errors, ".orbitos/AGENTS.md", "internal rule index does not expose project management rule")
+thinking_rule_path = ROOT / ".orbitos/rules/core/thinking.md"
+thinking_reference_path = ROOT / ".orbitos/rules/core/thinking-modes.md"
+if not thinking_rule_path.is_file():
+    add_error(document_semantics_errors, ".orbitos/rules/core/thinking.md", "core thinking rule is missing")
+else:
+    thinking_rule = thinking_rule_path.read_text(encoding="utf-8")
+    for term in ["thinking-modes.md", "思考模式启动选择", "回复 1 / 2 / 3", "直接做"]:
+        if term not in thinking_rule:
+            add_error(document_semantics_errors, ".orbitos/rules/core/thinking.md", f"core thinking rule is missing: {term}")
+if "思考模式启动选择" not in root_agents:
+    add_error(document_semantics_errors, "AGENTS.md", "root Agent router does not require thinking selection")
+if not thinking_reference_path.is_file():
+    add_error(document_semantics_errors, ".orbitos/rules/core/thinking-modes.md", "core thinking modes reference is missing")
+else:
+    thinking_reference = thinking_reference_path.read_text(encoding="utf-8")
+    for mode in ["5W1H", "苏格拉底提问", "SWOT", "第一性原理", "反向推导", "金字塔原理", "六顶思考帽", "批判性思维"]:
+        if mode not in thinking_reference:
+            add_error(document_semantics_errors, mode, "thinking modes reference is incomplete")
 print_case("actual.document-semantics", True, document_semantics_errors)
 
 
@@ -716,6 +734,16 @@ for event_path in sorted(events_root.glob("*.yaml")):
             f"$[{event_path.name}]",
             event_record_errors,
         )
+        thinking = event_data.get("thinking")
+        if isinstance(thinking, dict):
+            modes = thinking.get("modes", [])
+            outcome = thinking.get("outcome")
+            if outcome == "selected" and not modes:
+                add_error(event_record_errors, f"$[{event_path.name}].thinking", "selected thinking must include at least one mode")
+            if outcome == "bypassed" and modes:
+                add_error(event_record_errors, f"$[{event_path.name}].thinking", "bypassed thinking must not include modes")
+            if event_data.get("thinking_modes", []) != [item.get("mode") for item in modes]:
+                add_error(event_record_errors, f"$[{event_path.name}].thinking_modes", "thinking modes summary must match thinking details")
     except json.JSONDecodeError as error:
         add_error(
             event_record_errors,
@@ -726,22 +754,73 @@ print_case("actual.event-records", True, event_record_errors)
 
 
 case_count += 1
+module_errors = []
+catalog_path = ROOT / ".orbitos/module-catalog.json"
+module_state_path = ROOT / ".orbitos/state/modules.json"
+module_catalog = {"modules": {}}
+module_state = {"modules": {}}
+if not catalog_path.is_file():
+    add_error(module_errors, ".orbitos/module-catalog.json", "module catalog is missing")
+else:
+    module_catalog = read_json_like(".orbitos/module-catalog.json")
+    validate_value(module_catalog, SCHEMAS["module-catalog"], "$", module_errors)
+if not module_state_path.is_file():
+    add_error(module_errors, ".orbitos/state/modules.json", "module state registry is missing")
+else:
+    module_state = read_json_like(".orbitos/state/modules.json")
+    validate_value(module_state, SCHEMAS["module-state"], "$", module_errors)
+
+catalog_modules = module_catalog.get("modules", {})
+state_modules = module_state.get("modules", {})
+legacy_visible_domains = {
+    item.get("path")
+    for item in module_state.get("legacy_visible_domains", [])
+    if isinstance(item, dict)
+}
+for module_id, record in state_modules.items():
+    if module_id not in catalog_modules:
+        add_error(module_errors, f".orbitos/state/modules.json:{module_id}", "state references an unknown module")
+        continue
+    state_name = record.get("state") if isinstance(record, dict) else None
+    live_root = ROOT / ".orbitos/modules" / module_id
+    if state_name in {"installed_disabled", "enabled_unconfigured", "ready", "blocked", "disabled"} and not live_root.is_dir():
+        add_error(module_errors, f".orbitos/modules/{module_id}", "installed module files are missing")
+    if state_name == "ready":
+        for required_path in catalog_modules[module_id].get("required_paths", []):
+            if not (live_root / required_path).is_file():
+                add_error(module_errors, f".orbitos/modules/{module_id}/{required_path}", "ready module is missing a required file")
+        for visible_path in catalog_modules[module_id].get("visible_paths", []):
+            if not (ROOT / visible_path).is_dir():
+                add_error(module_errors, visible_path, "ready module is missing its visible domain")
+
+live_modules_root = ROOT / ".orbitos/modules"
+if live_modules_root.is_dir():
+    for path in live_modules_root.iterdir():
+        if path.is_dir() and path.name not in state_modules:
+            add_error(module_errors, f".orbitos/modules/{path.name}", "module files exist without a state entry")
+print_case("actual.module-state", True, module_errors)
+
+
+case_count += 1
 root_directory_errors = []
-expected_root_dirs = [
+required_core_root_dirs = [
     "00-系统",
     "01-收件箱",
     "02-时间线",
     "03-项目",
     "04-知识",
-    "05-资源",
-    "06-输出",
+]
+allowed_root_dirs = required_core_root_dirs + [
+    "05-阅读",
+    "06-资源",
+    "07-输出",
     "99-归档",
 ]
 root_numbered_pattern = re.compile(r"^[0-9]{2}-")
 root_numbered_dirs = [
     path.name for path in ROOT.iterdir() if path.is_dir() and root_numbered_pattern.match(path.name)
 ]
-for expected_name in expected_root_dirs:
+for expected_name in required_core_root_dirs:
     if not (ROOT / expected_name).is_dir():
         add_error(
             root_directory_errors,
@@ -749,7 +828,7 @@ for expected_name in expected_root_dirs:
             "required root numbered directory is missing",
         )
 for name in root_numbered_dirs:
-    if name not in expected_root_dirs:
+    if name not in allowed_root_dirs:
         add_error(
             root_directory_errors,
             name,
@@ -763,6 +842,14 @@ for prefix in sorted(set(prefixes)):
             prefix,
             "duplicate root directory numeric prefix",
         )
+if (ROOT / "05-阅读").exists() and state_modules.get("reading", {}).get("state") not in {"ready", "disabled"}:
+    add_error(root_directory_errors, "05-阅读", "reading domain exists but the reading module is not ready")
+for reserved_name in ("06-资源", "07-输出"):
+    if (ROOT / reserved_name).exists() and reserved_name not in legacy_visible_domains:
+        add_error(root_directory_errors, reserved_name, "reserved domain has no installable module package")
+for legacy_name in legacy_visible_domains:
+    if not (ROOT / legacy_name).is_dir():
+        add_error(root_directory_errors, legacy_name, "legacy visible-domain entry must be removed after its directory is gone")
 print_case("actual.root-directories", True, root_directory_errors)
 
 
@@ -821,6 +908,7 @@ case_count += 1
 runtime_template_errors = []
 required_runtime_templates = [
     ".orbitos/templates/.orbitos/agents/registry.yaml",
+    ".orbitos/templates/.orbitos/state/modules.json",
     ".orbitos/templates/01-收件箱/00-粘贴.md",
     ".orbitos/templates/02-时间线/今日.md",
     ".orbitos/templates/02-时间线/本周.md",
@@ -833,6 +921,34 @@ registry_template_path = ROOT / ".orbitos/templates/.orbitos/agents/registry.yam
 if registry_template_path.is_file():
     validate_value(read_json_like(".orbitos/templates/.orbitos/agents/registry.yaml"), SCHEMAS["agent-registry"], "$", runtime_template_errors)
 print_case("actual.runtime-templates", True, runtime_template_errors)
+
+
+case_count += 1
+reading_domain_errors = []
+reading_health_script = ROOT / ".orbitos/scripts/reading-health-check.py"
+reading_ready = state_modules.get("reading", {}).get("state") == "ready"
+if reading_ready and not reading_health_script.is_file():
+    add_error(reading_domain_errors, ".orbitos/scripts/reading-health-check.py", "reading health check is missing")
+elif reading_ready:
+    result = subprocess.run(
+        [sys.executable, str(reading_health_script)],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+    )
+    try:
+        health_report = json.loads(result.stdout)
+    except json.JSONDecodeError:
+        add_error(reading_domain_errors, ".orbitos/scripts/reading-health-check.py", "reading health check did not return JSON")
+    else:
+        for issue in health_report.get("issues", []):
+            add_error(reading_domain_errors, issue.get("path", "05-阅读"), issue.get("message", "reading health check failed"))
+        if result.returncode and not health_report.get("issues"):
+            add_error(reading_domain_errors, ".orbitos/scripts/reading-health-check.py", "reading health check failed without reporting issues")
+if reading_ready and (ROOT / "05-阅读/.claude").exists():
+    add_error(reading_domain_errors, "05-阅读/.claude", "reading domain must not contain Agent-specific Claude configuration")
+print_case("actual.reading-domain", True, reading_domain_errors)
 
 
 case_count += 1
@@ -871,17 +987,20 @@ if ingest_dir.exists():
                     )
 
 if ingested_dir.exists():
-    for file_path in ingested_dir.iterdir():
-        if file_path.name == "00-粘贴.md":
+    for file_path in ingested_dir.rglob("*"):
+        if not file_path.is_file():
+            continue
+        relative_path = file_path.relative_to(ingested_dir).as_posix()
+        if relative_path == "00-粘贴.md":
             add_error(
                 ingest_errors,
                 "01-收件箱/已入库/00-粘贴.md",
                 "00-粘贴.md must remain in the inbox root clipboard slot, not inside 已入库/",
             )
-        elif file_path.is_file() and file_path.name not in recorded_files:
+        elif relative_path not in recorded_files:
             add_error(
                 ingest_errors,
-                f"01-收件箱/已入库/{file_path.name}",
+                f"01-收件箱/已入库/{relative_path}",
                 "ingested file is missing an ingest batch record",
             )
 print_case("actual.ingest-batches", True, ingest_errors)

@@ -87,7 +87,13 @@ def main():
     results.append(
         write_if_missing(
             ".orbitos/agents/registry.yaml",
-            read_template(".orbitos/agents/registry.yaml"),
+            read_template(".orbitos/agents/registry.yaml").replace("{today}", TODAY),
+        )
+    )
+    results.append(
+        write_if_missing(
+            ".orbitos/state/modules.json",
+            read_template(".orbitos/state/modules.json"),
         )
     )
 
@@ -101,13 +107,13 @@ def main():
     results.append(
         write_if_missing(
             "02-时间线/今日.md",
-            read_template("02-时间线/今日.md"),
+            read_template("02-时间线/今日.md").format(today=TODAY),
         )
     )
     results.append(
         write_if_missing(
             "02-时间线/本周.md",
-            read_template("02-时间线/本周.md"),
+            read_template("02-时间线/本周.md").format(today=TODAY),
         )
     )
 
@@ -121,12 +127,6 @@ def main():
         write_if_missing(
             "04-知识/MAP.md",
             "---\ntitle: 知识地图\narea: knowledge\npurpose: navigation\nlifecycle: active\ncreated: {today}\nupdated: {now}\ntags:\n  - orbitos\n  - knowledge\n---\n\n# 知识地图\n\n- 暂无知识卡片。\n".format(today=TODAY, now=NOW),
-        )
-    )
-    results.append(
-        write_if_missing(
-            ".orbitos/rules/learned/INDEX.md",
-            read_template(".orbitos/rules/learned/INDEX.md"),
         )
     )
     results.append(

@@ -42,9 +42,9 @@ tags:
 
 - 暂无。
 
-## 经验入口
+## 运行记录
 
-- 完整经验、踩坑、规则候选与 Learned Rule 使用记录见 `[[{agent_id}-experience|{display_name} 经验记录]]`。
+- 需要追溯操作时，按 `agent_id` 查询 `.orbitos/logs/events/` 中的事实记录。
 
 ## 待改进
 

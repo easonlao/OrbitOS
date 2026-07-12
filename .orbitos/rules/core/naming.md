@@ -33,8 +33,9 @@ Root visible OrbitOS directories use numeric prefixes to show the stable knowled
 02-时间线
 03-项目
 04-知识
-05-资源
-06-输出
+05-阅读
+06-资源
+07-输出
 99-归档
 ```
 
@@ -45,8 +46,9 @@ Meaning:
 - `02-时间线`: today, this week, and archived timeline views.
 - `03-项目`: active workspaces and project state.
 - `04-知识`: confirmed, rewritten, human-readable knowledge.
-- `05-资源`: reusable references and supporting materials.
-- `06-输出`: Obsidian-produced outputs, drafts, articles, scripts, or publishable work.
+- `05-阅读`: sustained reading, annotations, progress, and personal reading insights.
+- `06-资源`: reusable references and supporting materials.
+- `07-输出`: Obsidian-produced outputs, drafts, articles, scripts, or publishable work.
 - `99-归档`: old or closed material that should not stay active.
 
 Rules:

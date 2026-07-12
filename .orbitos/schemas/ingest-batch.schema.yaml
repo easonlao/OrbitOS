@@ -32,7 +32,7 @@
         "properties": {
           "file": {
             "type": "string",
-            "description": "文件名。首版不记录目录；若已入库未来产生子目录，再升级为 path。"
+            "description": "相对于 01-收件箱/已入库/ 的文件路径。扁平文件使用文件名；已确认的内容集合可使用子目录相对路径。"
           },
           "status": {
             "type": "string",

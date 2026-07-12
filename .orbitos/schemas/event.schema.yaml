@@ -104,9 +104,39 @@
     },
     "thinking_modes": {
       "type": "array",
-      "description": "本次使用的 OrbitOS 思考模型，例如 金字塔原理、SWOT、苏格拉底提问。没有明确使用就填空数组。",
+      "maxItems": 2,
+      "description": "兼容性摘要：本次实际采用的 OrbitOS 思考方法。详细选择事实见 thinking。没有明确使用就填空数组。",
       "items": {
-        "type": "string"
+        "type": "string",
+        "enum": ["5W1H", "苏格拉底提问", "SWOT 分析", "第一性原理", "反向推导", "金字塔原理", "六顶思考帽", "批判性思维"]
+      }
+    },
+    "thinking": {
+      "type": "object",
+      "description": "本轮思考模式启动选择的最小事实。只记录用户选择或明确跳过，不记录推理过程。未触发时省略该字段。",
+      "additionalProperties": false,
+      "required": ["outcome", "modes"],
+      "properties": {
+        "outcome": {
+          "type": "string",
+          "enum": ["selected", "bypassed"]
+        },
+        "modes": {
+          "type": "array",
+          "maxItems": 2,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["mode", "purpose"],
+            "properties": {
+              "mode": {
+                "type": "string",
+                "enum": ["5W1H", "苏格拉底提问", "SWOT 分析", "第一性原理", "反向推导", "金字塔原理", "六顶思考帽", "批判性思维"]
+              },
+              "purpose": {"type": "string"}
+            }
+          }
+        }
       }
     },
     "inputs": {

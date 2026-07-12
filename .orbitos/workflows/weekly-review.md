@@ -56,6 +56,16 @@ Weekly Review 生成 `02-时间线/本周.md`。
 - `02-时间线/归档/` 只保存时间线历史快照，不等同于 `99-归档/`。
 - 当前周 `本周.md` 顶部应链接上一周归档；内部 workflow 中只记录示例路径，例如 `02-时间线/归档/2026-W24.md`。
 
+## Scheduled Automation Mode
+
+Scheduled Weekly Review is a constrained form of this workflow:
+
+- It may refresh `本周.md` only when the file already belongs to the current ISO week.
+- It must not archive, rename, move, or replace a weekly file at a week boundary.
+- When the current page belongs to an earlier week, stop and leave the rollover
+  for a user-confirmed Weekly Review run.
+- Schedule this task within the current week when automatic weekly synthesis is desired.
+
 ## 执行流程
 
 1. 确认本周时间范围，使用 ISO 周：周一到周日。

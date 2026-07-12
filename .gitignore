@@ -7,3 +7,32 @@ node_modules/
 .DS_Store
 Thumbs.db
 00-系统/08-本地协作偏好.md
+
+# Runtime state is generated in each local working copy, never shipped as product content.
+.orbitos/agents/
+.orbitos/cache/
+.orbitos/indexes/
+.orbitos/ingest/
+.orbitos/logs/**
+!.orbitos/logs/events/
+!.orbitos/logs/events/.gitkeep
+.orbitos/rules/learned/
+.orbitos/state/
+.orbitos/tmp/
+
+# Reading is a runtime user domain. Ship only its empty structure and skills.
+05-阅读/books/*
+!05-阅读/books/.gitkeep
+05-阅读/insight/*
+!05-阅读/insight/INDEX.md
+!05-阅读/insight/*/
+05-阅读/insight/*/*
+!05-阅读/insight/*/.gitkeep
+
+# Resources and outputs are local user content; keep only structural markers.
+06-资源/*
+!06-资源/.gitkeep
+!06-资源/附件/
+!06-资源/附件/.gitkeep
+07-输出/*
+!07-输出/.gitkeep

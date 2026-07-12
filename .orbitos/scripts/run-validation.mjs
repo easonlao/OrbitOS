@@ -44,6 +44,9 @@ function validateValue(value, schema, pathText, errors) {
   if (hasOwn(schema, "enum") && !schema.enum.some((item) => item === value)) {
     addError(errors, pathText, "value is not in enum");
   }
+  if (hasOwn(schema, "maxItems") && Array.isArray(value) && value.length > schema.maxItems) {
+    addError(errors, pathText, `array exceeds maxItems=${schema.maxItems}`);
+  }
 
   if (types.includes("object") && value !== null && typeof value === "object" && !Array.isArray(value)) {
     const properties = schema.properties ?? {};
@@ -53,7 +56,8 @@ function validateValue(value, schema, pathText, errors) {
       if (!hasOwn(value, name)) addError(errors, `${pathText}.${name}`, "missing required field");
     }
 
-    if (schema.additionalProperties === false) {
+    const additionalProperties = schema.additionalProperties ?? true;
+    if (additionalProperties === false) {
       for (const name of Object.keys(value)) {
         if (!hasOwn(properties, name)) addError(errors, `${pathText}.${name}`, "additional property is not allowed");
       }
@@ -61,6 +65,11 @@ function validateValue(value, schema, pathText, errors) {
 
     for (const name of Object.keys(properties)) {
       if (hasOwn(value, name)) validateValue(value[name], properties[name], `${pathText}.${name}`, errors);
+    }
+    if (additionalProperties !== null && typeof additionalProperties === "object") {
+      for (const [name, item] of Object.entries(value)) {
+        if (!hasOwn(properties, name)) validateValue(item, additionalProperties, `${pathText}.${name}`, errors);
+      }
     }
   }
 
@@ -244,11 +253,11 @@ function checkDocumentConsistency(files) {
 
 const schemas = {
   event: readJsonLike(".orbitos/schemas/event.schema.yaml"),
-  "inbox-triage": readJsonLike(".orbitos/schemas/inbox-triage.schema.yaml"),
   "ingest-batch": readJsonLike(".orbitos/schemas/ingest-batch.schema.yaml"),
   lifecycle: readJsonLike(".orbitos/schemas/lifecycle.schema.yaml"),
-  "core-change": readJsonLike(".orbitos/schemas/core-change.schema.yaml"),
   "agent-registry": readJsonLike(".orbitos/schemas/agent-registry.schema.yaml"),
+  "module-catalog": readJsonLike(".orbitos/schemas/module-catalog.schema.yaml"),
+  "module-state": readJsonLike(".orbitos/schemas/module-state.schema.yaml"),
 };
 
 let failureCount = 0;
@@ -264,9 +273,7 @@ function printCase(name, expectedValid, errors) {
 
 function schemaNameForCase(name) {
   if (name.startsWith("ingest-batch.")) return "ingest-batch";
-  if (name.startsWith("inbox-triage.")) return "inbox-triage";
   if (name.startsWith("agent-registry.")) return "agent-registry";
-  if (name.startsWith("core-change.")) return "core-change";
   if (name.startsWith("event.")) return "event";
   if (name.startsWith("lifecycle.")) return "lifecycle";
   throw new Error(`Cannot infer schema for case: ${name}`);
@@ -371,10 +378,6 @@ const rootAgents = fs.readFileSync(path.join(root, "AGENTS.md"), "utf8");
 if (!rootAgents.includes("document-semantics.md")) {
   addError(documentSemanticsErrors, "AGENTS.md", "root Agent router does not expose document semantics rule");
 }
-const internalAgents = fs.readFileSync(path.join(root, ".orbitos/AGENTS.md"), "utf8");
-if (!internalAgents.includes("document-semantics.md") || !internalAgents.includes("固定角色 Markdown")) {
-  addError(documentSemanticsErrors, ".orbitos/AGENTS.md", "internal development router does not require document semantics for fixed-role Markdown");
-}
 const projectManagementPath = path.join(root, ".orbitos/rules/core/project-management.md");
 if (!fs.existsSync(projectManagementPath)) {
   addError(documentSemanticsErrors, ".orbitos/rules/core/project-management.md", "shared project management rule is missing");
@@ -396,8 +399,26 @@ for (const syncTerm of ["用户不需要主动说出同步命令", "project-mana
 if (!rootAgents.includes("project-management.md")) {
   addError(documentSemanticsErrors, "AGENTS.md", "root Agent router does not expose project management rule");
 }
-if (!internalAgents.includes("project-management.md")) {
-  addError(documentSemanticsErrors, ".orbitos/AGENTS.md", "internal rule index does not expose project management rule");
+const thinkingRulePath = path.join(root, ".orbitos/rules/core/thinking.md");
+const thinkingReferencePath = path.join(root, ".orbitos/rules/core/thinking-modes.md");
+if (!fs.existsSync(thinkingRulePath)) {
+  addError(documentSemanticsErrors, ".orbitos/rules/core/thinking.md", "core thinking rule is missing");
+} else {
+  const thinkingRule = fs.readFileSync(thinkingRulePath, "utf8");
+  for (const term of ["thinking-modes.md", "思考模式启动选择", "回复 1 / 2 / 3", "直接做"]) {
+    if (!thinkingRule.includes(term)) addError(documentSemanticsErrors, ".orbitos/rules/core/thinking.md", `core thinking rule is missing: ${term}`);
+  }
+}
+if (!rootAgents.includes("思考模式启动选择")) {
+  addError(documentSemanticsErrors, "AGENTS.md", "root Agent router does not require thinking selection");
+}
+if (!fs.existsSync(thinkingReferencePath)) {
+  addError(documentSemanticsErrors, ".orbitos/rules/core/thinking-modes.md", "core thinking modes reference is missing");
+} else {
+  const thinkingReference = fs.readFileSync(thinkingReferencePath, "utf8");
+  for (const mode of ["5W1H", "苏格拉底提问", "SWOT", "第一性原理", "反向推导", "金字塔原理", "六顶思考帽", "批判性思维"]) {
+    if (!thinkingReference.includes(mode)) addError(documentSemanticsErrors, mode, "thinking modes reference is incomplete");
+  }
 }
 printCase("actual.document-semantics", true, documentSemanticsErrors);
 
@@ -436,6 +457,15 @@ if (fs.existsSync(eventsRoot)) {
     try {
       const eventData = JSON.parse(content);
       validateValue(eventData, schemas.event, `$[${name}]`, eventRecordErrors);
+      const thinking = eventData.thinking;
+      if (thinking && typeof thinking === "object") {
+        const modes = Array.isArray(thinking.modes) ? thinking.modes : [];
+        if (thinking.outcome === "selected" && modes.length === 0) addError(eventRecordErrors, `$[${name}].thinking`, "selected thinking must include at least one mode");
+        if (thinking.outcome === "bypassed" && modes.length > 0) addError(eventRecordErrors, `$[${name}].thinking`, "bypassed thinking must not include modes");
+        if (JSON.stringify(eventData.thinking_modes ?? []) !== JSON.stringify(modes.map((item) => item.mode))) {
+          addError(eventRecordErrors, `$[${name}].thinking_modes`, "thinking modes summary must match thinking details");
+        }
+      }
     } catch (error) {
       addError(eventRecordErrors, `.orbitos/logs/events/${name}`, `invalid JSON-compatible event: ${error.message}`);
     }
@@ -477,9 +507,77 @@ if (fs.existsSync(path.join(root, ".orbitos/docs"))) {
 printCase("actual.machine-layer-boundary", true, machineLayerErrors);
 
 caseCount += 1;
+const moduleErrors = [];
+let moduleCatalog = { modules: {} };
+let moduleState = { modules: {} };
+const catalogPath = path.join(root, ".orbitos/module-catalog.json");
+const moduleStatePath = path.join(root, ".orbitos/state/modules.json");
+if (!fs.existsSync(catalogPath)) {
+  addError(moduleErrors, ".orbitos/module-catalog.json", "module catalog is missing");
+} else {
+  moduleCatalog = readJsonLike(".orbitos/module-catalog.json");
+  validateValue(moduleCatalog, schemas["module-catalog"], "$", moduleErrors);
+}
+if (!fs.existsSync(moduleStatePath)) {
+  addError(moduleErrors, ".orbitos/state/modules.json", "module state registry is missing");
+} else {
+  moduleState = readJsonLike(".orbitos/state/modules.json");
+  validateValue(moduleState, schemas["module-state"], "$", moduleErrors);
+}
+const catalogModules = moduleCatalog.modules ?? {};
+const stateModules = moduleState.modules ?? {};
+const legacyVisibleDomains = new Set((moduleState.legacy_visible_domains ?? []).filter((item) => item && typeof item === "object").map((item) => item.path));
+for (const [moduleId, record] of Object.entries(stateModules)) {
+  if (!hasOwn(catalogModules, moduleId)) {
+    addError(moduleErrors, `.orbitos/state/modules.json:${moduleId}`, "state references an unknown module");
+    continue;
+  }
+  const stateName = record?.state;
+  const liveRoot = path.join(root, ".orbitos/modules", moduleId);
+  if (["installed_disabled", "enabled_unconfigured", "ready", "blocked", "disabled"].includes(stateName) && !fs.existsSync(liveRoot)) {
+    addError(moduleErrors, `.orbitos/modules/${moduleId}`, "installed module files are missing");
+  }
+  if (stateName === "ready") {
+    for (const requiredPath of catalogModules[moduleId].required_paths ?? []) {
+      if (!fs.existsSync(path.join(liveRoot, requiredPath))) {
+        addError(moduleErrors, `.orbitos/modules/${moduleId}/${requiredPath}`, "ready module is missing a required file");
+      }
+    }
+    for (const visiblePath of catalogModules[moduleId].visible_paths ?? []) {
+      if (!fs.existsSync(path.join(root, visiblePath))) {
+        addError(moduleErrors, visiblePath, "ready module is missing its visible domain");
+      }
+    }
+  }
+}
+const liveModulesRoot = path.join(root, ".orbitos/modules");
+if (fs.existsSync(liveModulesRoot)) {
+  for (const item of fs.readdirSync(liveModulesRoot, { withFileTypes: true })) {
+    if (item.isDirectory() && !hasOwn(stateModules, item.name)) {
+      addError(moduleErrors, `.orbitos/modules/${item.name}`, "module files exist without a state entry");
+    }
+  }
+}
+if (fs.existsSync(path.join(root, "05-阅读")) && !["ready", "disabled"].includes(stateModules.reading?.state)) {
+  addError(moduleErrors, "05-阅读", "reading domain exists but the reading module is not ready");
+}
+for (const reservedName of ["06-资源", "07-输出"]) {
+  if (fs.existsSync(path.join(root, reservedName)) && !legacyVisibleDomains.has(reservedName)) {
+    addError(moduleErrors, reservedName, "reserved domain has no installable module package");
+  }
+}
+for (const legacyName of legacyVisibleDomains) {
+  if (!fs.existsSync(path.join(root, legacyName))) {
+    addError(moduleErrors, legacyName, "legacy visible-domain entry must be removed after its directory is gone");
+  }
+}
+printCase("actual.module-state", true, moduleErrors);
+
+caseCount += 1;
 const runtimeTemplateErrors = [];
 const requiredRuntimeTemplates = [
   ".orbitos/templates/.orbitos/agents/registry.yaml",
+  ".orbitos/templates/.orbitos/state/modules.json",
   ".orbitos/templates/01-收件箱/00-粘贴.md",
   ".orbitos/templates/02-时间线/今日.md",
   ".orbitos/templates/02-时间线/本周.md",
@@ -517,10 +615,23 @@ if (fs.existsSync(ingestDir)) {
     }
   }
 }
+function walkFiles(directory) {
+  const files = [];
+  for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+    const fullPath = path.join(directory, entry.name);
+    if (entry.isDirectory()) files.push(...walkFiles(fullPath));
+    else if (entry.isFile()) files.push(fullPath);
+  }
+  return files;
+}
+
 if (fs.existsSync(ingestedDir)) {
-  for (const item of fs.readdirSync(ingestedDir, { withFileTypes: true })) {
-    if (item.isFile() && !recordedFiles.has(item.name)) {
-      addError(ingestErrors, `01-收件箱/已入库/${item.name}`, "ingested file is missing an ingest batch record");
+  for (const filePath of walkFiles(ingestedDir)) {
+    const relativePath = path.relative(ingestedDir, filePath).split(path.sep).join("/");
+    if (relativePath === "00-粘贴.md") {
+      addError(ingestErrors, "01-收件箱/已入库/00-粘贴.md", "00-粘贴.md must remain in the inbox root clipboard slot, not inside 已入库/");
+    } else if (!recordedFiles.has(relativePath)) {
+      addError(ingestErrors, `01-收件箱/已入库/${relativePath}`, "ingested file is missing an ingest batch record");
     }
   }
 }

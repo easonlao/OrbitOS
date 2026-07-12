@@ -5,7 +5,7 @@ This directory contains rules that agents must follow while operating OrbitOS.
 ## Layers
 
 - `core/`: stable rules that are active by default.
-- `learned/`: usable rules learned from agent experience. They use a shared `INDEX.md`; detailed assets remain in agent profiles.
+- Runtime does not maintain learned-rule state or a self-evolving rule workflow.
 
 ## Boundary
 
@@ -13,4 +13,4 @@ Rules are executable constraints for agents.
 
 Design notes, rationale, alternatives, and planning belong in the project development layer managed outside Product Repo, not in `.orbitos/`.
 
-Rule evolution is defined in `.orbitos/workflows/rule-evolution.md`.
+Rules change only through explicit product updates and validation.
