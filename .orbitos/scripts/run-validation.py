@@ -231,6 +231,15 @@ def source_targets(full_path):
     return targets
 
 
+def is_knowledge_conflict_source(target):
+    """Return whether a source target is evidence that can imply a knowledge conflict."""
+    parts = target.resolve().parts
+    return not any(
+        parts[index : index + 2] == ("00-系统", "agents")
+        for index in range(len(parts) - 1)
+    )
+
+
 def markdown_lifecycle(full_path):
     if not full_path.is_file():
         return None
@@ -287,6 +296,8 @@ def omitted_conflict_errors(knowledge_files):
     source_map = {}
     for file_path in active_files:
         for target in source_targets(file_path):
+            if not is_knowledge_conflict_source(target):
+                continue
             source_map.setdefault(target, []).append(file_path)
     for target, file_paths in sorted(source_map.items(), key=lambda item: str(item[0])):
         if len(file_paths) > 1:
