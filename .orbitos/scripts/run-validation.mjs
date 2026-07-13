@@ -686,6 +686,44 @@ if (fs.existsSync(registryTemplatePath)) {
 printCase("actual.runtime-templates", true, runtimeTemplateErrors);
 
 caseCount += 1;
+const clipboardFlowErrors = [];
+const clipboardWorkflowPath = path.join(root, ".orbitos/workflows/clipboard-flush.md");
+if (!fs.existsSync(clipboardWorkflowPath)) {
+  addError(clipboardFlowErrors, ".orbitos/workflows/clipboard-flush.md", "clipboard flush workflow is missing");
+} else {
+  const clipboardWorkflow = fs.readFileSync(clipboardWorkflowPath, "utf8");
+  for (const term of ["00-粘贴.md", "物化", "删除", "确认", "inbox-triage.md", "inbox-ingest.md"]) {
+    if (!clipboardWorkflow.includes(term)) addError(clipboardFlowErrors, ".orbitos/workflows/clipboard-flush.md", `clipboard workflow is missing required term: ${term}`);
+  }
+}
+if (fs.existsSync(path.join(root, "AGENTS.md")) && !fs.readFileSync(path.join(root, "AGENTS.md"), "utf8").includes("处理粘贴内容")) {
+  addError(clipboardFlowErrors, "AGENTS.md", "clipboard workflow route is missing");
+}
+const clipboardTemplatePath = path.join(root, ".orbitos/templates/01-收件箱/00-粘贴.md");
+if (fs.existsSync(clipboardTemplatePath) && !fs.readFileSync(clipboardTemplatePath, "utf8").includes("整理粘贴内容")) {
+  addError(clipboardFlowErrors, ".orbitos/templates/01-收件箱/00-粘贴.md", "clipboard template is missing its processing entry");
+}
+printCase("actual.clipboard-flow", true, clipboardFlowErrors);
+
+caseCount += 1;
+const inboxWorkflowErrors = [];
+for (const [relativePath, terms] of Object.entries({
+  ".orbitos/workflows/inbox-triage.md": ["single_source", "source_collection", "不按 PDF、图片、Markdown"],
+  ".orbitos/workflows/inbox-ingest.md": ["single_source", "source_collection", "不创建全局", "00-粘贴.md"],
+})) {
+  const fullPath = path.join(root, relativePath);
+  if (!fs.existsSync(fullPath)) {
+    addError(inboxWorkflowErrors, relativePath, "inbox workflow is missing");
+    continue;
+  }
+  const workflow = fs.readFileSync(fullPath, "utf8");
+  for (const term of terms) {
+    if (!workflow.includes(term)) addError(inboxWorkflowErrors, relativePath, `inbox workflow is missing required term: ${term}`);
+  }
+}
+printCase("actual.inbox-storage-boundary", true, inboxWorkflowErrors);
+
+caseCount += 1;
 const ingestErrors = [];
 const ingestDir = path.join(root, ".orbitos/ingest/batches");
 const ingestedDir = path.join(root, "01-收件箱/已入库");

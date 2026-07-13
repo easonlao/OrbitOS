@@ -982,6 +982,42 @@ print_case("actual.runtime-templates", True, runtime_template_errors)
 
 
 case_count += 1
+clipboard_flow_errors = []
+clipboard_workflow_path = ROOT / ".orbitos/workflows/clipboard-flush.md"
+if not clipboard_workflow_path.is_file():
+    add_error(clipboard_flow_errors, ".orbitos/workflows/clipboard-flush.md", "clipboard flush workflow is missing")
+else:
+    clipboard_workflow = clipboard_workflow_path.read_text(encoding="utf-8")
+    for term in ["00-粘贴.md", "物化", "删除", "确认", "inbox-triage.md", "inbox-ingest.md"]:
+        if term not in clipboard_workflow:
+            add_error(clipboard_flow_errors, ".orbitos/workflows/clipboard-flush.md", f"clipboard workflow is missing required term: {term}")
+root_agent_path = ROOT / "AGENTS.md"
+if root_agent_path.is_file() and "处理粘贴内容" not in root_agent_path.read_text(encoding="utf-8"):
+    add_error(clipboard_flow_errors, "AGENTS.md", "clipboard workflow route is missing")
+clipboard_template_path = ROOT / ".orbitos/templates/01-收件箱/00-粘贴.md"
+if clipboard_template_path.is_file() and "整理粘贴内容" not in clipboard_template_path.read_text(encoding="utf-8"):
+    add_error(clipboard_flow_errors, ".orbitos/templates/01-收件箱/00-粘贴.md", "clipboard template is missing its processing entry")
+print_case("actual.clipboard-flow", True, clipboard_flow_errors)
+
+
+case_count += 1
+inbox_workflow_errors = []
+for relative_path, terms in {
+    ".orbitos/workflows/inbox-triage.md": ["single_source", "source_collection", "不按 PDF、图片、Markdown"],
+    ".orbitos/workflows/inbox-ingest.md": ["single_source", "source_collection", "不创建全局", "00-粘贴.md"],
+}.items():
+    path = ROOT / relative_path
+    if not path.is_file():
+        add_error(inbox_workflow_errors, relative_path, "inbox workflow is missing")
+        continue
+    text = path.read_text(encoding="utf-8")
+    for term in terms:
+        if term not in text:
+            add_error(inbox_workflow_errors, relative_path, f"inbox workflow is missing required term: {term}")
+print_case("actual.inbox-storage-boundary", True, inbox_workflow_errors)
+
+
+case_count += 1
 reading_domain_errors = []
 reading_health_script = ROOT / ".orbitos/scripts/reading-health-check.py"
 reading_ready = state_modules.get("reading", {}).get("state") == "ready"
