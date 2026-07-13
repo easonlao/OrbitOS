@@ -54,6 +54,27 @@ def copy_missing_tree(source, target):
             shutil.copy2(path, destination)
 
 
+def upgrade_tree(source, target, force):
+    copied = []
+    conflicts = []
+    for path in source.rglob("*"):
+        relative = path.relative_to(source)
+        destination = target / relative
+        if path.is_dir():
+            destination.mkdir(parents=True, exist_ok=True)
+        elif not destination.exists():
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(path, destination)
+            copied.append(relative.as_posix())
+        elif path.read_bytes() != destination.read_bytes():
+            if force:
+                shutil.copy2(path, destination)
+                copied.append(relative.as_posix())
+            else:
+                conflicts.append(relative.as_posix())
+    return copied, conflicts
+
+
 def install(module_id):
     catalog = load_catalog()
     entry = module_entry(catalog, module_id)
@@ -127,6 +148,20 @@ def disable(module_id):
     print(f"disabled: {module_id}; user data was preserved")
 
 
+def upgrade(module_id, force):
+    catalog = load_catalog()
+    entry = module_entry(catalog, module_id)
+    source = package_path(entry)
+    destination = LIVE_MODULES_ROOT / module_id
+    if not destination.is_dir():
+        raise ValueError(f"module '{module_id}' is not installed")
+    copied, conflicts = upgrade_tree(source, destination, force)
+    if conflicts:
+        joined = ", ".join(conflicts)
+        raise ValueError(f"module '{module_id}' has changed live files; rerun with --force to replace: {joined}")
+    print(f"upgraded: {module_id} ({len(copied)} file(s) updated)")
+
+
 def status():
     catalog = load_catalog()
     state = load_state()["modules"]
@@ -145,6 +180,9 @@ def main():
     configure_parser = subparsers.add_parser("configure")
     configure_parser.add_argument("module_id")
     configure_parser.add_argument("--note", required=True)
+    upgrade_parser = subparsers.add_parser("upgrade")
+    upgrade_parser.add_argument("module_id")
+    upgrade_parser.add_argument("--force", action="store_true", help="replace changed machine-layer module files")
     subparsers.add_parser("status")
     args = parser.parse_args()
 
@@ -157,6 +195,8 @@ def main():
             configure(args.module_id, args.note)
         elif args.command == "disable":
             disable(args.module_id)
+        elif args.command == "upgrade":
+            upgrade(args.module_id, args.force)
         else:
             status()
     except ValueError as error:

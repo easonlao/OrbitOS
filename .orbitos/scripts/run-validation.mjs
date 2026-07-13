@@ -509,6 +509,7 @@ const requiredHandoffFiles = [
   ".orbitos/module-packages/collaboration/workflows/agent-handoff.md",
   ".orbitos/module-packages/collaboration/workflows/handoff-adapter.md",
   ".orbitos/module-packages/collaboration/workflows/handoff-pickup.md",
+  ".orbitos/scripts/handoff-status.py",
   "00-系统/agents/handoff/archive/.gitkeep",
 ];
 for (const relativePath of requiredHandoffFiles) {
@@ -519,7 +520,7 @@ for (const relativePath of requiredHandoffFiles) {
 const handoffWorkflowPath = path.join(root, ".orbitos/module-packages/collaboration/workflows/agent-handoff.md");
 if (fs.existsSync(handoffWorkflowPath)) {
   const handoffWorkflow = fs.readFileSync(handoffWorkflowPath, "utf8");
-  for (const term of ["execution_mode=delegated", "00-系统/agents/handoff/", "STATUS.md", "validation"]) {
+  for (const term of ["execution_mode=delegated", "handoff_status", "current_owner", "closed", "STATUS.md", "validation"]) {
     if (!handoffWorkflow.includes(term)) {
       addError(handoffStructureErrors, ".orbitos/module-packages/collaboration/workflows/agent-handoff.md", `handoff workflow is missing required term: ${term}`);
     }
@@ -528,7 +529,7 @@ if (fs.existsSync(handoffWorkflowPath)) {
 const pickupWorkflowPath = path.join(root, ".orbitos/module-packages/collaboration/workflows/handoff-pickup.md");
 if (fs.existsSync(pickupWorkflowPath)) {
   const pickupWorkflow = fs.readFileSync(pickupWorkflowPath, "utf8");
-  for (const term of ["获取交接工作", "00-系统/agents/BOARD.md", "交给谁", "接手动作", "不得要求用户提供 handoff 路径"]) {
+  for (const term of ["获取交接工作", "00-系统/agents/BOARD.md", "current_owner", "next_action", "不得要求用户提供路径"]) {
     if (!pickupWorkflow.includes(term)) {
       addError(handoffStructureErrors, ".orbitos/module-packages/collaboration/workflows/handoff-pickup.md", `handoff pickup workflow is missing required term: ${term}`);
     }
@@ -557,6 +558,35 @@ if (fs.existsSync(rootAgentPath)) {
       addError(handoffStructureErrors, "AGENTS.md", `handoff route is missing required term: ${term}`);
     }
   }
+}
+const activeHandoffRoot = path.join(root, "00-系统/agents/handoff");
+const archiveHandoffRoot = path.join(activeHandoffRoot, "archive");
+const openHandoffStatuses = new Set(["delegated", "working", "returned"]);
+const frontmatter = (text) => Object.fromEntries([...text.matchAll(/^([a-z_]+):\s*(.*?)\s*$/gm)].map(([, key, value]) => [key, value]));
+const activeHandoffNames = new Set();
+if (fs.existsSync(activeHandoffRoot)) {
+  for (const name of fs.readdirSync(activeHandoffRoot).filter((item) => item.endsWith(".md"))) {
+    const relativePath = `00-系统/agents/handoff/${name}`;
+    const metadata = frontmatter(fs.readFileSync(path.join(activeHandoffRoot, name), "utf8"));
+    activeHandoffNames.add(name.slice(0, -3));
+    if (!openHandoffStatuses.has(metadata.handoff_status)) addError(handoffStructureErrors, relativePath, "active handoff must use delegated, working, or returned status");
+    if (!metadata.current_owner) addError(handoffStructureErrors, relativePath, "active handoff is missing current_owner");
+    if (!metadata.return_owner) addError(handoffStructureErrors, relativePath, "active handoff is missing return_owner");
+    if (!metadata.next_action) addError(handoffStructureErrors, relativePath, "active handoff is missing next_action");
+  }
+}
+if (fs.existsSync(archiveHandoffRoot)) {
+  for (const name of fs.readdirSync(archiveHandoffRoot).filter((item) => item.endsWith(".md"))) {
+    const relativePath = `00-系统/agents/handoff/archive/${name}`;
+    const metadata = frontmatter(fs.readFileSync(path.join(archiveHandoffRoot, name), "utf8"));
+    if (metadata.handoff_status !== "closed") addError(handoffStructureErrors, relativePath, "archived handoff must use closed status");
+  }
+}
+if (fs.existsSync(path.join(root, "00-系统/agents/BOARD.md"))) {
+  const board = fs.readFileSync(path.join(root, "00-系统/agents/BOARD.md"), "utf8");
+  const boardNames = new Set([...board.matchAll(/\[\[handoff\/([^|\]]+)/g)].map(([, name]) => name));
+  if (boardNames.size !== activeHandoffNames.size || [...boardNames].some((name) => !activeHandoffNames.has(name))) addError(handoffStructureErrors, "00-系统/agents/BOARD.md", "current handoff links must match active handoff files");
+  if (activeHandoffNames.size && (!board.includes("状态：") || !board.includes("当前负责人：") || !board.includes("下一步："))) addError(handoffStructureErrors, "00-系统/agents/BOARD.md", "current handoff entries must include status, owner, and next action");
 }
 printCase("actual.agent-handoff-structure", true, handoffStructureErrors);
 

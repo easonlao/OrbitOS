@@ -7,7 +7,12 @@
     },
     "collaboration": {
       "package_path": ".orbitos/module-packages/collaboration",
-      "readiness": "immediate"
+      "readiness": "immediate",
+      "required_paths": [
+        "workflows/agent-handoff.md",
+        "workflows/handoff-adapter.md",
+        "workflows/handoff-pickup.md"
+      ]
     },
     "engineering": {
       "package_path": ".orbitos/module-packages/engineering",

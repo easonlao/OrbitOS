@@ -46,12 +46,13 @@ Agent 只需要整理：
 1. 确认本次存在需要持久化的实质结果。
 2. 具体项目任务先按 `project-management.md` 分类：当场完成只准备 event；需要跨会话才更新 STATUS；ROADMAP 变化必须已有用户确认。
 3. 如果属于具体项目且项目状态变化，更新 `STATUS.md`；满足已确认的 ROADMAP 完成条件时，同步勾选条件、日期和总体状态。
-4. 运行 `python .orbitos/scripts/run-validation.py`。
-5. validation 失败时停止，不刷新 Dashboard；报告失败原因。
-6. 使用 `.orbitos/scripts/write_event.py` 写入完成凭证。
-7. 按实际变化刷新 `今日.md`；只有周视图或其他明确状态页发生变化时才额外更新对应页面。
-8. 再运行一次 validation，确认最终状态。
-9. 最终 validation 失败时报告 event 路径和失败原因，不把失败结果描述为完成。
+4. 如果本轮处理 handoff，确认其状态、当前负责人、下一步和 BOARD 投影已同步；协作完成时先更新项目 `STATUS.md`，再关闭并归档 handoff。
+5. 运行 `python .orbitos/scripts/run-validation.py`。
+6. validation 失败时停止，不刷新 Dashboard；报告失败原因。
+7. 使用 `.orbitos/scripts/write_event.py` 写入完成凭证。
+8. 按实际变化刷新 `今日.md`；只有周视图或其他明确状态页发生变化时才额外更新对应页面。
+9. 再运行一次 validation，确认最终状态。
+10. 最终 validation 失败时报告 event 路径和失败原因，不把失败结果描述为完成。
 
 最小示例：
 
@@ -92,6 +93,7 @@ Windows PowerShell 可在同一行执行，或使用反引号换行。
 ### 执行检查
 
 - [ ] 项目状态变化时已先更新项目 `STATUS.md`。
+- [ ] handoff 任务已同步状态、负责人、下一步和 BOARD；关闭项已归档。
 - [ ] 当场完成的小修改未被写成 STATUS 事项；跨会话事项和 ROADMAP 条件按规则更新。
 - [ ] 写 event 前 validation 已通过。
 - [ ] 已使用 `write_event.py` 生成完成凭证。

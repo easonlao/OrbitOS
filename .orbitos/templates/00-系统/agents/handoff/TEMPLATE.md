@@ -5,6 +5,10 @@ purpose: record
 lifecycle: draft
 created: YYYY-MM-DD
 updated: YYYY-MM-DD
+handoff_status: delegated
+current_owner: unassigned
+return_owner: <原交出 agent_id>
+next_action: <接手后的第一步>
 tags:
   - orbitos
   - agents
@@ -13,7 +17,7 @@ tags:
 
 # <交接标题>
 
-> 状态：
+> 状态：delegated
 
 ## 项目归属
 
@@ -123,7 +127,6 @@ tags:
 - 协作继续：
 - 项目阻塞：
 - 归档条件：
-- 归档执行人（默认 B）：
 
 ## Suggested skills
 

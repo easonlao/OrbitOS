@@ -306,6 +306,7 @@ def handoff_structure_errors():
         ROOT / ".orbitos/module-packages/collaboration/workflows/agent-handoff.md",
         ROOT / ".orbitos/module-packages/collaboration/workflows/handoff-adapter.md",
         ROOT / ".orbitos/module-packages/collaboration/workflows/handoff-pickup.md",
+        ROOT / ".orbitos/scripts/handoff-status.py",
         ROOT / "00-系统/agents/handoff/archive/.gitkeep",
     ]
     for path in required_paths:
@@ -315,7 +316,7 @@ def handoff_structure_errors():
     board_path = ROOT / "00-系统/agents/BOARD.md"
     if board_path.is_file():
         board = board_path.read_text(encoding="utf-8")
-        for term in ["Agent 交接板", "不记录用户确认事项", "不记录项目总状态", "最近完成的 handoff", "handoff/archive/", "handoff/"]:
+        for term in ["Agent 交接板", "不记录用户确认事项", "不记录项目总状态", "当前交接", "handoff/archive/", "handoff/"]:
             if term not in board:
                 add_error(errors, "00-系统/agents/BOARD.md", f"handoff board is missing required term: {term}")
 
@@ -323,6 +324,10 @@ def handoff_structure_errors():
     if template_path.is_file():
         template = template_path.read_text(encoding="utf-8")
         for term in [
+            "handoff_status:",
+            "current_owner:",
+            "return_owner:",
+            "next_action:",
             "## 任务",
             "## 当前阶段",
             "## 交给谁",
@@ -334,7 +339,6 @@ def handoff_structure_errors():
             "## 需要继续做什么",
             "## Suggested skills",
             "## 最后确认",
-            "[ ] 我已阅读并确认这个 hand-off，准备接手。",
         ]:
             if term not in template:
                 add_error(errors, ".orbitos/templates/00-系统/agents/handoff/TEMPLATE.md", f"handoff template is missing required term: {term}")
@@ -342,14 +346,14 @@ def handoff_structure_errors():
     workflow_path = ROOT / ".orbitos/module-packages/collaboration/workflows/agent-handoff.md"
     if workflow_path.is_file():
         workflow = workflow_path.read_text(encoding="utf-8")
-        for term in ["execution_mode=delegated", "00-系统/agents/handoff/", "STATUS.md", "validation"]:
+        for term in ["execution_mode=delegated", "handoff_status", "current_owner", "closed", "STATUS.md", "validation"]:
             if term not in workflow:
                 add_error(errors, str(workflow_path.relative_to(ROOT)), f"handoff workflow is missing required term: {term}")
 
     pickup_path = ROOT / ".orbitos/module-packages/collaboration/workflows/handoff-pickup.md"
     if pickup_path.is_file():
         pickup = pickup_path.read_text(encoding="utf-8")
-        for term in ["获取交接工作", "00-系统/agents/BOARD.md", "交给谁", "接手动作", "不得要求用户提供 handoff 路径"]:
+        for term in ["获取交接工作", "00-系统/agents/BOARD.md", "current_owner", "next_action", "不得要求用户提供路径"]:
             if term not in pickup:
                 add_error(errors, str(pickup_path.relative_to(ROOT)), f"handoff pickup workflow is missing required term: {term}")
 
@@ -372,6 +376,37 @@ def handoff_structure_errors():
         ]:
             if term not in root_agent:
                 add_error(errors, "AGENTS.md", f"handoff route is missing required term: {term}")
+
+    active_root = ROOT / "00-系统/agents/handoff"
+    archive_root = active_root / "archive"
+    open_statuses = {"delegated", "working", "returned"}
+    active_names = set()
+    for path in sorted(active_root.glob("*.md")) if active_root.is_dir() else []:
+        text = path.read_text(encoding="utf-8")
+        parts = text.split("---", 2)
+        metadata = dict(re.findall(r"^([a-z_]+):\s*(.*?)\s*$", parts[1] if len(parts) >= 3 else "", re.MULTILINE))
+        active_names.add(path.stem)
+        if metadata.get("handoff_status") not in open_statuses:
+            add_error(errors, str(path.relative_to(ROOT)), "active handoff must use delegated, working, or returned status")
+        if not metadata.get("current_owner"):
+            add_error(errors, str(path.relative_to(ROOT)), "active handoff is missing current_owner")
+        if not metadata.get("return_owner"):
+            add_error(errors, str(path.relative_to(ROOT)), "active handoff is missing return_owner")
+        if not metadata.get("next_action"):
+            add_error(errors, str(path.relative_to(ROOT)), "active handoff is missing next_action")
+    for path in sorted(archive_root.glob("*.md")) if archive_root.is_dir() else []:
+        text = path.read_text(encoding="utf-8")
+        parts = text.split("---", 2)
+        metadata = dict(re.findall(r"^([a-z_]+):\s*(.*?)\s*$", parts[1] if len(parts) >= 3 else "", re.MULTILINE))
+        if metadata.get("handoff_status") != "closed":
+            add_error(errors, str(path.relative_to(ROOT)), "archived handoff must use closed status")
+    if board_path.is_file():
+        board = board_path.read_text(encoding="utf-8")
+        board_names = set(re.findall(r"\[\[handoff/([^|\]]+)", board))
+        if active_names != board_names:
+            add_error(errors, "00-系统/agents/BOARD.md", "current handoff links must match active handoff files")
+        if active_names and ("状态：" not in board or "当前负责人：" not in board or "下一步：" not in board):
+            add_error(errors, "00-系统/agents/BOARD.md", "current handoff entries must include status, owner, and next action")
 
     return errors
 
