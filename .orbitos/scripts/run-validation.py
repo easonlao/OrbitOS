@@ -881,10 +881,12 @@ required_system_manual = [
     "01-目录说明.md",
     "02-日常协作.md",
     "03-内容生命周期.md",
-    "04-Agent协作.md",
-    "05-安全与边界.md",
-    "06-术语表.md",
-    "07-系统变更.md",
+    "04-安全与边界.md",
+    "05-思考方法.md",
+    "06-模块与扩展.md",
+    "07-Agent协作.md",
+    "08-术语表.md",
+    "99-系统变更.md",
 ]
 legacy_system_manual = [
     "MAP.md",
