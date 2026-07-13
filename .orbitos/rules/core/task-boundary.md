@@ -42,6 +42,14 @@ Do not scan the entire vault for `AGENTS.md`. A local file applies only to its d
 
 Do not read README as default Agent context. Read it only when the task concerns the user-facing project introduction, onboarding, or README itself.
 
+## Execution Mode
+
+- `direct`：目标与范围明确，当前 Agent 可在单轮内完成。
+- `delegated`：任务需要跨 Agent 或跨会话交接、分工、审核或接手。用户显式调用 `$handoff`，或说“交给另一位 Agent 继续”“交接当前任务”“把任务交给 {agent_id}”时，直接判定为 `delegated`，进入协作模块的 handoff adapter。
+- `confirm_first`：目标、对象、归属或允许动作仍不明确，必须先问用户。
+
+用户说“获取交接工作”“接手交接”或“查看待接手任务”时，不重新判定为普通任务；在协作模块为 `ready` 的前提下，直接进入协作模块的接手 workflow。
+
 Temporary placement:
 
 - If the material should be visible for later user/agent review, put it under `01-收件箱/`.

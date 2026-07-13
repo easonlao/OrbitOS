@@ -500,6 +500,65 @@ for (const name of legacySystemManual) {
 printCase("actual.system-manual", true, systemManualErrors);
 
 caseCount += 1;
+const handoffStructureErrors = [];
+const requiredHandoffFiles = [
+  "00-系统/agents/BOARD.md",
+  ".orbitos/templates/00-系统/agents/handoff/TEMPLATE.md",
+  ".orbitos/module-packages/collaboration/workflows/agent-handoff.md",
+  ".orbitos/module-packages/collaboration/workflows/handoff-adapter.md",
+  ".orbitos/module-packages/collaboration/workflows/handoff-pickup.md",
+  "00-系统/agents/handoff/archive/.gitkeep",
+];
+for (const relativePath of requiredHandoffFiles) {
+  if (!fs.existsSync(path.join(root, relativePath))) {
+    addError(handoffStructureErrors, relativePath, "handoff structure file is missing");
+  }
+}
+const handoffWorkflowPath = path.join(root, ".orbitos/module-packages/collaboration/workflows/agent-handoff.md");
+if (fs.existsSync(handoffWorkflowPath)) {
+  const handoffWorkflow = fs.readFileSync(handoffWorkflowPath, "utf8");
+  for (const term of ["execution_mode=delegated", "00-系统/agents/handoff/", "STATUS.md", "validation"]) {
+    if (!handoffWorkflow.includes(term)) {
+      addError(handoffStructureErrors, ".orbitos/module-packages/collaboration/workflows/agent-handoff.md", `handoff workflow is missing required term: ${term}`);
+    }
+  }
+}
+const pickupWorkflowPath = path.join(root, ".orbitos/module-packages/collaboration/workflows/handoff-pickup.md");
+if (fs.existsSync(pickupWorkflowPath)) {
+  const pickupWorkflow = fs.readFileSync(pickupWorkflowPath, "utf8");
+  for (const term of ["获取交接工作", "00-系统/agents/BOARD.md", "交给谁", "接手动作", "不得要求用户提供 handoff 路径"]) {
+    if (!pickupWorkflow.includes(term)) {
+      addError(handoffStructureErrors, ".orbitos/module-packages/collaboration/workflows/handoff-pickup.md", `handoff pickup workflow is missing required term: ${term}`);
+    }
+  }
+}
+const adapterWorkflowPath = path.join(root, ".orbitos/module-packages/collaboration/workflows/handoff-adapter.md");
+if (fs.existsSync(adapterWorkflowPath)) {
+  const adapterWorkflow = fs.readFileSync(adapterWorkflowPath, "utf8");
+  for (const term of ["$handoff", "操作系统临时目录", "agent-handoff.md", "handoff-pickup.md", "不得扫描系统临时目录"]) {
+    if (!adapterWorkflow.includes(term)) {
+      addError(handoffStructureErrors, ".orbitos/module-packages/collaboration/workflows/handoff-adapter.md", `handoff adapter is missing required term: ${term}`);
+    }
+  }
+}
+const rootAgentPath = path.join(root, "AGENTS.md");
+if (fs.existsSync(rootAgentPath)) {
+  const rootAgent = fs.readFileSync(rootAgentPath, "utf8");
+  for (const term of [
+    "交给另一位 Agent 继续",
+    "$handoff",
+    ".orbitos/modules/collaboration/workflows/handoff-adapter.md",
+    "获取交接工作",
+    ".orbitos/modules/collaboration/workflows/handoff-pickup.md",
+  ]) {
+    if (!rootAgent.includes(term)) {
+      addError(handoffStructureErrors, "AGENTS.md", `handoff route is missing required term: ${term}`);
+    }
+  }
+}
+printCase("actual.agent-handoff-structure", true, handoffStructureErrors);
+
+caseCount += 1;
 const machineLayerErrors = [];
 if (fs.existsSync(path.join(root, ".orbitos/docs"))) {
   addError(machineLayerErrors, ".orbitos/docs", "runtime machine layer must not contain human-readable design docs");

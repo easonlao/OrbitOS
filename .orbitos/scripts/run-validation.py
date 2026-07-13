@@ -303,6 +303,9 @@ def handoff_structure_errors():
     required_paths = [
         ROOT / "00-系统/agents/BOARD.md",
         ROOT / ".orbitos/templates/00-系统/agents/handoff/TEMPLATE.md",
+        ROOT / ".orbitos/module-packages/collaboration/workflows/agent-handoff.md",
+        ROOT / ".orbitos/module-packages/collaboration/workflows/handoff-adapter.md",
+        ROOT / ".orbitos/module-packages/collaboration/workflows/handoff-pickup.md",
         ROOT / "00-系统/agents/handoff/archive/.gitkeep",
     ]
     for path in required_paths:
@@ -336,21 +339,39 @@ def handoff_structure_errors():
             if term not in template:
                 add_error(errors, ".orbitos/templates/00-系统/agents/handoff/TEMPLATE.md", f"handoff template is missing required term: {term}")
 
-    doc_requirements = {
-        ROOT / "00-系统/agents/README.md": ["BOARD.md", "handoff/", ".orbitos/templates/00-系统/agents/handoff/TEMPLATE.md"],
-        ROOT / "00-系统/04-Agent协作.md": ["agents/BOARD", "00-系统/agents/handoff/", ".orbitos/templates/00-系统/agents/handoff/TEMPLATE.md", "最后确认", "审核"],
-        ROOT / "00-系统/02-日常协作.md": ["00-系统/agents/handoff/", ".orbitos/templates/00-系统/agents/handoff/TEMPLATE.md", "最后确认", "审核"],
-        ROOT / "00-系统/00-开始使用.md": ["agents/BOARD.md"],
-        ROOT / "00-系统/07-系统变更.md": ["agents/BOARD.md", "00-系统/agents/handoff/", ".orbitos/templates/00-系统/agents/handoff/TEMPLATE.md", "审核"],
-    }
-    for doc_path, terms in doc_requirements.items():
-        if not doc_path.is_file():
-            add_error(errors, str(doc_path.relative_to(ROOT)), "handoff routing document is missing")
-            continue
-        content = doc_path.read_text(encoding="utf-8")
-        for term in terms:
-            if term not in content:
-                add_error(errors, str(doc_path.relative_to(ROOT)), f"handoff routing document is missing required term: {term}")
+    workflow_path = ROOT / ".orbitos/module-packages/collaboration/workflows/agent-handoff.md"
+    if workflow_path.is_file():
+        workflow = workflow_path.read_text(encoding="utf-8")
+        for term in ["execution_mode=delegated", "00-系统/agents/handoff/", "STATUS.md", "validation"]:
+            if term not in workflow:
+                add_error(errors, str(workflow_path.relative_to(ROOT)), f"handoff workflow is missing required term: {term}")
+
+    pickup_path = ROOT / ".orbitos/module-packages/collaboration/workflows/handoff-pickup.md"
+    if pickup_path.is_file():
+        pickup = pickup_path.read_text(encoding="utf-8")
+        for term in ["获取交接工作", "00-系统/agents/BOARD.md", "交给谁", "接手动作", "不得要求用户提供 handoff 路径"]:
+            if term not in pickup:
+                add_error(errors, str(pickup_path.relative_to(ROOT)), f"handoff pickup workflow is missing required term: {term}")
+
+    adapter_path = ROOT / ".orbitos/module-packages/collaboration/workflows/handoff-adapter.md"
+    if adapter_path.is_file():
+        adapter = adapter_path.read_text(encoding="utf-8")
+        for term in ["$handoff", "操作系统临时目录", "agent-handoff.md", "handoff-pickup.md", "不得扫描系统临时目录"]:
+            if term not in adapter:
+                add_error(errors, str(adapter_path.relative_to(ROOT)), f"handoff adapter is missing required term: {term}")
+
+    root_agent_path = ROOT / "AGENTS.md"
+    if root_agent_path.is_file():
+        root_agent = root_agent_path.read_text(encoding="utf-8")
+        for term in [
+            "交给另一位 Agent 继续",
+            "$handoff",
+            ".orbitos/modules/collaboration/workflows/handoff-adapter.md",
+            "获取交接工作",
+            ".orbitos/modules/collaboration/workflows/handoff-pickup.md",
+        ]:
+            if term not in root_agent:
+                add_error(errors, "AGENTS.md", f"handoff route is missing required term: {term}")
 
     return errors
 
