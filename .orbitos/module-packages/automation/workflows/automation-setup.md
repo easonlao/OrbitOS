@@ -21,13 +21,14 @@ tags:
 
 1. Read `.orbitos/rules/core/scheduled-task-boundary.md` and the Automation task catalog.
 2. Confirm the scheduler-capable agent, selected task, cadence, delivery behavior, and read/write boundary.
-3. For catalog tasks, preserve the stated read scope, write scope, and prohibitions. System Check must use `.orbitos/scripts/automation-health.py`; Today Refresh must run System Check before projecting the dashboard; Weekly Review must stop at a week boundary. For a new task, present the same fields for user confirmation.
+3. For catalog tasks, preserve the stated read scope, write scope, and prohibitions. System Check must use `.orbitos/scripts/automation-health.py`; Today Refresh must run that check before projecting the dashboard and must continue its managed projection when validation fails, while leaving the failure visible and making no repair. Stop only for failed preflight or unreadable required sources. Weekly Review must stop at a week boundary. For a new task, present the same fields for user confirmation.
 4. Create or update the task in the selected agent's external scheduler only after confirmation.
 5. Run the task once manually or wait for its first run, then report the observed result.
 
 ## Shared Boundaries
 
 - System Check and Today Refresh may write only `02-时间线/今日.md`.
+- Today Refresh may write only the `orbitos:today-date` and `orbitos:today-projection` markers, plus the health block produced by System Check. It must preserve all content outside those markers.
 - Weekly Review may write only the current `02-时间线/本周.md` and may not perform a week archive or rollover.
 - Reading Candidate Scan and Reading Health Check are read-only. Their command output may be reviewed or explicitly projected into `今日.md`, but they do not write, import, or repair reading content.
 - No catalog task moves, deletes, archives, ingests, creates knowledge, changes rules, or creates another scheduled task.

@@ -75,15 +75,14 @@ A scheduled task may write only when all are true:
 - the task explicitly declares it is write-enabled
 - the allowed write paths are listed
 - the write is reversible or append-only
-- validation passes before Dashboard refresh
+- the validation result is recorded before Dashboard refresh
 - failure behavior is defined
 
-If validation fails:
+If validation fails, follow the task-specific contract:
 
-1. stop the task
-2. do not refresh Dashboard files
-3. report the failed command and full reason
-4. do not attempt broad repair
+- System Check: update its managed health block, report the failure in that block, and stop.
+- Today Refresh: keep the failure in the health block and continue refreshing its declared date and projection blocks from readable existing sources. Do not repair the validation failure or change any source of truth.
+- Any task without an explicit projection exception: stop, report the failed command and full reason, and do not attempt broad repair.
 
 ## Dashboard Projection Exception
 
@@ -93,8 +92,10 @@ projection exception, not permission to refresh an entire Dashboard page.
 
 - System Check may update only the `orbitos:system-health` marker block in
   `今日.md`, including when validation fails.
-- Today Refresh may update only sections declared machine-managed by its task
-  contract; it must preserve user-authored or manually maintained sections.
+- Today Refresh may update only the `orbitos:today-date` and
+  `orbitos:today-projection` marker blocks declared by its task contract; it
+  must preserve every byte outside those markers, including user-authored or
+  manually maintained sections.
 - Weekly Review may update the current ISO week's `本周.md`; it must stop at a
   week boundary and may not archive, rename, or replace a prior week without
   a user-confirmed run.

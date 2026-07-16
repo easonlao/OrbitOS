@@ -22,10 +22,13 @@ The scheduler's external configuration is the source of truth for job IDs and ca
 ### Today Refresh
 
 - Purpose: rebuild the daily projection from existing state sources.
-- Read scope: event records, project `STATUS.md`, inbox/batch state, knowledge drafts, and the current health-check result.
+- Read scope: event records, existing project `STATUS.md` files, inbox/batch state, knowledge drafts, and the current health-check result. A project without `STATUS.md` is valid and may be summarized from events or skipped.
 - Write scope: only `02-时间线/今日.md`.
-- Prerequisite: run System Check first. If it fails, update only the system-health block and stop.
-- Result: refresh the date, current overview, unresolved items that have a source, current progress, area state, and system-health block. Preserve any content marked as user-maintained.
+- Prerequisite: run System Check first and record its result before projecting the dashboard. A failed validation is visible system state, not a reason to skip the daily projection.
+- Managed blocks: `orbitos:today-date`, `orbitos:today-projection`, and `orbitos:system-health` in `02-时间线/今日.md`. Content outside these markers is preserved byte-for-byte.
+- Projection links: when a projection names an existing Markdown source, use a valid Obsidian wikilink so the source is a real user-visible entry and can be checked by validation.
+- Result: on either validation success or validation failure, refresh the date and the projection block from existing sources when preflight and source reads succeed. Keep validation failures in the health block and do not attempt repairs, moves, ingestion, promotion, or source-of-truth changes.
+- Failure behavior: stop without rewriting the projection only when the OrbitOS preflight fails or a required source cannot be read. A failed validation alone must not stop Today Refresh.
 - Prohibitions: `今日.md` is a projection, not a new source of truth; do not move, delete, ingest, or promote content.
 
 ### Weekly Review
