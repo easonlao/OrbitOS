@@ -31,7 +31,10 @@
       "readiness": "immediate",
       "required_paths": [
         "README.md",
+        "CONTEXT.md",
         "workflows/reading-prepare.md",
+        "workflows/deep-reading.md",
+        "rules/deep-reading.md",
         "skills/echo-reading/book-ingest/SKILL.md",
         "skills/echo-reading/chapter-split/SKILL.md",
         "skills/echo-reading/annotate/SKILL.md",

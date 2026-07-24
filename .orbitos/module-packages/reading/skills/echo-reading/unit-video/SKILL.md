@@ -15,7 +15,7 @@ description: >-
 记：
 
 - `ROOT` = 项目根目录。
-- `SKILL` = `ROOT/.claude/skills/unit-video`。
+- `SKILL` = `ROOT/.orbitos/modules/reading/skills/echo-reading/unit-video`。
 - `<unit>` = `books/<书>/chNN/NN.md`。
 - `<out>` = `ROOT/video/<书>/chNN/NN/`。
 - `<assets>` = `SKILL/assets/<书>/<素材id>/`。

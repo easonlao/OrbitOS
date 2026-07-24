@@ -14,6 +14,8 @@ BOOKS = READING / "books"
 INSIGHT = READING / "insight"
 DIMENSIONS = ("概念", "延伸", "你的故事", "闪回", "共振", "悬题")
 INDEX_LINK = re.compile(r"\[\[([^\]|#]+)")
+CHAPTER_LINE = re.compile(r"^- \[([ x])\]\s+(ch\d+)\s*—")
+UNIT_LINE = re.compile(r"^- \[([ x])\]\s+(\d+)\s+")
 
 
 def remove_frontmatter(content: str) -> str:
@@ -31,6 +33,75 @@ def add_issue(issues: list[dict], path: Path, message: str) -> None:
     issues.append({"path": str(path.relative_to(ROOT)).replace("\\", "/"), "message": message})
 
 
+def check_progress_completion(book: Path, progress: Path, issues: list[dict]) -> None:
+    """Validate completion semantics in progress.md."""
+    lines = progress.read_text(encoding="utf-8").splitlines()
+    current_chapter = None
+    current_chapter_line = ""
+    chapter_checked = False
+    unit_lines: list[tuple[str, str]] = []
+
+    for line in lines:
+        ch_match = CHAPTER_LINE.match(line)
+        if ch_match:
+            current_chapter = ch_match.group(2)
+            current_chapter_line = line
+            chapter_checked = ch_match.group(1) == "x"
+            unit_lines = []
+            continue
+
+        if current_chapter:
+            u_match = UNIT_LINE.match(line.strip())
+            if u_match:
+                unit_lines.append((u_match.group(1), u_match.group(2)))
+
+        if not line.strip() and current_chapter and unit_lines:
+            _check_chapter_completion(book, current_chapter, chapter_checked, current_chapter_line, unit_lines, issues)
+            current_chapter = None
+            unit_lines = []
+
+    if current_chapter and unit_lines:
+        _check_chapter_completion(book, current_chapter, chapter_checked, current_chapter_line, unit_lines, issues)
+
+
+def _check_chapter_completion(book: Path, chid: str, chapter_checked: bool, chapter_line: str,
+                              unit_lines: list[tuple[str, str]], issues: list[dict]) -> None:
+    """Check consistency between chapter and unit completion marks."""
+    if not unit_lines:
+        return
+
+    all_units_checked = all(status == "x" for status, _ in unit_lines)
+
+    if chapter_checked and not all_units_checked:
+        add_issue(issues, book / "progress.md",
+                  f"{chid} is marked [x] but not all units are [x]")
+
+    if chapter_checked and len(unit_lines) > 1:
+        normalized = chapter_line.lower()
+        if "chapter-deep-read" not in normalized or "review: passed" not in normalized:
+            add_issue(issues, book / "progress.md",
+                      f"{chid} is marked [x] but lacks chapter-deep-read and review: passed markers")
+
+    if all_units_checked and not chapter_checked:
+        if len(unit_lines) > 1:
+            add_issue(issues, book / "progress.md",
+                      f"{chid} has all units [x] but chapter is not [x] — may need chapter distillation")
+
+    for status, unit_id in unit_lines:
+        if status != "x":
+            continue
+        unit_file = book / chid / f"{unit_id}.md"
+        if not unit_file.is_file():
+            add_issue(issues, book / "progress.md",
+                      f"{chid}/{unit_id}.md is marked [x] but file does not exist")
+            continue
+        content = unit_file.read_text(encoding="utf-8")
+        skeleton_count = content.count("<!-- 待生成")
+        if skeleton_count >= 5:
+            add_issue(issues, unit_file,
+                      f"marked [x] but has {skeleton_count} skeleton placeholders — deep reading may not be complete")
+
+
 def main() -> None:
     issues: list[dict] = []
     if not BOOKS.is_dir():
@@ -41,6 +112,8 @@ def main() -> None:
             sidecar = book / ".orbitos-source.json"
             if not progress.is_file():
                 add_issue(issues, book, "progress.md is missing")
+            else:
+                check_progress_completion(book, progress, issues)
             if not sidecar.is_file():
                 add_issue(issues, book, ".orbitos-source.json is missing")
                 continue

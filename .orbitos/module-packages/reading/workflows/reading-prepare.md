@@ -61,3 +61,10 @@ tags:
 - 不跳过收件箱入库或伪造 ingest batch。
 - 不改写 `raw.md`、`progress.md` 或原始 skills。
 - 不把 Insight 自动提升为知识或 Hindsight。
+
+## 后续
+
+完成 `book-ingest` 后，用户可以：
+1. 对长章执行 `chapter-split` 切分为阅读单元（见 `skills/echo-reading/chapter-split/SKILL.md`）。
+2. 对切分后的单元执行 `deep-reading` 深读陪读（见 `workflows/deep-reading.md`）。
+3. 在深读过程中使用 `annotate` 添加批注（见 `skills/echo-reading/annotate/SKILL.md`）。
