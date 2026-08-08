@@ -97,6 +97,7 @@ Startup Sync 默认只读取当前 agent 的轻量 profile；经验和历史问�
 - Runtime 用户内容与运行状态不属于 Product Repo；产品维护与 Git 发布只在 OrbitOS 开发层进行。
 - 放在 `00-系统/` 下的本地协作偏好仍属于 Runtime 用户内容；只有经用户再次确认并证明已通用化后，才能提升为可进入 Product Repo 的系统说明或 core rule。
 - 临时内容不放根目录：待留存输入放 `01-收件箱/`，可丢弃文件放系统临时目录或 `.orbitos/tmp/`。
+- 在 `E:\SynologyDrive` 同步盘内新建或克隆 git 仓库（`git init` / `git clone`）后，必须运行 `.orbitos/scripts/add-git-exclusions.py` 把该 `.git` 加入 Synology Drive 排除列表（幂等，可随时重跑；否则 cloud-drive-daemon 会对 `.git` 文件持独占锁，导致 git 写入报 `unable to write new index file`）。
 
 ### 状态与记忆
 

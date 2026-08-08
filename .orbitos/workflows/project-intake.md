@@ -78,9 +78,10 @@ Project Intake 用于在普通项目推进前，先判断一项任务是否已�
    - 创建后必须替换 `{PROJECT_NAME}`、`{DATE}` 和 `待补充` 等占位内容，再把文件作为项目入口。
    - `docs/` 先只建立目录，不自动填充平级设计稿
    - `repo/` 仅在代码型项目时创建
-8. 初始化完成后，再进入普通项目流；不得跳过项目入口直接进入 `repo/`。
-9. 执行 `validate-sync.md`。
-10. 通过后写 event，并在需要时把“新项目已建立”或“项目已挂接”投影到今日。
+8. 若创建了代码型项目的 `repo/` 且项目位于 `E:\SynologyDrive` 同步盘内：运行 `.orbitos/scripts/add-git-exclusions.py` 检查 `.git` 是否已加入 Synology Drive 排除（缺失则追加并提示重启 cloud-drive；幂等可随时重跑）。git 仓库在同步盘内不排除 `.git`，会导致 cloud-drive-daemon 独占锁使 git 写入失败。
+9. 初始化完成后，再进入普通项目流；不得跳过项目入口直接进入 `repo/`。
+10. 执行 `validate-sync.md`。
+11. 通过后写 event，并在需要时把"新项目已建立"或"项目已挂接"投影到今日。
 
 ## 最小入口模板
 
@@ -107,6 +108,7 @@ Project Intake 用于在普通项目推进前，先判断一项任务是否已�
 - [ ] 若需新建项目，已先得到用户确认。
 - [ ] 已按模板建立最小入口。
 - [ ] 仅在代码型项目场景创建 `repo/`。
+- [ ] 代码型项目创建 `repo/` 后已运行 `.orbitos/scripts/add-git-exclusions.py`（同步盘内 git 仓库 `.git` 排除检查）。
 - [ ] 代码型项目在 Engineering 模块为 `ready` 时已进入 `.orbitos/modules/engineering/workflows/code-project.md`，未直接跳进仓库执行开发任务。
 
 ### 退出检查
