@@ -59,6 +59,18 @@ tags:
 4. 形成新的长期能力或改变完成条件：先说明原因和影响，经用户确认后更新 REQUIREMENTS 与 ROADMAP；只有用户同时决定现在推进时才进入 STATUS。
 5. 新事项会替换现有 STATUS 事项或改变当前优先级时，先请用户确认。
 
+## Agent Work Index
+
+当一个项目事项需要跨会话、跨 Agent 或与其他项目并行推进时，除项目 `STATUS.md` 外，创建一条 `.orbitos/state/work-items.json` 索引：
+
+- `source_type` 与 `source_ref` 指向真正的项目任务、issue 或 handoff；不复制任务正文。
+- `agent_id`、`status`、`lease_owner`、`lease_until`、`next_action` 和 `evidence_refs` 只描述当前调度与接管信息。
+- Agent 启动时通过 `python .orbitos/scripts/task-context.py --agent-id {agent_id}` 获取自己的工作视图。
+- work item 结束前，先完成原始来源的验收、项目状态同步和 validation，再用完成证据更新为 `done`。
+- `done` 不是对话结束的同义词；没有来源完成证据时不得关闭索引。
+
+普通短任务仍可只写 event，不强制创建 work item。维护事项和 handoff 保留各自主源，work index 只保存指针与调度状态。
+
 Agent 可以提出路线和优先级建议，但用户决定是否进入 ROADMAP、是否现在推进以及当前事项的替换顺序。
 
 禁止自动流转：STATUS 事项不能自动提升为 ROADMAP 目标，ROADMAP 目标也不能自动进入 STATUS。

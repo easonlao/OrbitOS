@@ -41,9 +41,11 @@ Startup Sync 不修改用户内容、registry、profile、event、项目或时�
 6. 运行 `python .orbitos/scripts/env-check.py --agent-id {agent_id}`；已有当日报告且本次只读时可以直接读取。
 7. 协作模块为 `ready` 时，运行 `python .orbitos/scripts/handoff-status.py --agent-id {agent_id}`；只报告当前 Agent 负责的 `delegated / working / returned` handoff，不自动开始、抢占或改写它们。
 8. 读取 `02-时间线/今日.md`，从其中获取当前摘要、待确认和可继续入口。
-9. 如果 `00-系统/09-人物档案.md` 存在且仍处于 `baseline_status: pending`，提醒用户：动态人物模块尚未完成首轮问卷，当前只是一份待初始化骨架。
-10. 如果 `00-系统/08-本地协作偏好.md` 存在且仍包含 `TODO_UPDATE_LOCAL_COLLAB_PREFS`，提醒用户这是首次初始化生成的模板，请先按自己的习惯更新后再依赖。
-11. 输出短摘要：`agent_id`、runtime 状态、当前状态、待确认、本人待接手任务和可继续入口。
+9. 如果 `.orbitos/state/maintenance.json` 存在，读取当前开放维护项的 `status`、`owner_agent`、`lease_until` 和 `next_action`；只同步状态，不自动领取、修复或关闭。恢复维护任务时，后续动作必须基于当前 `revision` 和最新证据。
+10. 运行 `python .orbitos/scripts/task-context.py --agent-id {agent_id}` 获取当前 Agent 的统一任务上下文；只读查询，不自动领取任务。该上下文同时显示当前 Agent 名下的 work item 与 collaboration session/角色。传入明确项目路径时，再增加 `--path {path}` 获取路径上的项目入口与状态摘要。
+11. 如果 `00-系统/09-人物档案.md` 存在且仍处于 `baseline_status: pending`，提醒用户：动态人物模块尚未完成首轮问卷，当前只是一份待初始化骨架。
+12. 如果 `00-系统/08-本地协作偏好.md` 存在且仍包含 `TODO_UPDATE_LOCAL_COLLAB_PREFS`，提醒用户这是首次初始化生成的模板，请先按自己的习惯更新后再依赖。
+13. 输出短摘要：`agent_id`、runtime 状态、当前任务面板、当前角色 session、待确认、当前维护项负责人/租约和可继续入口。
 
 ## 异常处理
 
@@ -52,6 +54,7 @@ Startup Sync 不修改用户内容、registry、profile、event、项目或时�
 - agent 未注册：停止，不创建 registry、profile 或 event。
 - Python 不可用或 runtime `blocked`：停止写入型工作流并报告原因。
 - 下一步仍不明确：只报告已知状态和可选入口，不扩大任务范围。
+- 维护状态缺失或不可读：只报告缺口；不得从旧 event 推导当前故障，也不得静默创建开放事项。
 - 动态人物模块未初始化：只提醒当前仍是待初始化骨架，不在 Startup Sync 中自行发问卷或生成主源。
 
 ## 执行清单
@@ -66,6 +69,7 @@ Startup Sync 不修改用户内容、registry、profile、event、项目或时�
 - [ ] 只读取当前 agent 的轻量 profile，未默认展开经验文件。
 - [ ] runtime 环境未 blocked。
 - [ ] 协作模块 ready 时，已检查当前 Agent 名下的开放 handoff，未自动推进它们。
+- [ ] 已只读检查当前 Agent 名下的开放 collaboration session 与角色，未自动认领或改变阶段。
 - [ ] 默认只读 `今日.md`，其他时间线均按需展开。
 - [ ] 未在 Startup Sync 中擅自生成 `09-人物档案.md` 或启动人物问卷。
 

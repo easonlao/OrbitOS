@@ -318,6 +318,7 @@ def handoff_structure_errors():
         ROOT / ".orbitos/module-packages/collaboration/workflows/handoff-adapter.md",
         ROOT / ".orbitos/module-packages/collaboration/workflows/handoff-pickup.md",
         ROOT / ".orbitos/scripts/handoff-status.py",
+        ROOT / ".orbitos/scripts/handoff-control.py",
         ROOT / "00-系统/agents/handoff/archive/.gitkeep",
     ]
     for path in required_paths:
@@ -339,6 +340,8 @@ def handoff_structure_errors():
             "current_owner:",
             "return_owner:",
             "next_action:",
+            "governance_required:",
+            "collaboration_session_id:",
             "## 任务",
             "## 当前阶段",
             "## 交给谁",
@@ -357,7 +360,7 @@ def handoff_structure_errors():
     workflow_path = ROOT / ".orbitos/module-packages/collaboration/workflows/agent-handoff.md"
     if workflow_path.is_file():
         workflow = workflow_path.read_text(encoding="utf-8")
-        for term in ["execution_mode=delegated", "handoff_status", "current_owner", "closed", "STATUS.md", "validation"]:
+        for term in ["execution_mode=delegated", "handoff_status", "current_owner", "closed", "STATUS.md", "validation", "handoff-control.py begin", "handoff-control.py close"]:
             if term not in workflow:
                 add_error(errors, str(workflow_path.relative_to(ROOT)), f"handoff workflow is missing required term: {term}")
 
@@ -418,6 +421,103 @@ def handoff_structure_errors():
             add_error(errors, "00-系统/agents/BOARD.md", "current handoff links must match active handoff files")
         if active_names and ("状态：" not in board or "当前负责人：" not in board or "下一步：" not in board):
             add_error(errors, "00-系统/agents/BOARD.md", "current handoff entries must include status, owner, and next action")
+
+    return errors
+
+
+def collaboration_consistency_errors():
+    """Check that governed handoffs, work items, sessions, and receipts agree."""
+    errors = []
+    work_path = ROOT / ".orbitos/state/work-items.json"
+    session_path = ROOT / ".orbitos/state/collaboration-sessions.json"
+    if not work_path.is_file() or not session_path.is_file():
+        return errors
+
+    work_items = read_json_like(".orbitos/state/work-items.json")
+    sessions_state = read_json_like(".orbitos/state/collaboration-sessions.json")
+    works = work_items.get("items", {}) if isinstance(work_items, dict) else {}
+    sessions = sessions_state.get("sessions", {}) if isinstance(sessions_state, dict) else {}
+    if not isinstance(works, dict) or not isinstance(sessions, dict):
+        return errors
+
+    system_dir = "00-" + chr(0x7CFB) + chr(0x7EDF)
+    handoff_root = ROOT / system_dir / "agents/handoff"
+    archive_root = handoff_root / "archive"
+
+    def metadata_for(path):
+        text = path.read_text(encoding="utf-8")
+        parts = text.split("---", 2)
+        return dict(re.findall(r"^([a-z_]+):\s*(.*?)\s*$", parts[1] if len(parts) >= 3 else "", re.MULTILINE))
+
+    def governed(metadata):
+        return str(metadata.get("governance_required", "")).lower() == "true"
+
+    def check_handoff(path, archived):
+        metadata = metadata_for(path)
+        if not governed(metadata):
+            return
+        relative = path.relative_to(ROOT).as_posix()
+        session_id = metadata.get("collaboration_session_id")
+        session = sessions.get(session_id)
+        if not isinstance(session, dict):
+            add_error(errors, relative, "governed handoff must reference an existing collaboration session")
+            return
+        expected_task_ref = relative.replace("/handoff/archive/", "/handoff/") if archived else relative
+        if session.get("task_ref") != expected_task_ref:
+            add_error(errors, relative, "governed handoff session task_ref must point to this handoff")
+        if archived:
+            if session.get("status") != "closed" or not session.get("gate_state", {}).get("hard_gate_passed"):
+                add_error(errors, relative, "closed governed handoff requires a closed hard-gate-passed session")
+        elif metadata.get("handoff_status") in {"working", "returned"} and session.get("status") == "closed":
+            add_error(errors, relative, "open governed handoff cannot point to a closed session")
+
+    for path in sorted(handoff_root.glob("*.md")) if handoff_root.is_dir() else []:
+        check_handoff(path, archived=False)
+    for path in sorted(archive_root.glob("*.md")) if archive_root.is_dir() else []:
+        check_handoff(path, archived=True)
+
+    for work_id, work in works.items():
+        if not isinstance(work, dict):
+            continue
+        source_ref = work.get("source_ref")
+        if work.get("source_type") == "handoff" and isinstance(source_ref, str) and source_ref:
+            source_path = ROOT / source_ref.split("#", 1)[0]
+            if not source_path.is_file():
+                add_error(errors, f".orbitos/state/work-items.json#{work_id}", "work item source_ref does not exist")
+        if work.get("status") == "done" and not work.get("evidence_refs"):
+            add_error(errors, f".orbitos/state/work-items.json#{work_id}", "done work item requires evidence_refs")
+
+    events_root = ROOT / ".orbitos/logs/events"
+    for event_path in sorted(events_root.glob("*.yaml")) if events_root.is_dir() else []:
+        content = event_path.read_text(encoding="utf-8").lstrip()
+        if not content.startswith("{"):
+            continue
+        try:
+            event = json.loads(content)
+        except json.JSONDecodeError:
+            continue
+        if not isinstance(event, dict) or "collaboration" not in event:
+            continue
+        collaboration = event.get("collaboration")
+        actor = event.get("actor", {})
+        outputs = event.get("outputs", [])
+        if not isinstance(collaboration, dict):
+            add_error(errors, str(event_path.relative_to(ROOT)), "collaboration receipt is invalid")
+            continue
+        session = sessions.get(collaboration.get("session_id"))
+        if not isinstance(session, dict):
+            add_error(errors, str(event_path.relative_to(ROOT)), "collaboration receipt references a missing session")
+            continue
+        if not isinstance(actor, dict) or actor.get("role") != session.get("role"):
+            add_error(errors, str(event_path.relative_to(ROOT)), "collaboration receipt actor role must match the session role")
+        if not isinstance(outputs, list) or not outputs:
+            add_error(errors, str(event_path.relative_to(ROOT)), "collaboration receipt requires at least one output")
+        review = session.get("review", {})
+        if collaboration.get("review_status") != review.get("status"):
+            add_error(errors, str(event_path.relative_to(ROOT)), "collaboration receipt review status must match the session")
+        if collaboration.get("review_status") == "approved":
+            if collaboration.get("reviewer_session_id") != review.get("reviewer_session_id") or collaboration.get("reviewer_agent_id") != review.get("reviewer_agent_id"):
+                add_error(errors, str(event_path.relative_to(ROOT)), "approved collaboration receipt must retain its independent reviewer")
 
     return errors
 
@@ -523,6 +623,10 @@ SCHEMAS = {
     "agent-registry": read_json_like(".orbitos/schemas/agent-registry.schema.yaml"),
     "module-catalog": read_json_like(".orbitos/schemas/module-catalog.schema.yaml"),
     "module-state": read_json_like(".orbitos/schemas/module-state.schema.yaml"),
+    "maintenance-state": read_json_like(".orbitos/schemas/maintenance-state.schema.yaml"),
+    "work-items": read_json_like(".orbitos/schemas/work-items.schema.yaml"),
+    "role-catalog": read_json_like(".orbitos/schemas/role-catalog.schema.yaml"),
+    "collaboration-sessions": read_json_like(".orbitos/schemas/collaboration-sessions.schema.yaml"),
 }
 
 failure_count = 0
@@ -549,6 +653,10 @@ def schema_name_for_case(name):
         return "event"
     if name.startswith("lifecycle."):
         return "lifecycle"
+    if name.startswith("maintenance-state."):
+        return "maintenance-state"
+    if name.startswith("work-items."):
+        return "work-items"
     raise ValueError(f"Cannot infer schema for case: {name}")
 
 
@@ -869,6 +977,83 @@ print_case("actual.module-state", True, module_errors)
 
 
 case_count += 1
+maintenance_errors = []
+maintenance_state_path = ROOT / ".orbitos/state/maintenance.json"
+if not maintenance_state_path.is_file():
+    # The Product Repo ships the template; init-runtime creates the ignored runtime state.
+    pass
+else:
+    maintenance_state = read_json_like(".orbitos/state/maintenance.json")
+    validate_value(maintenance_state, SCHEMAS["maintenance-state"], "$", maintenance_errors)
+print_case("actual.maintenance-state", True, maintenance_errors)
+
+case_count += 1
+work_item_errors = []
+work_item_state_path = ROOT / ".orbitos/state/work-items.json"
+if work_item_state_path.is_file():
+    work_items = read_json_like(".orbitos/state/work-items.json")
+    validate_value(work_items, SCHEMAS["work-items"], "$", work_item_errors)
+print_case("actual.work-items-state", True, work_item_errors)
+
+
+case_count += 1
+collaboration_asset_errors = []
+role_catalog_path = ROOT / ".orbitos/module-packages/collaboration/roles.json"
+role_schema_path = ROOT / ".orbitos/schemas/role-catalog.schema.yaml"
+session_schema_path = ROOT / ".orbitos/schemas/collaboration-sessions.schema.yaml"
+session_script_path = ROOT / ".orbitos/scripts/collab-session.py"
+session_workflow_path = ROOT / ".orbitos/module-packages/collaboration/workflows/governance-session.md"
+session_rule_path = ROOT / ".orbitos/module-packages/collaboration/rules/collaboration-governance.md"
+session_template_path = ROOT / ".orbitos/templates/.orbitos/state/collaboration-sessions.json"
+for required_path in [
+    role_catalog_path,
+    role_schema_path,
+    session_schema_path,
+    session_script_path,
+    session_workflow_path,
+    session_rule_path,
+    session_template_path,
+]:
+    if not required_path.is_file():
+        add_error(collaboration_asset_errors, str(required_path.relative_to(ROOT)), "collaboration governance asset is missing")
+if role_catalog_path.is_file():
+    role_catalog = read_json_like(".orbitos/module-packages/collaboration/roles.json")
+    validate_value(role_catalog, SCHEMAS["role-catalog"], "$", collaboration_asset_errors)
+    required_roles = {"coordinator", "researcher", "writer", "builder", "editor"}
+    actual_roles = set(role_catalog.get("roles", {}))
+    if actual_roles != required_roles:
+        add_error(collaboration_asset_errors, ".orbitos/module-packages/collaboration/roles.json", f"role catalog must contain exactly {sorted(required_roles)}, got {sorted(actual_roles)}")
+if session_template_path.is_file():
+    session_template = read_json_like(".orbitos/templates/.orbitos/state/collaboration-sessions.json")
+    validate_value(session_template, SCHEMAS["collaboration-sessions"], "$", collaboration_asset_errors)
+for path, terms in {
+    session_script_path: ["def main", "open", "claim", "heartbeat", "submit-research", "review", "review_target_session_id", "confidence_tier", "evidence_kind", "independently_reviewed", "review_required", "revision"],
+    session_workflow_path: ["collaboration-sessions.json", "single_agent_subsession", "multi_agent_claim", "review_target_session_id", "independently_reviewed", "task_ref", "yellow", "green"],
+    session_rule_path: ["未注册 Agent", "租约", "审核自己的产出", "independently_reviewed", "confidence", "回流"],
+}.items():
+    if path.is_file():
+        content = path.read_text(encoding="utf-8")
+        for term in terms:
+            if term not in content:
+                add_error(collaboration_asset_errors, str(path.relative_to(ROOT)), f"collaboration governance asset is missing required term: {term}")
+print_case("actual.collaboration-governance-assets", True, collaboration_asset_errors)
+
+
+case_count += 1
+collaboration_state_errors = []
+collaboration_state_path = ROOT / ".orbitos/state/collaboration-sessions.json"
+if collaboration_state_path.is_file():
+    collaboration_state = read_json_like(".orbitos/state/collaboration-sessions.json")
+    validate_value(collaboration_state, SCHEMAS["collaboration-sessions"], "$", collaboration_state_errors)
+print_case("actual.collaboration-sessions-state", True, collaboration_state_errors)
+
+
+case_count += 1
+collaboration_consistency_errors_list = collaboration_consistency_errors()
+print_case("actual.collaboration-state-consistency", True, collaboration_consistency_errors_list)
+
+
+case_count += 1
 root_directory_errors = []
 required_core_root_dirs = [
     "00-系统",
@@ -978,6 +1163,8 @@ runtime_template_errors = []
 required_runtime_templates = [
     ".orbitos/templates/.orbitos/agents/registry.yaml",
     ".orbitos/templates/.orbitos/state/modules.json",
+    ".orbitos/templates/.orbitos/state/maintenance.json",
+    ".orbitos/templates/.orbitos/state/work-items.json",
     ".orbitos/templates/01-收件箱/00-粘贴.md",
     ".orbitos/templates/02-时间线/今日.md",
     ".orbitos/templates/02-时间线/本周.md",

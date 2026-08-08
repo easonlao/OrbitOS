@@ -45,14 +45,18 @@ Agent 只需要整理：
 
 1. 确认本次存在需要持久化的实质结果。
 2. 具体项目任务先按 `project-management.md` 分类：当场完成只准备 event；需要跨会话才更新 STATUS；ROADMAP 变化必须已有用户确认。
-3. 如果属于具体项目且项目状态变化，更新 `STATUS.md`；满足已确认的 ROADMAP 完成条件时，同步勾选条件、日期和总体状态。
-4. 如果本轮处理 handoff，确认其状态、当前负责人、下一步和 BOARD 投影已同步；协作完成时先更新项目 `STATUS.md`，再关闭并归档 handoff。
-5. 运行 `python .orbitos/scripts/run-validation.py`。
-6. validation 失败时停止，不刷新 Dashboard；报告失败原因。
-7. 使用 `.orbitos/scripts/write_event.py` 写入完成凭证。
-8. 按实际变化刷新 `今日.md`；只有周视图或其他明确状态页发生变化时才额外更新对应页面。
-9. 再运行一次 validation，确认最终状态。
-10. 最终 validation 失败时报告 event 路径和失败原因，不把失败结果描述为完成。
+3. 需要跨会话、跨 Agent 或并行推进的普通工作，创建或更新 `.orbitos/state/work-items.json` 索引；索引只记录 `source_type/source_ref`、负责人、下一步、租约和证据，不复制项目 STATUS、handoff 或 maintenance 的正文。
+4. 如果本轮使用角色治理 session，先通过 `.orbitos/scripts/collab-session.py` 同步角色、租约、revision、阶段和证据；session 只通过 `task_ref` 指向业务主源，不复制正文。
+5. 如果属于具体项目且项目状态变化，更新 `STATUS.md`；满足已确认的 ROADMAP 完成条件时，同步勾选条件、日期和总体状态。
+6. 如果本轮处理 handoff，确认其状态、当前负责人、下一步和 BOARD 投影已同步；协作完成时先更新项目 `STATUS.md`，再关闭和归档 handoff，并同步 work index 指针。
+7. 如果本轮处理维护事项，先用 `.orbitos/scripts/maintenance-control.py` 读取当前状态；领取、修复、验证和关闭都必须携带最新 `revision`，存在有效租约时不得覆盖其他执行者。只有新鲜验证 receipt 才能关闭；无法安全继续时进入 `blocked` 并请求用户确认。维护事项不转写为普通 work item。
+8. 运行 `python .orbitos/scripts/run-validation.py`。
+9. validation 失败时停止本轮业务投影并报告失败原因；System Check 可由自动化契约更新维护状态和受管健康区块。
+10. 使用 `.orbitos/scripts/write_event.py` 写入完成凭证；event 记录历史事实，不替代当前维护状态。
+11. 对普通 work item，只有原始来源已完成、验证/证据已记录且无用户待确认时，才将索引更新为 `done`；`work-control.py update --status done` 必须携带 completion evidence。对 collaboration session，只有租约有效、证据存在且没有待审核门禁时，才能关闭。
+12. 按实际变化刷新 `今日.md`；维护状态投影只显示当前开放项，`closed` 与 `expired` 不得继续作为当前故障。
+13. 再运行一次 validation，确认最终状态。
+14. 最终 validation 失败时报告 event 路径和失败原因，不把失败结果描述为完成。
 
 最小示例：
 

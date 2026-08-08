@@ -39,9 +39,11 @@ Agent Handoff 承接 `execution_mode=delegated` 的跨 Agent 或跨会话工作�
 4. 新交接一律从 `delegated` 开始；目标未定时使用 `current_owner: unassigned`。除非用户指定其他验收方，`return_owner` 必须是原交出 Agent。
 5. 填写项目归属、目标、边界、已完成、未完成、风险、证据与接手动作。
 6. 在 `00-系统/agents/BOARD.md` 当前交接区登记链接、状态、负责人和下一步。
-7. 接手方真正开始时改为 `working`；本轮完成且要他人继续时改为 `returned`。用户未指定下一位负责人时，`current_owner` 默认回填 `return_owner`，并更新下一步。
-8. 协作合同完成时，最后处理的 Agent 先更新项目 `STATUS.md`，再写为 `closed`、从 BOARD 移除并移入归档。
-9. 在 Progress Sync 前运行 `python .orbitos/scripts/run-validation.py`。
+7. 为需要跨 Agent 或跨会话继续的交接创建一个 `source_type=handoff` 的 work item，`source_ref` 指向 handoff 文件；work item 只记录负责人、状态、租约、下一步和证据，不复制 handoff 正文。
+8. 接手方真正开始时，使用 `.orbitos/scripts/handoff-control.py begin`；它会原子地创建 `multi_agent_claim` governance session、claim 对应 work item、写入 `working`、`governance_required: true`、`collaboration_session_id` 并同步 BOARD。不得手工绕过这条链。
+9. 本轮完成且要他人继续时改为 `returned`，同步 work item 为 `waiting`。用户未指定下一位负责人时，`current_owner` 默认回填 `return_owner`，并更新下一步。
+10. 协作合同完成时，最后处理的 Agent 先更新项目 `STATUS.md`，再使用 `.orbitos/scripts/handoff-control.py close`。它只接受已通过 hard gate 的 session，并原子地归档 handoff、回写 work item `done` 与 archive source_ref、写入带 role/output/review 的完成 event。
+11. 在 Progress Sync 前运行 `python .orbitos/scripts/run-validation.py`。
 
 ## 最小内容
 

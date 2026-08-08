@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "updated_at", "items"],
+  "properties": {
+    "version": {"const": 1},
+    "updated_at": {"type": "string"},
+    "items": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["work_id", "agent_id", "project", "title", "source_type", "source_ref", "status", "next_action", "requires_user", "blocked_reason", "revision", "lease_owner", "lease_until", "evidence_refs", "updated_at"],
+        "properties": {
+          "work_id": {"type": "string", "minLength": 1},
+          "agent_id": {"type": ["string", "null"]},
+          "project": {"type": "string", "minLength": 1},
+          "title": {"type": "string", "minLength": 1},
+          "source_type": {"enum": ["project_task", "issue", "handoff", "maintenance", "confirmation"]},
+          "source_ref": {"type": "string", "minLength": 1},
+          "status": {"enum": ["active", "waiting", "blocked", "done", "cancelled"]},
+          "next_action": {"type": "string"},
+          "requires_user": {"type": "boolean"},
+          "blocked_reason": {"type": ["string", "null"]},
+          "revision": {"type": "integer", "minimum": 1},
+          "lease_owner": {"type": ["string", "null"]},
+          "lease_until": {"type": ["string", "null"]},
+          "evidence_refs": {"type": "array", "items": {"type": "string"}},
+          "updated_at": {"type": "string"}
+        }
+      }
+    }
+  }
+}

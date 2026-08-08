@@ -258,6 +258,10 @@ const schemas = {
   "agent-registry": readJsonLike(".orbitos/schemas/agent-registry.schema.yaml"),
   "module-catalog": readJsonLike(".orbitos/schemas/module-catalog.schema.yaml"),
   "module-state": readJsonLike(".orbitos/schemas/module-state.schema.yaml"),
+  "maintenance-state": readJsonLike(".orbitos/schemas/maintenance-state.schema.yaml"),
+  "work-items": readJsonLike(".orbitos/schemas/work-items.schema.yaml"),
+  "role-catalog": readJsonLike(".orbitos/schemas/role-catalog.schema.yaml"),
+  "collaboration-sessions": readJsonLike(".orbitos/schemas/collaboration-sessions.schema.yaml"),
 };
 
 let failureCount = 0;
@@ -276,6 +280,8 @@ function schemaNameForCase(name) {
   if (name.startsWith("agent-registry.")) return "agent-registry";
   if (name.startsWith("event.")) return "event";
   if (name.startsWith("lifecycle.")) return "lifecycle";
+  if (name.startsWith("maintenance-state.")) return "maintenance-state";
+  if (name.startsWith("work-items.")) return "work-items";
   throw new Error(`Cannot infer schema for case: ${name}`);
 }
 
@@ -508,9 +514,10 @@ const requiredHandoffFiles = [
   ".orbitos/templates/00-系统/agents/handoff/TEMPLATE.md",
   ".orbitos/module-packages/collaboration/workflows/agent-handoff.md",
   ".orbitos/module-packages/collaboration/workflows/handoff-adapter.md",
-  ".orbitos/module-packages/collaboration/workflows/handoff-pickup.md",
-  ".orbitos/scripts/handoff-status.py",
-  "00-系统/agents/handoff/archive/.gitkeep",
+ ".orbitos/module-packages/collaboration/workflows/handoff-pickup.md",
+ ".orbitos/scripts/handoff-status.py",
+  ".orbitos/scripts/handoff-control.py",
+ "00-系统/agents/handoff/archive/.gitkeep",
 ];
 for (const relativePath of requiredHandoffFiles) {
   if (!fs.existsSync(path.join(root, relativePath))) {
@@ -520,7 +527,7 @@ for (const relativePath of requiredHandoffFiles) {
 const handoffWorkflowPath = path.join(root, ".orbitos/module-packages/collaboration/workflows/agent-handoff.md");
 if (fs.existsSync(handoffWorkflowPath)) {
   const handoffWorkflow = fs.readFileSync(handoffWorkflowPath, "utf8");
-  for (const term of ["execution_mode=delegated", "handoff_status", "current_owner", "closed", "STATUS.md", "validation"]) {
+  for (const term of ["execution_mode=delegated", "handoff_status", "current_owner", "closed", "STATUS.md", "validation", "handoff-control.py begin", "handoff-control.py close"]) {
     if (!handoffWorkflow.includes(term)) {
       addError(handoffStructureErrors, ".orbitos/module-packages/collaboration/workflows/agent-handoff.md", `handoff workflow is missing required term: ${term}`);
     }
@@ -665,10 +672,177 @@ for (const legacyName of legacyVisibleDomains) {
 printCase("actual.module-state", true, moduleErrors);
 
 caseCount += 1;
+const maintenanceErrors = [];
+const maintenanceStatePath = path.join(root, ".orbitos/state/maintenance.json");
+if (!fs.existsSync(maintenanceStatePath)) {
+  // The Product Repo ships the template; init-runtime creates the ignored runtime state.
+} else {
+  validateValue(readJsonLike(".orbitos/state/maintenance.json"), schemas["maintenance-state"], "$", maintenanceErrors);
+}
+printCase("actual.maintenance-state", true, maintenanceErrors);
+
+caseCount += 1;
+const workItemErrors = [];
+const workItemStatePath = path.join(root, ".orbitos/state/work-items.json");
+if (fs.existsSync(workItemStatePath)) {
+  validateValue(readJsonLike(".orbitos/state/work-items.json"), schemas["work-items"], "$", workItemErrors);
+}
+printCase("actual.work-items-state", true, workItemErrors);
+
+caseCount += 1;
+const collaborationAssetErrors = [];
+const roleCatalogPath = path.join(root, ".orbitos/module-packages/collaboration/roles.json");
+const roleSchemaPath = path.join(root, ".orbitos/schemas/role-catalog.schema.yaml");
+const sessionSchemaPath = path.join(root, ".orbitos/schemas/collaboration-sessions.schema.yaml");
+const sessionScriptPath = path.join(root, ".orbitos/scripts/collab-session.py");
+const sessionWorkflowPath = path.join(root, ".orbitos/module-packages/collaboration/workflows/governance-session.md");
+const sessionRulePath = path.join(root, ".orbitos/module-packages/collaboration/rules/collaboration-governance.md");
+const sessionTemplatePath = path.join(root, ".orbitos/templates/.orbitos/state/collaboration-sessions.json");
+for (const requiredPath of [roleCatalogPath, roleSchemaPath, sessionSchemaPath, sessionScriptPath, sessionWorkflowPath, sessionRulePath, sessionTemplatePath]) {
+  if (!fs.existsSync(requiredPath)) addError(collaborationAssetErrors, path.relative(root, requiredPath), "collaboration governance asset is missing");
+}
+if (fs.existsSync(roleCatalogPath)) {
+  const roleCatalog = readJsonLike(".orbitos/module-packages/collaboration/roles.json");
+  validateValue(roleCatalog, schemas["role-catalog"], "$", collaborationAssetErrors);
+  const requiredRoles = new Set(["coordinator", "researcher", "writer", "builder", "editor"]);
+  const actualRoles = new Set(Object.keys(roleCatalog.roles ?? {}));
+  if (JSON.stringify([...actualRoles].sort()) !== JSON.stringify([...requiredRoles].sort())) {
+    addError(collaborationAssetErrors, ".orbitos/module-packages/collaboration/roles.json", `role catalog must contain exactly ${[...requiredRoles].sort().join(", ")}`);
+  }
+}
+if (fs.existsSync(sessionTemplatePath)) {
+  validateValue(readJsonLike(".orbitos/templates/.orbitos/state/collaboration-sessions.json"), schemas["collaboration-sessions"], "$", collaborationAssetErrors);
+}
+for (const [filePath, terms] of new Map([
+  [sessionScriptPath, ["def main", "open", "claim", "heartbeat", "submit-research", "review", "review_target_session_id", "confidence_tier", "evidence_kind", "independently_reviewed", "review_required", "revision"]],
+  [sessionWorkflowPath, ["collaboration-sessions.json", "single_agent_subsession", "multi_agent_claim", "review_target_session_id", "independently_reviewed", "task_ref", "yellow", "green"]],
+  [sessionRulePath, ["未注册 Agent", "租约", "审核自己的产出", "independently_reviewed", "confidence", "回流"]],
+])) {
+  if (!fs.existsSync(filePath)) continue;
+  const content = fs.readFileSync(filePath, "utf8");
+  for (const term of terms) if (!content.includes(term)) addError(collaborationAssetErrors, path.relative(root, filePath), `collaboration governance asset is missing required term: ${term}`);
+}
+printCase("actual.collaboration-governance-assets", true, collaborationAssetErrors);
+
+caseCount += 1;
+const collaborationStateErrors = [];
+const collaborationStatePath = path.join(root, ".orbitos/state/collaboration-sessions.json");
+if (fs.existsSync(collaborationStatePath)) validateValue(readJsonLike(".orbitos/state/collaboration-sessions.json"), schemas["collaboration-sessions"], "$", collaborationStateErrors);
+printCase("actual.collaboration-sessions-state", true, collaborationStateErrors);
+
+caseCount += 1;
+const collaborationConsistencyErrors = [];
+const workItemsForConsistency = fs.existsSync(workItemStatePath)
+  ? readJsonLike(".orbitos/state/work-items.json")
+  : { items: {} };
+const sessionsForConsistency = fs.existsSync(collaborationStatePath)
+  ? readJsonLike(".orbitos/state/collaboration-sessions.json")
+  : { sessions: {} };
+const worksForConsistency = workItemsForConsistency?.items ?? {};
+const sessionsForConsistencyMap = sessionsForConsistency?.sessions ?? {};
+const systemDirectory = "00-" + String.fromCodePoint(0x7CFB, 0x7EDF);
+const governedHandoffDirectory = path.join(root, systemDirectory, "agents", "handoff");
+const governedArchiveDirectory = path.join(governedHandoffDirectory, "archive");
+const isGoverned = (metadata) => String(metadata.governance_required ?? "").toLowerCase() === "true";
+
+function checkGovernedHandoff(filePath, archived) {
+  const relativePath = path.relative(root, filePath).replaceAll("\\", "/");
+  const metadata = frontmatter(fs.readFileSync(filePath, "utf8"));
+  if (!isGoverned(metadata)) return;
+  const session = sessionsForConsistencyMap[metadata.collaboration_session_id];
+  if (!session || typeof session !== "object") {
+    addError(collaborationConsistencyErrors, relativePath, "governed handoff must reference an existing collaboration session");
+    return;
+  }
+  const expectedTaskRef = archived
+    ? relativePath.replace("/handoff/archive/", "/handoff/")
+    : relativePath;
+  if (session.task_ref !== expectedTaskRef) {
+    addError(collaborationConsistencyErrors, relativePath, "governed handoff session task_ref must point to this handoff");
+  }
+  if (archived) {
+    if (session.status !== "closed" || !session.gate_state?.hard_gate_passed) {
+      addError(collaborationConsistencyErrors, relativePath, "closed governed handoff requires a closed hard-gate-passed session");
+    }
+  } else if (["working", "returned"].includes(metadata.handoff_status) && session.status === "closed") {
+    addError(collaborationConsistencyErrors, relativePath, "open governed handoff cannot point to a closed session");
+  }
+}
+
+if (fs.existsSync(governedHandoffDirectory)) {
+  for (const name of fs.readdirSync(governedHandoffDirectory).filter((item) => item.endsWith(".md"))) {
+    checkGovernedHandoff(path.join(governedHandoffDirectory, name), false);
+  }
+}
+if (fs.existsSync(governedArchiveDirectory)) {
+  for (const name of fs.readdirSync(governedArchiveDirectory).filter((item) => item.endsWith(".md"))) {
+    checkGovernedHandoff(path.join(governedArchiveDirectory, name), true);
+  }
+}
+
+for (const [workId, work] of Object.entries(worksForConsistency)) {
+  if (!work || typeof work !== "object") continue;
+  if (work.source_type === "handoff" && typeof work.source_ref === "string" && work.source_ref) {
+    const sourceFile = path.join(root, work.source_ref.split("#", 1)[0]);
+    if (!fs.existsSync(sourceFile) || !fs.statSync(sourceFile).isFile()) {
+      addError(collaborationConsistencyErrors, ".orbitos/state/work-items.json#" + workId, "work item source_ref does not exist");
+    }
+  }
+  if (work.status === "done" && (!Array.isArray(work.evidence_refs) || work.evidence_refs.length === 0)) {
+    addError(collaborationConsistencyErrors, ".orbitos/state/work-items.json#" + workId, "done work item requires evidence_refs");
+  }
+}
+
+const consistencyEventDirectory = path.join(root, ".orbitos/logs/events");
+if (fs.existsSync(consistencyEventDirectory)) {
+  for (const name of fs.readdirSync(consistencyEventDirectory).filter((item) => item.endsWith(".yaml"))) {
+    const relativePath = ".orbitos/logs/events/" + name;
+    const content = fs.readFileSync(path.join(consistencyEventDirectory, name), "utf8").trimStart();
+    if (!content.startsWith("{")) continue;
+    let event;
+    try {
+      event = JSON.parse(content);
+    } catch {
+      continue;
+    }
+    if (!event || typeof event !== "object" || !("collaboration" in event)) continue;
+    const collaboration = event.collaboration;
+    if (!collaboration || typeof collaboration !== "object") {
+      addError(collaborationConsistencyErrors, relativePath, "collaboration receipt is invalid");
+      continue;
+    }
+    const session = sessionsForConsistencyMap[collaboration.session_id];
+    if (!session || typeof session !== "object") {
+      addError(collaborationConsistencyErrors, relativePath, "collaboration receipt references a missing session");
+      continue;
+    }
+    if (!event.actor || event.actor.role !== session.role) {
+      addError(collaborationConsistencyErrors, relativePath, "collaboration receipt actor role must match the session role");
+    }
+    if (!Array.isArray(event.outputs) || event.outputs.length === 0) {
+      addError(collaborationConsistencyErrors, relativePath, "collaboration receipt requires at least one output");
+    }
+    if (collaboration.review_status !== session.review?.status) {
+      addError(collaborationConsistencyErrors, relativePath, "collaboration receipt review status must match the session");
+    }
+    if (collaboration.review_status === "approved" && (
+      collaboration.reviewer_session_id !== session.review?.reviewer_session_id
+      || collaboration.reviewer_agent_id !== session.review?.reviewer_agent_id
+    )) {
+      addError(collaborationConsistencyErrors, relativePath, "approved collaboration receipt must retain its independent reviewer");
+    }
+  }
+}
+printCase("actual.collaboration-state-consistency", true, collaborationConsistencyErrors);
+
+caseCount += 1;
 const runtimeTemplateErrors = [];
 const requiredRuntimeTemplates = [
   ".orbitos/templates/.orbitos/agents/registry.yaml",
   ".orbitos/templates/.orbitos/state/modules.json",
+  ".orbitos/templates/.orbitos/state/maintenance.json",
+  ".orbitos/templates/.orbitos/state/work-items.json",
+  ".orbitos/templates/.orbitos/state/collaboration-sessions.json",
   ".orbitos/templates/01-收件箱/00-粘贴.md",
   ".orbitos/templates/02-时间线/今日.md",
   ".orbitos/templates/02-时间线/本周.md",

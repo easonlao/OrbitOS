@@ -96,6 +96,24 @@ def main():
             read_template(".orbitos/state/modules.json"),
         )
     )
+    results.append(
+        write_if_missing(
+            ".orbitos/state/maintenance.json",
+            read_template(".orbitos/state/maintenance.json").replace("{now}", NOW),
+        )
+    )
+    results.append(
+        write_if_missing(
+            ".orbitos/state/work-items.json",
+            read_template(".orbitos/state/work-items.json").replace("{now}", NOW),
+        )
+    )
+    results.append(
+        write_if_missing(
+            ".orbitos/state/collaboration-sessions.json",
+            read_template(".orbitos/state/collaboration-sessions.json").replace("{now}", NOW),
+        )
+    )
 
     results.append(
         write_if_missing(

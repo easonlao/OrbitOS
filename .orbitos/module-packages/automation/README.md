@@ -13,21 +13,22 @@ The scheduler's external configuration is the source of truth for job IDs and ca
 ### System Check
 
 - Purpose: run deterministic integrity checks and expose current failures in the user's main view.
-- Command: `python .orbitos/scripts/run-validation.py`.
+- Command: `python .orbitos/scripts/automation-health.py --executor {executor}`.
 - Read scope: OrbitOS runtime as required by validation.
-- Write scope: only the managed system-health block in `02-时间线/今日.md`.
-- Result: on failure, show failed checks, affected paths, and check time in the `orbitos:system-health` block in `今日.md`; on success, replace that block with the latest passing result.
-- Prohibitions: no automatic repair, file moves, ingestion, knowledge creation, or external notification requirement.
+- Write scope: the managed system-health block in `02-时间线/今日.md` and the ignored runtime state `.orbitos/state/maintenance.json`.
+- Result: write a structure-layer run receipt and create/update the `system-check` maintenance item; on failure, show failed checks and keep the item open; a later passing receipt is fresh evidence that can close it.
+- Prohibitions: no user-content repair, file moves, ingestion, knowledge creation, or external notification requirement.
 
 ### Today Refresh
 
 - Purpose: rebuild the daily projection from existing state sources.
-- Read scope: event records, existing project `STATUS.md` files, inbox/batch state, knowledge drafts, and the current health-check result. A project without `STATUS.md` is valid and may be summarized from events or skipped.
-- Write scope: only `02-时间线/今日.md`.
+- Command: `python .orbitos/scripts/today-refresh.py --executor {executor}`.
+- Read scope: current maintenance state, the latest health-check result, and existing project `STATUS.md` files for business focus. A project without `STATUS.md` is skipped.
+- Write scope: only the managed `02-时间线/今日.md` markers and ignored `.orbitos/state/maintenance.json` runtime state.
 - Prerequisite: run System Check first and record its result before projecting the dashboard. A failed validation is visible system state, not a reason to skip the daily projection.
 - Managed blocks: `orbitos:today-date`, `orbitos:today-projection`, and `orbitos:system-health` in `02-时间线/今日.md`. Content outside these markers is preserved byte-for-byte.
 - Projection links: when a projection names an existing Markdown source, use a valid Obsidian wikilink so the source is a real user-visible entry and can be checked by validation.
-- Result: on either validation success or validation failure, refresh the date and the projection block from existing sources when preflight and source reads succeed. Keep validation failures in the health block and do not attempt repairs, moves, ingestion, promotion, or source-of-truth changes.
+- Result: on either validation success or validation failure, refresh the date and the projection block from current maintenance state when preflight and source reads succeed. Keep validation failures in the health block; only rebuild the explicitly managed projection markers and remove closed/expired stale maintenance notices.
 - Failure behavior: stop without rewriting the projection only when the OrbitOS preflight fails or a required source cannot be read. A failed validation alone must not stop Today Refresh.
 - Prohibitions: `今日.md` is a projection, not a new source of truth; do not move, delete, ingest, or promote content.
 

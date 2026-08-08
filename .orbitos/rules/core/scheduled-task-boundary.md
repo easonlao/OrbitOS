@@ -29,6 +29,7 @@ Allowed by default:
 - read Dashboard files
 - count inbox files
 - report failures or summaries
+- update the ignored `.orbitos/state/maintenance.json` with a run receipt and current maintenance status when the task contract declares it
 
 Not allowed by default:
 
@@ -81,7 +82,7 @@ A scheduled task may write only when all are true:
 If validation fails, follow the task-specific contract:
 
 - System Check: update its managed health block, report the failure in that block, and stop.
-- Today Refresh: keep the failure in the health block and continue refreshing its declared date and projection blocks from readable existing sources. Do not repair the validation failure or change any source of truth.
+- Today Refresh: keep the failure in the health block and continue refreshing its declared date and projection blocks from readable existing sources. It may clear only projection text proven stale by current maintenance state; do not repair user content or change any other source of truth.
 - Any task without an explicit projection exception: stop, report the failed command and full reason, and do not attempt broad repair.
 
 ## Dashboard Projection Exception
@@ -91,16 +92,18 @@ block in `02-时间线/今日.md` or `02-时间线/本周.md`. This is a narrow
 projection exception, not permission to refresh an entire Dashboard page.
 
 - System Check may update only the `orbitos:system-health` marker block in
-  `今日.md`, including when validation fails.
+  `今日.md`, including when validation fails, and the declared runtime maintenance state/receipt.
 - Today Refresh may update only the `orbitos:today-date` and
-  `orbitos:today-projection` marker blocks declared by its task contract; it
+  `orbitos:today-projection` marker blocks declared by its task contract and
+  the declared runtime maintenance state/receipt; it
   must preserve every byte outside those markers, including user-authored or
   manually maintained sections.
 - Weekly Review may update the current ISO week's `本周.md`; it must stop at a
   week boundary and may not archive, rename, or replace a prior week without
   a user-confirmed run.
 - Dashboard projection does not require an event. It must never be used to
-  conceal a failed validation or to make a repair.
+  conceal a failed validation or to repair user content or another source of truth;
+  only the declared managed projection may be rebuilt.
 
 ## Delivery Rules
 

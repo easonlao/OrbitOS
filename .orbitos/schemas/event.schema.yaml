@@ -263,6 +263,18 @@
         }
       }
     },
+    "collaboration": {
+      "type": "object",
+      "description": "角色治理 session 的最小可追溯摘要。仅协作收口 event 使用。",
+      "additionalProperties": false,
+      "required": ["session_id", "review_status", "reviewer_session_id", "reviewer_agent_id"],
+      "properties": {
+        "session_id": {"type": "string", "minLength": 1},
+        "review_status": {"enum": ["not_required", "pending", "approved", "rejected"]},
+        "reviewer_session_id": {"type": ["string", "null"]},
+        "reviewer_agent_id": {"type": ["string", "null"]}
+      }
+    },
     "files_changed": {
       "type": "array",
       "description": "本次具体改动过哪些文件。没有文件改动就填空数组。",

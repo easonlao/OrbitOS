@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "roles": {
+    "coordinator": {
+      "role_id": "coordinator",
+      "label": "Coordinator",
+      "purpose": "定义目标、拆解任务、路由角色并汇总状态。",
+      "must_do": ["确认项目上下文", "建立任务边界", "协调角色流转"],
+      "must_not_do": ["替代 Researcher 取证", "替代 Editor 做最终质量审核"],
+      "default_gate": "context"
+    },
+    "researcher": {
+      "role_id": "researcher",
+      "label": "Researcher",
+      "purpose": "收集证据、标注来源、暴露不确定性。",
+      "must_do": ["记录来源", "区分事实与推断", "标记需要复核的内容"],
+      "must_not_do": ["无证据补写结论", "把推断伪装成确认事实"],
+      "default_gate": "evidence"
+    },
+    "writer": {
+      "role_id": "writer",
+      "label": "Writer",
+      "purpose": "把已允许流转的材料组织成可读产出。",
+      "must_do": ["引用输入材料", "保持项目语义一致", "标记未决内容"],
+      "must_not_do": ["自行补造事实", "替代 Editor 做独立事实核查"],
+      "default_gate": "source"
+    },
+    "builder": {
+      "role_id": "builder",
+      "label": "Builder",
+      "purpose": "实现、调试、测试并交付工程结果。",
+      "must_do": ["遵循任务边界", "留下验证证据", "报告返工影响范围"],
+      "must_not_do": ["自行改变项目方向", "把未验证实现标记为完成"],
+      "default_gate": "validation"
+    },
+    "editor": {
+      "role_id": "editor",
+      "label": "Editor",
+      "purpose": "独立审查产出、事实、边界和发布条件。",
+      "must_do": ["重新检查证据", "记录通过或驳回理由", "保持与执行者的独立性"],
+      "must_not_do": ["审核自己的产出", "用空泛判断替代证据"],
+      "default_gate": "independent_review"
+    }
+  }
+}

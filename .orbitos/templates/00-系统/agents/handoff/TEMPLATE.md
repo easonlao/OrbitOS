@@ -9,6 +9,8 @@ handoff_status: delegated
 current_owner: unassigned
 return_owner: <原交出 agent_id>
 next_action: <接手后的第一步>
+governance_required: false
+collaboration_session_id:
 tags:
   - orbitos
   - agents

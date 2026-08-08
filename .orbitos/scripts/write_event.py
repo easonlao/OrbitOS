@@ -19,6 +19,8 @@ THINKING_MODES = {
     "六顶思考帽",
     "批判性思维",
 }
+OUTPUT_KINDS = {"event", "markdown", "project_file", "artifact", "review_item", "knowledge_candidate", "schema", "workflow", "eval", "script", "other"}
+OUTPUT_STATUSES = {"created", "updated", "unchanged", "skipped", "failed"}
 
 
 def parse_file_change(value):
@@ -41,6 +43,13 @@ def parse_thinking_mode(value):
             "thinking mode must be MODE:PURPOSE and MODE must be a registered OrbitOS thinking mode"
         )
     return {"mode": mode, "purpose": purpose.strip()}
+
+
+def parse_output(value):
+    parts = value.split("|", 3)
+    if len(parts) < 3 or parts[0] not in OUTPUT_KINDS or not parts[1] or parts[2] not in OUTPUT_STATUSES:
+        raise argparse.ArgumentTypeError("output must use KIND|REF|STATUS[|NOTE]")
+    return {"kind": parts[0], "ref": parts[1], "status": parts[2], "note": parts[3] if len(parts) == 4 and parts[3] else None}
 
 
 def build_event(args, now):
@@ -93,7 +102,7 @@ def build_event(args, now):
             "type": "agent",
             "name": args.agent_name or args.agent_id,
             "agent_id": args.agent_id,
-            "role": None,
+            "role": args.role,
             "device": None,
         },
         "event_type": args.event_type,
@@ -109,7 +118,7 @@ def build_event(args, now):
                 "result": "completed",
             }
         ],
-        "outputs": [],
+        "outputs": args.output,
         "files_changed": args.file,
         "review_required": args.review_required,
         "review_items": review_items,
@@ -126,6 +135,13 @@ def build_event(args, now):
     }
     if thinking:
         event["thinking"] = thinking
+    if args.collaboration_session:
+        event["collaboration"] = {
+            "session_id": args.collaboration_session,
+            "review_status": args.review_status,
+            "reviewer_session_id": args.reviewer_session,
+            "reviewer_agent_id": args.reviewer_agent,
+        }
     return event
 
 
@@ -135,6 +151,7 @@ def build_parser():
     )
     parser.add_argument("--agent-id", required=True)
     parser.add_argument("--agent-name")
+    parser.add_argument("--role", choices=["coordinator", "researcher", "writer", "builder", "editor"])
     parser.add_argument("--slug", required=True)
     parser.add_argument("--summary", required=True)
     parser.add_argument("--reason", required=True)
@@ -155,6 +172,11 @@ def build_parser():
         ],
     )
     parser.add_argument("--file", action="append", default=[], type=parse_file_change)
+    parser.add_argument("--output", action="append", default=[], type=parse_output)
+    parser.add_argument("--collaboration-session")
+    parser.add_argument("--review-status", choices=["not_required", "pending", "approved", "rejected"], default="not_required")
+    parser.add_argument("--reviewer-session")
+    parser.add_argument("--reviewer-agent")
     parser.add_argument("--review-required", action="store_true")
     parser.add_argument("--review-item", action="append", default=[])
     parser.add_argument("--hindsight-recall", action="append", default=[])
@@ -179,6 +201,12 @@ def main():
         parser.error("--review-required needs at least one --review-item")
     if len(args.thinking_mode) > 2:
         parser.error("at most two thinking modes can be recorded")
+    if args.collaboration_session and not args.role:
+        parser.error("--collaboration-session requires --role")
+    if args.collaboration_session and not args.output:
+        parser.error("--collaboration-session requires at least one --output")
+    if args.review_status == "approved" and (not args.reviewer_session or not args.reviewer_agent):
+        parser.error("approved review status requires reviewer session and agent")
 
     now = datetime.now().astimezone()
     event = build_event(args, now)

@@ -1,0 +1,96 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "orbitos/maintenance-state.schema.yaml",
+  "title": "OrbitOS Maintenance State",
+  "description": "当前维护状态与运行凭证。它是控制主源，不是历史 event 的替代品。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "updated_at", "items", "receipts"],
+  "properties": {
+    "version": {"type": "integer", "enum": [1]},
+    "updated_at": {"type": "string"},
+    "items": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "maintenance_id",
+          "subject",
+          "status",
+          "owner_agent",
+          "executor",
+          "attempt",
+          "max_attempts",
+          "revision",
+          "lease_owner",
+          "lease_until",
+          "last_observed_at",
+          "last_verified_at",
+          "last_verification_receipt",
+          "evidence_refs",
+          "next_action",
+          "requires_user",
+          "updated_at",
+          "blocked_reason"
+        ],
+        "properties": {
+          "maintenance_id": {"type": "string"},
+          "subject": {"type": "string"},
+          "status": {
+            "type": "string",
+            "enum": [
+              "detected",
+              "classified",
+              "assigned",
+              "repairing",
+              "verifying",
+              "blocked",
+              "closed",
+              "expired"
+            ]
+          },
+          "owner_agent": {"type": ["string", "null"]},
+          "executor": {"type": ["string", "null"]},
+          "attempt": {"type": "integer"},
+          "max_attempts": {"type": "integer"},
+          "revision": {"type": "integer"},
+          "lease_owner": {"type": ["string", "null"]},
+          "lease_until": {"type": ["string", "null"]},
+          "last_observed_at": {"type": ["string", "null"]},
+          "last_verified_at": {"type": ["string", "null"]},
+          "last_verification_receipt": {"type": ["string", "null"]},
+          "evidence_refs": {
+            "type": "array",
+            "items": {"type": "string"}
+          },
+          "next_action": {"type": ["string", "null"]},
+          "requires_user": {"type": "boolean"},
+          "updated_at": {"type": "string"},
+          "blocked_reason": {"type": ["string", "null"]}
+        }
+      }
+    },
+    "receipts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "kind", "executor", "observed_at", "status"],
+        "properties": {
+          "id": {"type": "string"},
+          "kind": {"type": "string"},
+          "executor": {"type": "string"},
+          "observed_at": {"type": "string"},
+          "status": {"type": "string", "enum": ["passed", "failed"]},
+          "validation_command": {"type": ["string", "null"]},
+          "evidence": {"type": "string"},
+          "errors": {
+            "type": "array",
+            "items": {"type": "string"}
+          }
+        }
+      }
+    }
+  }
+}

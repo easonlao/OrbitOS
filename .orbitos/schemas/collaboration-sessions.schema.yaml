@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "updated_at", "sessions"],
+  "properties": {
+    "version": {"const": 1},
+    "updated_at": {"type": "string"},
+    "sessions": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["session_id", "parent_session_id", "mode", "task_ref", "project", "agent_id", "role", "source_session_id", "review_target_session_id", "status", "lease_owner", "lease_until", "revision", "evidence_refs", "evidence", "research", "return_reason", "return_target_session_id", "return_count", "review", "gate_state", "created_at", "updated_at"],
+        "properties": {
+          "session_id": {"type": "string", "minLength": 1},
+          "parent_session_id": {"type": ["string", "null"]},
+          "mode": {"enum": ["single_agent_subsession", "multi_agent_claim"]},
+          "task_ref": {"type": "string", "minLength": 1},
+          "project": {"type": "string", "minLength": 1},
+          "agent_id": {"type": "string", "minLength": 1},
+          "role": {"enum": ["coordinator", "researcher", "writer", "builder", "editor"]},
+          "source_session_id": {"type": ["string", "null"]},
+          "review_target_session_id": {"type": ["string", "null"]},
+          "status": {"enum": ["open", "claimed", "working", "review_required", "returned", "blocked", "closed"]},
+          "lease_owner": {"type": ["string", "null"]},
+          "lease_until": {"type": ["string", "null"]},
+          "revision": {"type": "integer", "minimum": 1},
+          "evidence_refs": {"type": "array", "items": {"type": "string"}},
+          "evidence": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["ref", "evidence_kind", "source_state", "verification_status", "actor_agent_id", "observed_at"],
+              "properties": {
+                "ref": {"type": "string", "minLength": 1},
+                "evidence_kind": {"enum": ["primary_doc", "runtime_receipt", "validation_run", "source_quote", "human_confirmed", "external_primary", "agent_inference"]},
+                "source_state": {"enum": ["current_primary", "current_snapshot", "secondary", "archived", "stale", "unknown"]},
+                "verification_status": {"enum": ["unverified", "source_checked", "reproduced", "independently_reviewed", "contradicted"]},
+                "actor_agent_id": {"type": "string", "minLength": 1},
+                "observed_at": {"type": "string"}
+              }
+            }
+          },
+          "research": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["confidence_tier", "source_state", "verification_status", "evidence_count", "submitted_at"],
+            "properties": {
+              "confidence_tier": {"enum": ["red", "yellow", "green"]},
+              "source_state": {"enum": ["current_primary", "current_snapshot", "secondary", "archived", "stale", "unknown"]},
+              "verification_status": {"enum": ["unverified", "source_checked", "reproduced", "independently_reviewed", "contradicted"]},
+              "evidence_count": {"type": "integer", "minimum": 0},
+              "submitted_at": {"type": ["string", "null"]}
+            }
+          },
+          "return_reason": {"type": ["string", "null"]},
+          "return_target_session_id": {"type": ["string", "null"]},
+          "return_count": {"type": "integer", "minimum": 0},
+          "review": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["status", "reviewer_session_id", "reviewer_agent_id", "evidence_refs", "reason", "reviewed_at"],
+            "properties": {
+              "status": {"enum": ["not_required", "pending", "approved", "rejected"]},
+              "reviewer_session_id": {"type": ["string", "null"]},
+              "reviewer_agent_id": {"type": ["string", "null"]},
+              "evidence_refs": {"type": "array", "items": {"type": "string"}},
+              "reason": {"type": ["string", "null"]},
+              "reviewed_at": {"type": ["string", "null"]}
+            }
+          },
+          "gate_state": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["schema_valid", "role_valid", "lease_valid", "evidence_present", "research_ready", "review_required", "review_status", "hard_gate_passed"],
+            "properties": {
+              "schema_valid": {"type": "boolean"},
+              "role_valid": {"type": "boolean"},
+              "lease_valid": {"type": "boolean"},
+              "evidence_present": {"type": "boolean"},
+              "research_ready": {"type": "boolean"},
+              "review_required": {"type": "boolean"},
+              "review_status": {"enum": ["not_required", "pending", "approved", "rejected"]},
+              "hard_gate_passed": {"type": "boolean"}
+            }
+          },
+          "created_at": {"type": "string"},
+          "updated_at": {"type": "string"}
+        }
+      }
+    }
+  }
+}

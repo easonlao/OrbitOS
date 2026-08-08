@@ -33,10 +33,10 @@ tags:
 
 1. 读取候选 handoff 的状态、目标、边界、已完成、未完成、风险、待确认和 `next_action`。
 2. 简要告诉用户：当前目标、已完成、仍待确认与接手后的第一步。
-3. 用户明确要求开始后，写入 `handoff_status: working`，并同步 BOARD 的状态、负责人和下一步。
+3. 用户明确要求开始后，先为 handoff 创建 `source_type=handoff` work item（若尚不存在），再使用 `.orbitos/scripts/handoff-control.py begin`。该命令会创建 governance session、写入 `handoff_status: working`、同步 BOARD 并 claim work item；不得拆开或手工模拟这些状态变更。
 4. 完成本轮后：
-   - 仍要另一位 Agent 继续时，写入 `returned`，把 `current_owner` 和 `next_action` 改为下一位 Agent；用户未指定下一位 Agent 时，默认交回 `return_owner` 验收。
-   - 协作合同已完成时，先更新项目 `STATUS.md`，再写为 `closed`、从 BOARD 移除并移入 `handoff/archive/`。
+   - 仍要另一位 Agent 继续时，写入 `returned`，把 `current_owner` 和 `next_action` 改为下一位 Agent，并把对应 work item 更新为 `waiting`；用户未指定下一位 Agent 时，默认交回 `return_owner` 验收。
+   - 协作合同已完成时，先更新项目 `STATUS.md`，再使用 `.orbitos/scripts/handoff-control.py close`；该命令归档到 `handoff/archive/`，完成 event 后将对应 work item 更新为 `done`。
 5. 按 Progress Sync 记录实际结果并通过 validation。
 
 ## 写入边界
