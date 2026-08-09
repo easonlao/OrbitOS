@@ -42,6 +42,8 @@ Startup Sync 默认只读取当前 agent 的轻量 profile；经验和历史问�
 ### 业务 Workflow
 
 - 收件箱处理：`inbox-triage.md` → `inbox-ingest.md` → `knowledge-draft.md`；知识冲突处理用 `knowledge-conflict.md`；审计用 `vault-audit.md`
+- 知识流转与调用：`knowledge-flow.md`；它统一默认分流、批量确认、知识调用、适用性判断和结果反馈回写，不新增可见知识目录。
+- 对话目的与混沌记录：用户说"先记下来""我还不清楚""把讨论目的留下"，或内容未定型时，先进入 `chaos-capture.md`；目的不明的记录落到 `01-收件箱/待铸卡/`，不强行分类或产出正式知识。
 - 粘贴内容整理：用户说“整理粘贴内容”或“处理粘贴内容”时，先进入 `clipboard-flush.md`；它先物化选中条目为独立收件箱原件，再进入普通收件箱流程。
 - 项目接入：`project-intake.md`；只有命中已有项目或完成新项目初始化后，才进入普通项目流
 - 动态人物模块初始化：人物模块为 `enabled_unconfigured` 或 `ready` 时进入 `.orbitos/modules/persona/workflows/persona-baseline.md`；校准、更新仅在 `ready` 时进入对应 workflow。只有用户明确启用后才运行
@@ -67,6 +69,8 @@ Startup Sync 默认只读取当前 agent 的轻量 profile；经验和历史问�
 ### 维护 Rule
 
 - 处理 `03-项目/{project}/`：`project-management.md`
+- 知识调用与反馈：`knowledge-use.md`
+- 知识提炼门槛：`knowledge-refinement.md`；从混沌记录或原始输入提炼知识草稿前先读它，不足时保留为待铸卡
 - Hindsight memory 与直连 API：Hindsight 模块为 `ready` 时读取 `.orbitos/modules/hindsight/rules/hindsight-memory.md`
 - 命名与 event：`naming.md`
 - 任务范围：`task-boundary.md`

@@ -1,0 +1,35 @@
+{
+  "id": "evt_20260809_120000_codex_knowledge_use",
+  "timestamp": "2026-08-09T12:00:00+08:00",
+  "actor": {
+    "type": "agent",
+    "name": "codex",
+    "agent_id": "codex",
+    "role": null,
+    "device": "desktop-win"
+  },
+  "event_type": "knowledge_use",
+  "project": "OrbitOS",
+  "summary": "记录一次知识调用及其适用性判断。",
+  "reason": "验证知识调用必须保留来源与反馈去向。",
+  "thinking_modes": [],
+  "inputs": [
+    {
+      "kind": "file",
+      "ref": "04-知识/MAP.md",
+      "note": "knowledge source used"
+    }
+  ],
+  "knowledge": {
+    "sources": ["04-知识/MAP.md"],
+    "fit": "applicable",
+    "outcome": "pending",
+    "feedback_route": "none",
+    "feedback_ref": null
+  },
+  "actions": [],
+  "outputs": [],
+  "files_changed": [],
+  "review_required": false,
+  "next_steps": []
+}

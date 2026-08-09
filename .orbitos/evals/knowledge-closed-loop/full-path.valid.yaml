@@ -1,0 +1,12 @@
+{
+  "scenario": "closed_loop",
+  "name": "full_path",
+  "description": "一条内容走完：讨论目的 -> 原始/混沌 -> 草稿 -> 调用/反馈 -> 归档/退出。",
+  "steps": [
+    {"step": "dialog_purpose", "purpose_status": "clear", "artifact": "01-收件箱/待铸卡/交易复盘讨论.md"},
+    {"step": "chaos_capture", "capture_kind": "chaos", "artifact": "01-收件箱/待铸卡/交易复盘讨论.md"},
+    {"step": "draft", "gates": "complete", "artifact": "04-知识/00-草稿箱/交易复盘模板.md"},
+    {"step": "knowledge_use", "sources": ["04-知识/00-草稿箱/交易复盘模板.md"], "fit": "applicable", "feedback_route": "knowledge_draft", "feedback_ref": "04-知识/00-草稿箱/交易复盘模板.md"},
+    {"step": "exit", "exit": "archive", "confirmed_by": "user"}
+  ]
+}

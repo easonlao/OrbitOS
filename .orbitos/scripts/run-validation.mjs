@@ -93,6 +93,210 @@ function validateLifecycle(value, errors) {
   if (!allowedPairs.has(pair)) addError(errors, "$.status", `illegal lifecycle transition: ${from || null} -> ${to}`);
 }
 
+function validateKnowledgeEvent(value, errors, pathText = "$") {
+  if (!value || typeof value !== "object" || value.event_type !== "knowledge_use") return;
+  const knowledge = value.knowledge;
+  if (!knowledge || typeof knowledge !== "object" || Array.isArray(knowledge)) {
+    addError(errors, `${pathText}.knowledge`, "knowledge_use requires a knowledge object");
+    return;
+  }
+  const sources = Array.isArray(knowledge.sources) ? knowledge.sources : [];
+  const inputRefs = (Array.isArray(value.inputs) ? value.inputs : [])
+    .filter((item) => item && item.kind === "file")
+    .map((item) => item.ref);
+  if (JSON.stringify(sources) !== JSON.stringify(inputRefs)) {
+    addError(errors, `${pathText}.knowledge.sources`, "knowledge sources must match file input refs in order");
+  }
+  if (knowledge.fit === "no_match" && sources.length > 0) {
+    addError(errors, `${pathText}.knowledge.sources`, "no_match knowledge_use must not list sources");
+  }
+  if (knowledge.fit !== "no_match" && sources.length === 0) {
+    addError(errors, `${pathText}.knowledge.sources`, "non-no_match knowledge_use requires 1-3 sources");
+  }
+  if (knowledge.feedback_route === "none" && knowledge.feedback_ref !== null && knowledge.feedback_ref !== undefined) {
+    addError(errors, `${pathText}.knowledge.feedback_ref`, "feedback route none must not have feedback_ref");
+  }
+  if (knowledge.feedback_route !== "none" && !knowledge.feedback_ref) {
+    addError(errors, `${pathText}.knowledge.feedback_ref`, "non-none feedback route requires feedback_ref");
+  }
+}
+
+const captureKindPattern = /^capture_kind:\s*([a-z_]+)\s*$/im;
+const purposeStatusPattern = /^purpose_status:\s*([a-z_]+)\s*$/im;
+const exitPattern = /^exit:\s*([a-z_]+)\s*$/im;
+const confirmedByPattern = /^confirmed_by:\s*(\S+)\s*$/m;
+const refinedToPattern = /^refined_to:\s*\S+\s*$/m;
+const replacedByPattern = /^replaced_by:\s*\S+\s*$/m;
+const irreversibleExits = new Set(["archive", "discard", "superseded"]);
+const chaosCaptureKinds = new Set(["chaos", "dialog_purpose", "mixed"]);
+
+function frontmatterValue(content, pattern) {
+  const match = content.match(pattern);
+  return match ? match[1].trim().toLowerCase() : null;
+}
+
+function frontmatterHas(content, pattern) {
+  return pattern.test(content);
+}
+
+function chaosPurposeErrors(fullPath) {
+  if (!fs.existsSync(fullPath) || !fs.statSync(fullPath).isFile()) return [];
+  const content = fs.readFileSync(fullPath, "utf8");
+  if (!chaosCaptureKinds.has(frontmatterValue(content, captureKindPattern))) return [];
+  const errors = [];
+  const purposeStatus = frontmatterValue(content, purposeStatusPattern);
+  const exitValue = frontmatterValue(content, exitPattern);
+  const rel = path.relative(root, fullPath);
+  if (purposeStatus === "unclear") {
+    if (["draft", "active"].includes(markdownLifecycle(fullPath))) {
+      addError(errors, rel, "purpose-unclear chaos record must not be promoted to knowledge draft or active knowledge");
+    }
+    if (frontmatterHas(content, refinedToPattern)) {
+      addError(errors, rel, "purpose-unclear chaos record must not be refined to a knowledge draft");
+    }
+  }
+  if (irreversibleExits.has(exitValue) && frontmatterValue(content, confirmedByPattern) !== "user") {
+    addError(errors, rel, `exit ${exitValue} requires confirmed_by user confirmation`);
+  }
+  if (exitValue === "draft" && !frontmatterHas(content, refinedToPattern)) {
+    addError(errors, rel, "exit draft requires refined_to target");
+  }
+  if (exitValue === "superseded" && !frontmatterHas(content, replacedByPattern)) {
+    addError(errors, rel, "exit superseded requires replaced_by target");
+  }
+  return errors;
+}
+
+const draftGateSections = ["核心结论", "事实与依据", "因果链", "适用条件与边界", "复用方式", "来源", "不确定性"];
+const draftGatePattern = /^##\s*(核心结论|事实与依据|因果链|适用条件与边界|复用方式|来源|不确定性)\s*$/gm;
+
+function knowledgeDraftGateErrors(fullPath) {
+  if (!fs.existsSync(fullPath) || !fs.statSync(fullPath).isFile()) return [];
+  const content = fs.readFileSync(fullPath, "utf8");
+  const presentClean = new Set();
+  for (const match of content.matchAll(draftGatePattern)) presentClean.add(match[1]);
+  const missing = draftGateSections.filter((section) => !presentClean.has(section));
+  if (missing.length > 0) {
+    return [{ path: path.relative(root, fullPath), message: `knowledge draft is missing refinement gates: ${missing.join(", ")}` }];
+  }
+  return [];
+}
+
+function chaosFlowErrors() {
+  const errors = [];
+  const requiredTerms = new Map([
+    [".orbitos/workflows/chaos-capture.md", ["混沌记录", "讨论目的", "用户原话", "未定型思考", "purpose_status", "待铸卡", "退出", "knowledge-refinement.md"]],
+    [".orbitos/rules/core/knowledge-refinement.md", ["核心判断", "事实", "因果链", "适用条件", "复用方式", "来源", "不确定性"]],
+    [".orbitos/workflows/knowledge-flow.md", ["退出", "混沌", "待铸卡"]],
+    [".orbitos/workflows/inbox-triage.md", ["chaos_candidate", "待铸卡"]],
+    [".orbitos/rules/core/knowledge-use.md", ["chaos_record"]],
+    ["AGENTS.md", ["chaos-capture.md", "knowledge-refinement.md"]],
+    ["00-系统/02-日常协作.md", ["混沌", "待铸卡"]],
+    ["00-系统/03-内容生命周期.md", ["混沌记录", "退出"]],
+  ]);
+  for (const [relativePath, terms] of requiredTerms) {
+    const fullPath = path.join(root, relativePath);
+    if (!fs.existsSync(fullPath)) {
+      addError(errors, relativePath, "chaos flow asset is missing");
+      continue;
+    }
+    const content = fs.readFileSync(fullPath, "utf8");
+    for (const term of terms) {
+      if (!content.includes(term)) addError(errors, relativePath, `chaos flow asset is missing required term: ${term}`);
+    }
+  }
+  if (!fs.existsSync(path.join(root, ".orbitos/templates/01-收件箱/待铸卡/00-混沌记录模板.md"))) {
+    addError(errors, ".orbitos/templates/01-收件箱/待铸卡/00-混沌记录模板.md", "chaos record template is missing");
+  }
+  if (fs.existsSync(path.join(root, "01-收件箱")) && !fs.existsSync(path.join(root, "01-收件箱/待铸卡"))) {
+    addError(errors, "01-收件箱/待铸卡", "pending-card zone is missing from the inbox");
+  }
+  return errors;
+}
+
+const closedLoopSteps = new Set(["dialog_purpose", "chaos_capture", "draft", "knowledge_use", "exit"]);
+const knowledgeFitValues = new Set(["applicable", "partially_applicable", "not_applicable", "no_match"]);
+const feedbackRouteValues = new Set(["none", "experience", "project_lesson", "knowledge_draft", "knowledge_conflict", "chaos_record"]);
+const exitValues = new Set(["keep_raw", "pending_card", "draft", "archive", "discard", "superseded"]);
+
+function closedLoopScenarioErrors(data) {
+  const errors = [];
+  if (!data || typeof data !== "object" || data.scenario !== "closed_loop") {
+    addError(errors, "$", "closed-loop scenario requires scenario=closed_loop");
+    return errors;
+  }
+  const steps = data.steps;
+  if (!Array.isArray(steps) || steps.length === 0) {
+    addError(errors, "$.steps", "closed-loop scenario requires a non-empty steps list");
+    return errors;
+  }
+  const order = [];
+  for (const [index, step] of steps.entries()) {
+    if (!step || typeof step !== "object") {
+      addError(errors, `$.steps[${index}]`, "step must be an object");
+      order.push(null);
+      continue;
+    }
+    const stepName = step.step;
+    order.push(stepName);
+    if (!closedLoopSteps.has(stepName)) addError(errors, `$.steps[${index}].step`, `unknown closed-loop step: ${stepName}`);
+  }
+  const indexMap = {};
+  order.forEach((stepName, index) => { if (!(stepName in indexMap)) indexMap[stepName] = index; });
+  if ("dialog_purpose" in indexMap && "draft" in indexMap && indexMap.dialog_purpose > indexMap.draft) {
+    addError(errors, "$.steps", "dialog_purpose must precede draft");
+  }
+  if ("chaos_capture" in indexMap && "draft" in indexMap && indexMap.chaos_capture > indexMap.draft) {
+    addError(errors, "$.steps", "chaos_capture must precede draft");
+  }
+  if ("draft" in indexMap && "knowledge_use" in indexMap && indexMap.draft > indexMap.knowledge_use) {
+    addError(errors, "$.steps", "draft must precede knowledge_use");
+  }
+  if ("exit" in indexMap && indexMap.exit !== order.length - 1) {
+    addError(errors, "$.steps", "exit must be the final step");
+  }
+  for (const [index, step] of steps.entries()) {
+    if (!step || typeof step !== "object") continue;
+    const stepName = step.step;
+    if (stepName === "dialog_purpose") {
+      if (!["clear", "unclear", "pending"].includes(step.purpose_status)) {
+        addError(errors, `$.steps[${index}].purpose_status`, "invalid purpose_status");
+      }
+    } else if (stepName === "draft") {
+      if (!["complete", "incomplete"].includes(step.gates)) {
+        addError(errors, `$.steps[${index}].gates`, "draft gates must be complete or incomplete");
+      }
+      if (step.gates === "complete") {
+        const dialog = steps.find((item) => item && typeof item === "object" && item.step === "dialog_purpose");
+        if (dialog && dialog.purpose_status === "unclear") {
+          addError(errors, `$.steps[${index}]`, "purpose-unclear content must not be forced into a knowledge draft");
+        }
+      }
+    } else if (stepName === "knowledge_use") {
+      if (!Array.isArray(step.sources)) {
+        addError(errors, `$.steps[${index}].sources`, "knowledge_use requires sources");
+      } else if (step.fit === "no_match") {
+        if (step.sources.length > 0) {
+          addError(errors, `$.steps[${index}].sources`, "no_match knowledge_use must not list sources");
+        }
+      } else if (step.sources.length === 0) {
+        addError(errors, `$.steps[${index}].sources`, "non-no_match knowledge_use requires 1-3 sources");
+      }
+      if (!knowledgeFitValues.has(step.fit)) addError(errors, `$.steps[${index}].fit`, "invalid knowledge fit");
+      if (!feedbackRouteValues.has(step.feedback_route)) addError(errors, `$.steps[${index}].feedback_route`, "invalid feedback route");
+      if (step.feedback_route !== "none" && !step.feedback_ref) {
+        addError(errors, `$.steps[${index}].feedback_ref`, "non-none feedback route requires feedback_ref");
+      }
+    } else if (stepName === "exit") {
+      if (!exitValues.has(step.exit)) addError(errors, `$.steps[${index}].exit`, "invalid exit");
+      if (irreversibleExits.has(step.exit) && step.confirmed_by !== "user") {
+        addError(errors, `$.steps[${index}].confirmed_by`, "irreversible exit requires confirmed_by user");
+      }
+    }
+  }
+  return errors;
+}
+
 function markdownInternalWikilinkErrors(fullPath) {
   const content = fs.readFileSync(fullPath, "utf8");
   const pattern = /\[\[[^\]]*(?:^|\/|\\|\.\.)\.orbitos(?:\/|\\)[^\]]*\]\]/g;
@@ -133,6 +337,54 @@ const forbiddenStatements = [
   [/Active knowledge\s*(?:可以|可)\s*直接(?:进行)?语义修改/i, "active knowledge must return to draft before semantic changes"],
 ];
 const docConsistencyExcludePatterns = ["00-系统/agents/*.md", "AGENTS.md"];
+
+function knowledgeFlowErrors() {
+  const errors = [];
+  const requiredTerms = new Map([
+    [".orbitos/workflows/knowledge-flow.md", ["默认分流", "批量确认", "1—3", "适用性", "knowledge_use", "反馈"]],
+    [".orbitos/rules/core/knowledge-use.md", ["已有知识", "当前事实", "本次推断", "适用性检查", "不自动升级"]],
+    [".orbitos/workflows/inbox-triage.md", ["确认批次", "默认分流优先级", "MAP 同步"]],
+    [".orbitos/workflows/inbox-ingest.md", ["批次清单", "不对同一批次内的每个文件重复询问"]],
+    [".orbitos/workflows/knowledge-draft.md", ["不重复询问同一授权"]],
+    ["AGENTS.md", ["知识流转与调用", "knowledge-use.md"]],
+    ["00-系统/02-日常协作.md", ["已有依据", "当前事实", "本次推断"]],
+    ["00-系统/03-内容生命周期.md", ["默认分流", "批量确认", "使用反馈回写", "适用"]],
+  ]);
+  for (const [relativePath, terms] of requiredTerms) {
+    const fullPath = path.join(root, relativePath);
+    if (!fs.existsSync(fullPath)) {
+      addError(errors, relativePath, "knowledge flow asset is missing");
+      continue;
+    }
+    const content = fs.readFileSync(fullPath, "utf8");
+    for (const term of terms) {
+      if (!content.includes(term)) addError(errors, relativePath, `knowledge flow asset is missing required term: ${term}`);
+    }
+  }
+  const knowledgeRoot = path.join(root, "04-知识");
+  const mapPath = path.join(knowledgeRoot, "MAP.md");
+  if (fs.existsSync(knowledgeRoot) && !fs.existsSync(mapPath)) {
+    addError(errors, "04-知识/MAP.md", "knowledge directory requires a MAP.md index");
+  }
+  if (fs.existsSync(knowledgeRoot) && fs.existsSync(mapPath)) {
+    const mapText = fs.readFileSync(mapPath, "utf8");
+    const mapped = new Set();
+    for (const match of mapText.matchAll(wikilinkPattern)) {
+      let target = match[1].replaceAll("\\", "/");
+      if (target.startsWith("04-知识/")) target = target.slice("04-知识/".length);
+      if (!target.endsWith(".md")) target += ".md";
+      mapped.add(target);
+      const targetPath = path.join(knowledgeRoot, target);
+      if (!fs.existsSync(targetPath) || !fs.statSync(targetPath).isFile()) addError(errors, `04-知识/MAP.md:${target}`, "MAP target does not exist");
+    }
+    for (const filePath of walkMarkdown(knowledgeRoot)) {
+      if (path.resolve(filePath) === path.resolve(mapPath) || markdownLifecycle(filePath) !== "active") continue;
+      const relative = path.relative(knowledgeRoot, filePath).replaceAll("\\", "/");
+      if (!mapped.has(relative)) addError(errors, `04-知识/${relative}`, "knowledge file is missing from MAP.md");
+    }
+  }
+  return errors;
+}
 
 function isDocConsistencyExcluded(filePath) {
   const rel = path.relative(root, filePath).replace(/\\/g, "/");
@@ -262,6 +514,7 @@ const schemas = {
   "work-items": readJsonLike(".orbitos/schemas/work-items.schema.yaml"),
   "role-catalog": readJsonLike(".orbitos/schemas/role-catalog.schema.yaml"),
   "collaboration-sessions": readJsonLike(".orbitos/schemas/collaboration-sessions.schema.yaml"),
+  "chaos-record": readJsonLike(".orbitos/schemas/chaos-record.schema.yaml"),
 };
 
 let failureCount = 0;
@@ -282,6 +535,7 @@ function schemaNameForCase(name) {
   if (name.startsWith("lifecycle.")) return "lifecycle";
   if (name.startsWith("maintenance-state.")) return "maintenance-state";
   if (name.startsWith("work-items.")) return "work-items";
+  if (name.startsWith("chaos-record.")) return "chaos-record";
   throw new Error(`Cannot infer schema for case: ${name}`);
 }
 
@@ -293,6 +547,7 @@ for (const name of fs.readdirSync(caseRoot).filter((item) => item.endsWith(".yam
   const errors = [];
   validateValue(data, schemas[schemaName], "$", errors);
   if (schemaName === "lifecycle") validateLifecycle(data, errors);
+  if (schemaName === "event") validateKnowledgeEvent(data, errors);
   printCase(name, name.includes(".valid."), errors);
 }
 
@@ -314,6 +569,42 @@ const knowledgeSourceCaseRoot = path.join(root, ".orbitos/evals/knowledge-source
 for (const name of fs.readdirSync(knowledgeSourceCaseRoot).filter((item) => item.endsWith(".md")).sort()) {
   caseCount += 1;
   const errors = knowledgeSourceErrors(path.join(knowledgeSourceCaseRoot, name));
+  printCase(name, name.includes(".valid."), errors);
+}
+
+const chaosRecordCaseRoot = path.join(root, ".orbitos/evals/chaos-record");
+for (const name of fs.readdirSync(chaosRecordCaseRoot).filter((item) => item.endsWith(".yaml")).sort()) {
+  caseCount += 1;
+  const errors = [];
+  validateValue(readJsonLike(`.orbitos/evals/chaos-record/${name}`), schemas["chaos-record"], "$", errors);
+  printCase(name, name.includes(".valid."), errors);
+}
+
+const chaosPurposeCaseRoot = path.join(root, ".orbitos/evals/chaos-purpose");
+for (const name of fs.readdirSync(chaosPurposeCaseRoot).filter((item) => item.endsWith(".md")).sort()) {
+  caseCount += 1;
+  const errors = chaosPurposeErrors(path.join(chaosPurposeCaseRoot, name));
+  printCase(name, name.includes(".valid."), errors);
+}
+
+const knowledgeExitCaseRoot = path.join(root, ".orbitos/evals/knowledge-exit");
+for (const name of fs.readdirSync(knowledgeExitCaseRoot).filter((item) => item.endsWith(".md")).sort()) {
+  caseCount += 1;
+  const errors = chaosPurposeErrors(path.join(knowledgeExitCaseRoot, name));
+  printCase(name, name.includes(".valid."), errors);
+}
+
+const knowledgeGateCaseRoot = path.join(root, ".orbitos/evals/knowledge-draft-gates");
+for (const name of fs.readdirSync(knowledgeGateCaseRoot).filter((item) => item.endsWith(".md")).sort()) {
+  caseCount += 1;
+  const errors = knowledgeDraftGateErrors(path.join(knowledgeGateCaseRoot, name));
+  printCase(name, name.includes(".valid."), errors);
+}
+
+const knowledgeClosedLoopCaseRoot = path.join(root, ".orbitos/evals/knowledge-closed-loop");
+for (const name of fs.readdirSync(knowledgeClosedLoopCaseRoot).filter((item) => item.endsWith(".yaml")).sort()) {
+  caseCount += 1;
+  const errors = closedLoopScenarioErrors(readJsonLike(`.orbitos/evals/knowledge-closed-loop/${name}`));
   printCase(name, name.includes(".valid."), errors);
 }
 
@@ -463,6 +754,7 @@ if (fs.existsSync(eventsRoot)) {
     try {
       const eventData = JSON.parse(content);
       validateValue(eventData, schemas.event, `$[${name}]`, eventRecordErrors);
+      validateKnowledgeEvent(eventData, eventRecordErrors, `$[${name}]`);
       const thinking = eventData.thinking;
       if (thinking && typeof thinking === "object") {
         const modes = Array.isArray(thinking.modes) ? thinking.modes : [];
@@ -478,6 +770,23 @@ if (fs.existsSync(eventsRoot)) {
   }
 }
 printCase("actual.event-records", true, eventRecordErrors);
+
+caseCount += 1;
+printCase("actual.knowledge-flow", true, knowledgeFlowErrors());
+
+caseCount += 1;
+const chaosPurposeActualErrors = [];
+const chaosPendingDir = path.join(root, "01-收件箱/待铸卡");
+if (fs.existsSync(chaosPendingDir)) {
+  for (const name of fs.readdirSync(chaosPendingDir).filter((item) => item.endsWith(".md"))) {
+    if (name.includes("模板")) continue;
+    for (const error of chaosPurposeErrors(path.join(chaosPendingDir, name))) addError(chaosPurposeActualErrors, error.path, error.message);
+  }
+}
+printCase("actual.chaos-records", true, chaosPurposeActualErrors);
+
+caseCount += 1;
+printCase("actual.chaos-flow", true, chaosFlowErrors());
 
 caseCount += 1;
 const systemManualErrors = [];

@@ -21,6 +21,9 @@ THINKING_MODES = {
 }
 OUTPUT_KINDS = {"event", "markdown", "project_file", "artifact", "review_item", "knowledge_candidate", "schema", "workflow", "eval", "script", "other"}
 OUTPUT_STATUSES = {"created", "updated", "unchanged", "skipped", "failed"}
+KNOWLEDGE_FITS = {"applicable", "partially_applicable", "not_applicable", "no_match"}
+KNOWLEDGE_OUTCOMES = {"pending", "validated", "rejected", "needs_revision"}
+KNOWLEDGE_FEEDBACK_ROUTES = {"none", "experience", "project_lesson", "knowledge_draft", "knowledge_conflict", "chaos_record"}
 
 
 def parse_file_change(value):
@@ -95,6 +98,11 @@ def build_event(args, now):
     elif args.thinking_bypassed:
         thinking = {"outcome": "bypassed", "modes": []}
 
+    inputs = [
+        {"kind": "file", "ref": source, "note": "knowledge source used"}
+        for source in args.knowledge_source
+    ]
+
     event = {
         "id": f"evt_{compact_time}_{args.agent_id}_{args.slug}",
         "timestamp": timestamp,
@@ -110,7 +118,7 @@ def build_event(args, now):
         "summary": args.summary,
         "reason": args.reason,
         "thinking_modes": [item["mode"] for item in args.thinking_mode],
-        "inputs": [],
+        "inputs": inputs,
         "actions": [
             {
                 "action": "complete_task",
@@ -133,6 +141,14 @@ def build_event(args, now):
         "related_events": [],
         "confidence": "high",
     }
+    if args.event_type == "knowledge_use":
+        event["knowledge"] = {
+            "sources": args.knowledge_source,
+            "fit": args.knowledge_fit,
+            "outcome": args.knowledge_outcome,
+            "feedback_route": args.knowledge_feedback_route,
+            "feedback_ref": args.knowledge_feedback_ref,
+        }
     if thinking:
         event["thinking"] = thinking
     if args.collaboration_session:
@@ -168,6 +184,7 @@ def build_parser():
             "project_update",
             "system_change",
             "inbox_triage",
+            "knowledge_use",
             "validation_failed",
         ],
     )
@@ -181,6 +198,11 @@ def build_parser():
     parser.add_argument("--review-item", action="append", default=[])
     parser.add_argument("--hindsight-recall", action="append", default=[])
     parser.add_argument("--hindsight-retain", action="append", default=[])
+    parser.add_argument("--knowledge-source", action="append", default=[])
+    parser.add_argument("--knowledge-fit", choices=sorted(KNOWLEDGE_FITS))
+    parser.add_argument("--knowledge-outcome", choices=sorted(KNOWLEDGE_OUTCOMES))
+    parser.add_argument("--knowledge-feedback-route", choices=sorted(KNOWLEDGE_FEEDBACK_ROUTES))
+    parser.add_argument("--knowledge-feedback-ref")
     parser.add_argument("--user-content-changed", action="store_true")
     thinking_group = parser.add_mutually_exclusive_group()
     thinking_group.add_argument("--thinking-mode", action="append", default=[], type=parse_thinking_mode)
@@ -207,6 +229,28 @@ def main():
         parser.error("--collaboration-session requires at least one --output")
     if args.review_status == "approved" and (not args.reviewer_session or not args.reviewer_agent):
         parser.error("approved review status requires reviewer session and agent")
+    knowledge_args_used = bool(
+        args.knowledge_source
+        or args.knowledge_fit
+        or args.knowledge_outcome
+        or args.knowledge_feedback_route
+        or args.knowledge_feedback_ref
+    )
+    if args.event_type == "knowledge_use":
+        if args.knowledge_fit is None or args.knowledge_outcome is None or args.knowledge_feedback_route is None:
+            parser.error("knowledge_use requires --knowledge-fit, --knowledge-outcome, and --knowledge-feedback-route")
+        if len(args.knowledge_source) > 3:
+            parser.error("knowledge_use accepts at most three --knowledge-source values")
+        if args.knowledge_fit == "no_match" and args.knowledge_source:
+            parser.error("no_match knowledge_use must not list knowledge sources")
+        if args.knowledge_fit != "no_match" and not args.knowledge_source:
+            parser.error("non-no_match knowledge_use requires 1-3 --knowledge-source values")
+        if args.knowledge_feedback_route == "none" and args.knowledge_feedback_ref:
+            parser.error("feedback route none must not have --knowledge-feedback-ref")
+        if args.knowledge_feedback_route != "none" and not args.knowledge_feedback_ref:
+            parser.error("non-none feedback route requires --knowledge-feedback-ref")
+    elif knowledge_args_used:
+        parser.error("knowledge arguments are only valid with --event-type knowledge_use")
 
     now = datetime.now().astimezone()
     event = build_event(args, now)

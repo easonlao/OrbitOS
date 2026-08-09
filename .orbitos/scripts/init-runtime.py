@@ -122,6 +122,21 @@ def main():
         )
     )
 
+    pending_dir = ROOT / "01-收件箱/待铸卡"
+    pending_dir.mkdir(parents=True, exist_ok=True)
+    pending_gitkeep = pending_dir / ".gitkeep"
+    if not pending_gitkeep.exists():
+        pending_gitkeep.write_text("", encoding="utf-8", newline="\n")
+        results.append(("created", "01-收件箱/待铸卡/.gitkeep"))
+    else:
+        results.append(("exists", "01-收件箱/待铸卡/.gitkeep"))
+    results.append(
+        write_if_missing(
+            "01-收件箱/待铸卡/00-混沌记录模板.md",
+            read_template("01-收件箱/待铸卡/00-混沌记录模板.md"),
+        )
+    )
+
     results.append(
         write_if_missing(
             "02-时间线/今日.md",

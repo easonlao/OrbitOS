@@ -91,6 +91,7 @@
       ],
       "enum": [
         "knowledge_candidate",
+        "chaos_candidate",
         "project_material",
         "resource_material",
         "output_candidate",

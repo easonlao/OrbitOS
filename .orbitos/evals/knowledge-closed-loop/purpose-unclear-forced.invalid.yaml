@@ -1,0 +1,10 @@
+{
+  "scenario": "closed_loop",
+  "name": "purpose_unclear_forced_to_draft",
+  "description": "目的不明的内容被强行转成完整草稿，必须失败。",
+  "steps": [
+    {"step": "dialog_purpose", "purpose_status": "unclear", "artifact": "01-收件箱/待铸卡/不明目的讨论.md"},
+    {"step": "chaos_capture", "capture_kind": "chaos", "artifact": "01-收件箱/待铸卡/不明目的讨论.md"},
+    {"step": "draft", "gates": "complete", "artifact": "04-知识/00-草稿箱/被强行转写的草稿.md"}
+  ]
+}

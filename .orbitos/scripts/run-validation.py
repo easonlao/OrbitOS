@@ -118,6 +118,81 @@ def validate_lifecycle(value, errors):
         add_error(errors, "$.status", f"illegal lifecycle transition: {from_status or None} -> {to_status}")
 
 
+def validate_knowledge_event(value, errors, path_text="$" ):
+    if not isinstance(value, dict) or value.get("event_type") != "knowledge_use":
+        return
+    knowledge = value.get("knowledge")
+    if not isinstance(knowledge, dict):
+        add_error(errors, f"{path_text}.knowledge", "knowledge_use requires a knowledge object")
+        return
+    sources = knowledge.get("sources", [])
+    input_refs = [
+        item.get("ref")
+        for item in value.get("inputs", [])
+        if isinstance(item, dict) and item.get("kind") == "file"
+    ]
+    if sources != input_refs:
+        add_error(errors, f"{path_text}.knowledge.sources", "knowledge sources must match file input refs in order")
+    if knowledge.get("fit") == "no_match" and sources:
+        add_error(errors, f"{path_text}.knowledge.sources", "no_match knowledge_use must not list sources")
+    if knowledge.get("fit") != "no_match" and not sources:
+        add_error(errors, f"{path_text}.knowledge.sources", "non-no_match knowledge_use requires 1-3 sources")
+    route = knowledge.get("feedback_route")
+    feedback_ref = knowledge.get("feedback_ref")
+    if route == "none" and feedback_ref is not None:
+        add_error(errors, f"{path_text}.knowledge.feedback_ref", "feedback route none must not have feedback_ref")
+    if route != "none" and not feedback_ref:
+        add_error(errors, f"{path_text}.knowledge.feedback_ref", "non-none feedback route requires feedback_ref")
+
+
+def knowledge_flow_errors():
+    errors = []
+    required_terms = {
+        ".orbitos/workflows/knowledge-flow.md": ["默认分流", "批量确认", "1—3", "适用性", "knowledge_use", "反馈"],
+        ".orbitos/rules/core/knowledge-use.md": ["已有知识", "当前事实", "本次推断", "适用性检查", "不自动升级"],
+        ".orbitos/workflows/inbox-triage.md": ["确认批次", "默认分流优先级", "MAP 同步"],
+        ".orbitos/workflows/inbox-ingest.md": ["批次清单", "不对同一批次内的每个文件重复询问"],
+        ".orbitos/workflows/knowledge-draft.md": ["不重复询问同一授权"],
+        "AGENTS.md": ["知识流转与调用", "knowledge-use.md"],
+        "00-系统/02-日常协作.md": ["已有依据", "当前事实", "本次推断"],
+        "00-系统/03-内容生命周期.md": ["默认分流", "批量确认", "使用反馈回写", "适用"],
+    }
+    for relative_path, terms in required_terms.items():
+        full_path = ROOT / relative_path
+        if not full_path.is_file():
+            add_error(errors, relative_path, "knowledge flow asset is missing")
+            continue
+        content = full_path.read_text(encoding="utf-8")
+        for term in terms:
+            if term not in content:
+                add_error(errors, relative_path, f"knowledge flow asset is missing required term: {term}")
+
+    knowledge_root = ROOT / "04-知识"
+    map_path = knowledge_root / "MAP.md"
+    if knowledge_root.is_dir() and not map_path.is_file():
+        add_error(errors, "04-知识/MAP.md", "knowledge directory requires a MAP.md index")
+    if knowledge_root.is_dir() and map_path.is_file():
+        map_text = map_path.read_text(encoding="utf-8")
+        mapped = set()
+        for match in WIKILINK_TARGET_PATTERN.finditer(map_text):
+            target = match.group(1).replace("\\", "/")
+            if target.startswith("04-知识/"):
+                target = target[len("04-知识/"):]
+            if not target.endswith(".md"):
+                target += ".md"
+            mapped.add(target)
+            target_path = knowledge_root / target
+            if not target_path.is_file():
+                add_error(errors, f"04-知识/MAP.md:{target}", "MAP target does not exist")
+        for file_path in sorted(knowledge_root.rglob("*.md")):
+            if file_path == map_path or markdown_lifecycle(file_path) != "active":
+                continue
+            relative = file_path.relative_to(knowledge_root).as_posix()
+            if relative not in mapped:
+                add_error(errors, f"04-知识/{relative}", "knowledge file is missing from MAP.md")
+    return errors
+
+
 INTERNAL_WIKILINK_PATTERN = re.compile(r"\[\[[^\]]*(?:^|/|\\|\.\.)\.orbitos(?:/|\\)[^\]]*\]\]")
 WIKILINK_TARGET_PATTERN = re.compile(r"\[\[([^\]|#]+?)(?:#[^\]|]*)?(?:\|[^\]]+)?\]\]")
 SOURCE_HEADING_PATTERN = re.compile(r"^##\s*(?:来源|Source)\s*$", re.IGNORECASE)
@@ -306,6 +381,176 @@ def omitted_conflict_errors(knowledge_files):
                 str(target.relative_to(ROOT)),
                 "same source is referenced by multiple active knowledge files; possible omitted conflict",
             )
+    return errors
+
+
+CAPTURE_KIND_PATTERN = re.compile(r"^capture_kind:\s*([a-z_]+)\s*$", re.IGNORECASE | re.MULTILINE)
+PURPOSE_STATUS_PATTERN = re.compile(r"^purpose_status:\s*([a-z_]+)\s*$", re.IGNORECASE | re.MULTILINE)
+EXIT_PATTERN = re.compile(r"^exit:\s*([a-z_]+)\s*$", re.IGNORECASE | re.MULTILINE)
+CONFIRMED_BY_PATTERN = re.compile(r"^confirmed_by:\s*(\S+)\s*$", re.MULTILINE)
+REFINED_TO_PATTERN = re.compile(r"^refined_to:\s*\S+\s*$", re.MULTILINE)
+REPLACED_BY_PATTERN = re.compile(r"^replaced_by:\s*\S+\s*$", re.MULTILINE)
+IRREVERSIBLE_EXITS = {"archive", "discard", "superseded"}
+CHAOS_CAPTURE_KINDS = {"chaos", "dialog_purpose", "mixed"}
+
+
+def frontmatter_value(content, pattern):
+    match = pattern.search(content)
+    return match.group(1).strip().lower() if match else None
+
+
+def frontmatter_has(content, pattern):
+    return pattern.search(content) is not None
+
+
+def chaos_purpose_errors(full_path):
+    if not full_path.is_file():
+        return []
+    content = full_path.read_text(encoding="utf-8")
+    if frontmatter_value(content, CAPTURE_KIND_PATTERN) not in CHAOS_CAPTURE_KINDS:
+        return []
+    errors = []
+    purpose_status = frontmatter_value(content, PURPOSE_STATUS_PATTERN)
+    exit_value = frontmatter_value(content, EXIT_PATTERN)
+    rel = full_path.relative_to(ROOT)
+    if purpose_status == "unclear":
+        if markdown_lifecycle(full_path) in {"draft", "active"}:
+            add_error(errors, str(rel), "purpose-unclear chaos record must not be promoted to knowledge draft or active knowledge")
+        if frontmatter_has(content, REFINED_TO_PATTERN):
+            add_error(errors, str(rel), "purpose-unclear chaos record must not be refined to a knowledge draft")
+    if exit_value in IRREVERSIBLE_EXITS and frontmatter_value(content, CONFIRMED_BY_PATTERN) != "user":
+        add_error(errors, str(rel), f"exit {exit_value} requires confirmed_by user confirmation")
+    if exit_value == "draft" and not frontmatter_has(content, REFINED_TO_PATTERN):
+        add_error(errors, str(rel), "exit draft requires refined_to target")
+    if exit_value == "superseded" and not frontmatter_has(content, REPLACED_BY_PATTERN):
+        add_error(errors, str(rel), "exit superseded requires replaced_by target")
+    return errors
+
+
+DRAFT_GATE_SECTIONS = ["核心结论", "事实与依据", "因果链", "适用条件与边界", "复用方式", "来源", "不确定性"]
+DRAFT_GATE_PATTERN = re.compile(r"^##\s*(核心结论|事实与依据|因果链|适用条件与边界|复用方式|来源|不确定性)\s*$", re.MULTILINE)
+
+
+def knowledge_draft_gate_errors(full_path):
+    if not full_path.is_file():
+        return []
+    content = full_path.read_text(encoding="utf-8")
+    errors = []
+    present = set(DRAFT_GATE_PATTERN.findall(content))
+    missing = [section for section in DRAFT_GATE_SECTIONS if section not in present]
+    if missing:
+        add_error(
+            errors,
+            str(full_path.relative_to(ROOT)),
+            "knowledge draft is missing refinement gates: " + ", ".join(missing),
+        )
+    return errors
+
+
+def chaos_flow_errors():
+    errors = []
+    required_terms = {
+        ".orbitos/workflows/chaos-capture.md": ["混沌记录", "讨论目的", "用户原话", "未定型思考", "purpose_status", "待铸卡", "退出", "knowledge-refinement.md"],
+        ".orbitos/rules/core/knowledge-refinement.md": ["核心判断", "事实", "因果链", "适用条件", "复用方式", "来源", "不确定性"],
+        ".orbitos/workflows/knowledge-flow.md": ["退出", "混沌", "待铸卡"],
+        ".orbitos/workflows/inbox-triage.md": ["chaos_candidate", "待铸卡"],
+        ".orbitos/rules/core/knowledge-use.md": ["chaos_record"],
+        "AGENTS.md": ["chaos-capture.md", "knowledge-refinement.md"],
+        "00-系统/02-日常协作.md": ["混沌", "待铸卡"],
+        "00-系统/03-内容生命周期.md": ["混沌记录", "退出"],
+    }
+    for relative_path, terms in required_terms.items():
+        full_path = ROOT / relative_path
+        if not full_path.is_file():
+            add_error(errors, relative_path, "chaos flow asset is missing")
+            continue
+        content = full_path.read_text(encoding="utf-8")
+        for term in terms:
+            if term not in content:
+                add_error(errors, relative_path, f"chaos flow asset is missing required term: {term}")
+    template = ROOT / ".orbitos/templates/01-收件箱/待铸卡/00-混沌记录模板.md"
+    if not template.is_file():
+        add_error(errors, ".orbitos/templates/01-收件箱/待铸卡/00-混沌记录模板.md", "chaos record template is missing")
+    if (ROOT / "01-收件箱").is_dir() and not (ROOT / "01-收件箱/待铸卡").is_dir():
+        add_error(errors, "01-收件箱/待铸卡", "pending-card zone is missing from the inbox")
+    return errors
+
+
+CLOSED_LOOP_STEPS = {"dialog_purpose", "chaos_capture", "draft", "knowledge_use", "exit"}
+KNOWLEDGE_FIT_VALUES = {"applicable", "partially_applicable", "not_applicable", "no_match"}
+FEEDBACK_ROUTE_VALUES = {"none", "experience", "project_lesson", "knowledge_draft", "knowledge_conflict", "chaos_record"}
+EXIT_VALUES = {"keep_raw", "pending_card", "draft", "archive", "discard", "superseded"}
+
+
+def closed_loop_scenario_errors(data, name):
+    errors = []
+    if not isinstance(data, dict) or data.get("scenario") != "closed_loop":
+        add_error(errors, "$", "closed-loop scenario requires scenario=closed_loop")
+        return errors
+    steps = data.get("steps")
+    if not isinstance(steps, list) or not steps:
+        add_error(errors, "$.steps", "closed-loop scenario requires a non-empty steps list")
+        return errors
+    order = []
+    for index, step in enumerate(steps):
+        if not isinstance(step, dict):
+            add_error(errors, f"$.steps[{index}]", "step must be an object")
+            order.append(None)
+            continue
+        step_name = step.get("step")
+        order.append(step_name)
+        if step_name not in CLOSED_LOOP_STEPS:
+            add_error(errors, f"$.steps[{index}].step", f"unknown closed-loop step: {step_name}")
+    index_map = {}
+    for index, step_name in enumerate(order):
+        index_map.setdefault(step_name, index)
+    if "dialog_purpose" in index_map and "draft" in index_map and index_map["dialog_purpose"] > index_map["draft"]:
+        add_error(errors, "$.steps", "dialog_purpose must precede draft")
+    if "chaos_capture" in index_map and "draft" in index_map and index_map["chaos_capture"] > index_map["draft"]:
+        add_error(errors, "$.steps", "chaos_capture must precede draft")
+    if "draft" in index_map and "knowledge_use" in index_map and index_map["draft"] > index_map["knowledge_use"]:
+        add_error(errors, "$.steps", "draft must precede knowledge_use")
+    if "exit" in index_map and index_map["exit"] != len(order) - 1:
+        add_error(errors, "$.steps", "exit must be the final step")
+    for index, step in enumerate(steps):
+        if not isinstance(step, dict):
+            continue
+        step_name = step.get("step")
+        if step_name == "dialog_purpose":
+            if step.get("purpose_status") not in {"clear", "unclear", "pending"}:
+                add_error(errors, f"$.steps[{index}].purpose_status", "invalid purpose_status")
+        elif step_name == "draft":
+            gates = step.get("gates")
+            if gates not in {"complete", "incomplete"}:
+                add_error(errors, f"$.steps[{index}].gates", "draft gates must be complete or incomplete")
+            if gates == "complete":
+                dialog = next((s for s in steps if isinstance(s, dict) and s.get("step") == "dialog_purpose"), None)
+                if isinstance(dialog, dict) and dialog.get("purpose_status") == "unclear":
+                    add_error(errors, f"$.steps[{index}]", "purpose-unclear content must not be forced into a knowledge draft")
+        elif step_name == "knowledge_use":
+            sources = step.get("sources")
+            fit = step.get("fit")
+            route = step.get("feedback_route")
+            ref = step.get("feedback_ref")
+            if not isinstance(sources, list):
+                add_error(errors, f"$.steps[{index}].sources", "knowledge_use requires sources")
+            elif fit == "no_match":
+                if sources:
+                    add_error(errors, f"$.steps[{index}].sources", "no_match knowledge_use must not list sources")
+            elif not sources:
+                add_error(errors, f"$.steps[{index}].sources", "non-no_match knowledge_use requires 1-3 sources")
+            if fit not in KNOWLEDGE_FIT_VALUES:
+                add_error(errors, f"$.steps[{index}].fit", "invalid knowledge fit")
+            if route not in FEEDBACK_ROUTE_VALUES:
+                add_error(errors, f"$.steps[{index}].feedback_route", "invalid feedback route")
+            if route != "none" and not ref:
+                add_error(errors, f"$.steps[{index}].feedback_ref", "non-none feedback route requires feedback_ref")
+        elif step_name == "exit":
+            exit_name = step.get("exit")
+            if exit_name not in EXIT_VALUES:
+                add_error(errors, f"$.steps[{index}].exit", "invalid exit")
+            if exit_name in IRREVERSIBLE_EXITS and step.get("confirmed_by") != "user":
+                add_error(errors, f"$.steps[{index}].confirmed_by", "irreversible exit requires confirmed_by user")
     return errors
 
 
@@ -627,6 +872,7 @@ SCHEMAS = {
     "work-items": read_json_like(".orbitos/schemas/work-items.schema.yaml"),
     "role-catalog": read_json_like(".orbitos/schemas/role-catalog.schema.yaml"),
     "collaboration-sessions": read_json_like(".orbitos/schemas/collaboration-sessions.schema.yaml"),
+    "chaos-record": read_json_like(".orbitos/schemas/chaos-record.schema.yaml"),
 }
 
 failure_count = 0
@@ -657,6 +903,8 @@ def schema_name_for_case(name):
         return "maintenance-state"
     if name.startswith("work-items."):
         return "work-items"
+    if name.startswith("chaos-record."):
+        return "chaos-record"
     raise ValueError(f"Cannot infer schema for case: {name}")
 
 
@@ -669,6 +917,8 @@ for case_path in sorted(case_root.glob("*.yaml")):
     validate_value(data, SCHEMAS[schema_name], "$", errors)
     if schema_name == "lifecycle":
         validate_lifecycle(data, errors)
+    if schema_name == "event":
+        validate_knowledge_event(data, errors)
     print_case(case_path.name, ".valid." in case_path.name, errors)
 
 
@@ -718,6 +968,44 @@ knowledge_omitted_conflict_valid_root = ROOT / ".orbitos/evals/knowledge-omitted
 for case_path in sorted(knowledge_omitted_conflict_valid_root.glob("*.md")):
     case_count += 1
     errors = omitted_conflict_errors(list(knowledge_omitted_conflict_valid_root.glob("*.md")))
+    print_case(case_path.name, ".valid." in case_path.name, errors)
+
+
+chaos_record_case_root = ROOT / ".orbitos/evals/chaos-record"
+for case_path in sorted(chaos_record_case_root.glob("*.yaml")):
+    case_count += 1
+    data = read_json_like(f".orbitos/evals/chaos-record/{case_path.name}")
+    errors = []
+    validate_value(data, SCHEMAS["chaos-record"], "$", errors)
+    print_case(case_path.name, ".valid." in case_path.name, errors)
+
+
+chaos_purpose_case_root = ROOT / ".orbitos/evals/chaos-purpose"
+for case_path in sorted(chaos_purpose_case_root.glob("*.md")):
+    case_count += 1
+    errors = chaos_purpose_errors(case_path)
+    print_case(case_path.name, ".valid." in case_path.name, errors)
+
+
+knowledge_exit_case_root = ROOT / ".orbitos/evals/knowledge-exit"
+for case_path in sorted(knowledge_exit_case_root.glob("*.md")):
+    case_count += 1
+    errors = chaos_purpose_errors(case_path)
+    print_case(case_path.name, ".valid." in case_path.name, errors)
+
+
+knowledge_gate_case_root = ROOT / ".orbitos/evals/knowledge-draft-gates"
+for case_path in sorted(knowledge_gate_case_root.glob("*.md")):
+    case_count += 1
+    errors = knowledge_draft_gate_errors(case_path)
+    print_case(case_path.name, ".valid." in case_path.name, errors)
+
+
+knowledge_closed_loop_case_root = ROOT / ".orbitos/evals/knowledge-closed-loop"
+for case_path in sorted(knowledge_closed_loop_case_root.glob("*.yaml")):
+    case_count += 1
+    data = read_json_like(f".orbitos/evals/knowledge-closed-loop/{case_path.name}")
+    errors = closed_loop_scenario_errors(data, case_path.name)
     print_case(case_path.name, ".valid." in case_path.name, errors)
 
 
@@ -909,6 +1197,7 @@ for event_path in sorted(events_root.glob("*.yaml")):
             f"$[{event_path.name}]",
             event_record_errors,
         )
+        validate_knowledge_event(event_data, event_record_errors, f"$[{event_path.name}]")
         thinking = event_data.get("thinking")
         if isinstance(thinking, dict):
             modes = thinking.get("modes", [])
@@ -926,6 +1215,25 @@ for event_path in sorted(events_root.glob("*.yaml")):
             f"invalid JSON-compatible event: {error}",
         )
 print_case("actual.event-records", True, event_record_errors)
+
+
+case_count += 1
+print_case("actual.knowledge-flow", True, knowledge_flow_errors())
+
+
+case_count += 1
+chaos_purpose_actual_errors = []
+chaos_pending_dir = ROOT / "01-收件箱/待铸卡"
+if chaos_pending_dir.exists():
+    for file_path in sorted(chaos_pending_dir.glob("*.md")):
+        if "模板" in file_path.name:
+            continue
+        chaos_purpose_actual_errors.extend(chaos_purpose_errors(file_path))
+print_case("actual.chaos-records", True, chaos_purpose_actual_errors)
+
+
+case_count += 1
+print_case("actual.chaos-flow", True, chaos_flow_errors())
 
 
 case_count += 1
@@ -1328,6 +1636,28 @@ else:
             validate_value(generated_event, SCHEMAS["event"], "$", event_writer_errors)
         except json.JSONDecodeError as error:
             add_error(event_writer_errors, ".orbitos/scripts/write_event.py", f"invalid JSON output: {error}")
+    knowledge_command = command + [
+        "--event-type",
+        "knowledge_use",
+        "--knowledge-source",
+        "04-知识/MAP.md",
+        "--knowledge-fit",
+        "applicable",
+        "--knowledge-outcome",
+        "pending",
+        "--knowledge-feedback-route",
+        "none",
+    ]
+    knowledge_result = subprocess.run(knowledge_command, capture_output=True, text=True, encoding="utf-8")
+    if knowledge_result.returncode != 0:
+        add_error(event_writer_errors, ".orbitos/scripts/write_event.py", knowledge_result.stderr.strip())
+    else:
+        try:
+            generated_knowledge_event = json.loads(knowledge_result.stdout)
+            validate_value(generated_knowledge_event, SCHEMAS["event"], "$", event_writer_errors)
+            validate_knowledge_event(generated_knowledge_event, event_writer_errors)
+        except json.JSONDecodeError as error:
+            add_error(event_writer_errors, ".orbitos/scripts/write_event.py", f"invalid knowledge_use JSON output: {error}")
 print_case("actual.event-writer", True, event_writer_errors)
 
 

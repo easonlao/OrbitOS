@@ -83,6 +83,7 @@
         "project_update",
         "system_change",
         "inbox_triage",
+        "knowledge_use",
         "validation_failed"
       ],
       "description": "事件类型。首版保持少量枚举，避免 agent 分类过度。"
@@ -181,6 +182,63 @@
               "null"
             ]
           }
+        }
+      }
+    },
+    "knowledge": {
+      "type": "object",
+      "description": "知识调用的最小反馈事实。记录引用、适用性和回写去向，不记录长篇推理。",
+      "additionalProperties": false,
+      "required": [
+        "sources",
+        "fit",
+        "outcome",
+        "feedback_route"
+      ],
+      "properties": {
+        "sources": {
+          "type": "array",
+          "maxItems": 3,
+          "items": {
+            "type": "string"
+          },
+          "description": "知识调用引用来源。fit 不是 no_match 时必须保留 1-3 个来源；no_match 必须为空。"
+        },
+        "fit": {
+          "type": "string",
+          "enum": [
+            "applicable",
+            "partially_applicable",
+            "not_applicable",
+            "no_match"
+          ]
+        },
+        "outcome": {
+          "type": "string",
+          "enum": [
+            "pending",
+            "validated",
+            "rejected",
+            "needs_revision"
+          ]
+        },
+        "feedback_route": {
+          "type": "string",
+          "enum": [
+            "none",
+            "experience",
+            "project_lesson",
+            "knowledge_draft",
+            "knowledge_conflict",
+            "chaos_record"
+          ],
+          "description": "反馈回写去向。chaos_record 表示把使用反馈写回混沌记录或原始材料，而不是只停留在对话。"
+        },
+        "feedback_ref": {
+          "type": [
+            "string",
+            "null"
+          ]
         }
       }
     },

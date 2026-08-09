@@ -1,0 +1,35 @@
+{
+  "id": "evt_20260809_120001_codex_knowledge_use_invalid",
+  "timestamp": "2026-08-09T12:00:01+08:00",
+  "actor": {
+    "type": "agent",
+    "name": "codex",
+    "agent_id": "codex",
+    "role": null,
+    "device": "desktop-win"
+  },
+  "event_type": "knowledge_use",
+  "project": "OrbitOS",
+  "summary": "不应通过知识调用契约。",
+  "reason": "测试 no_match 不得伪造引用来源。",
+  "thinking_modes": [],
+  "inputs": [
+    {
+      "kind": "file",
+      "ref": "04-知识/MAP.md",
+      "note": "knowledge source used"
+    }
+  ],
+  "knowledge": {
+    "sources": ["04-知识/MAP.md"],
+    "fit": "no_match",
+    "outcome": "pending",
+    "feedback_route": "none",
+    "feedback_ref": null
+  },
+  "actions": [],
+  "outputs": [],
+  "files_changed": [],
+  "review_required": false,
+  "next_steps": []
+}

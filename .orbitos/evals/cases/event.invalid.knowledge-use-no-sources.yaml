@@ -1,0 +1,29 @@
+{
+  "id": "evt_20260809_120002_codex_knowledge_use_no_sources",
+  "timestamp": "2026-08-09T12:00:02+08:00",
+  "actor": {
+    "type": "agent",
+    "name": "codex",
+    "agent_id": "codex",
+    "role": null,
+    "device": "desktop-win"
+  },
+  "event_type": "knowledge_use",
+  "project": "OrbitOS",
+  "summary": "不应通过知识调用契约。",
+  "reason": "适用性判断（fit != no_match）必须携带 1-3 个来源。",
+  "thinking_modes": [],
+  "inputs": [],
+  "knowledge": {
+    "sources": [],
+    "fit": "applicable",
+    "outcome": "pending",
+    "feedback_route": "none",
+    "feedback_ref": null
+  },
+  "actions": [],
+  "outputs": [],
+  "files_changed": [],
+  "review_required": false,
+  "next_steps": []
+}

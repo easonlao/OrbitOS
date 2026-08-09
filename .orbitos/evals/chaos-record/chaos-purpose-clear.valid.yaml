@@ -1,0 +1,10 @@
+{
+  "title": "记录一次交易复盘的目的",
+  "capture_kind": "dialog_purpose",
+  "purpose_status": "clear",
+  "created": "2026-08-09",
+  "updated": "2026-08-09",
+  "tags": ["trading", "review"],
+  "exit": "keep_raw",
+  "confirmed_by": "user"
+}

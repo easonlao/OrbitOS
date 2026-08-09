@@ -14,7 +14,7 @@ tags:
 
 # Inbox Ingest Workflow
 
-Inbox Ingest 在用户确认后，把原始输入移到 `01-收件箱/已入库/` 并登记 batch，避免后续 Agent 重复处理。
+Inbox Ingest 在用户确认一个批次后，把该批次的原始输入移到 `01-收件箱/已入库/` 并登记 batch，避免后续 Agent 重复处理。
 
 ## 目标
 
@@ -47,11 +47,11 @@ batch 文件位于 `.orbitos/ingest/batches/`，文件名建议 `INB-YYYYMMDD-NN
 
 ## 执行流程
 
-1. 读取用户确认的文件或来源集合清单。
+1. 读取用户确认的批次清单；不对同一批次内的每个文件重复询问。
 2. 确认每个输入位于 `01-收件箱/` 内，且不是固定入口文件 `00-粘贴.md`；判断它是独立原件还是来源集合。
 3. 单一原件原样移动；集合整体移动并逐文件登记 batch，不得按扩展名拆分。
 4. 如发现主题、关联或后续方向，写入 `今日.md` 的待确认或可继续区块。
-5. 执行 Validate Sync 与 Progress Sync。
+5. 执行 Validate Sync 与 Progress Sync；如果用户确认同时要求“整理为知识草稿”，可直接继续进入 `knowledge-draft.md`，不得重复确认创建草稿。
 
 ## 异常分支
 

@@ -1,0 +1,94 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "orbitos/chaos-record.schema.yaml",
+  "title": "OrbitOS Chaos Record",
+  "description": "对话目的与混沌记录的最小 frontmatter 元数据。目的不明时只允许停留在混沌/待铸层。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "title",
+    "capture_kind",
+    "purpose_status",
+    "created",
+    "updated"
+  ],
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "混沌记录的阅读标题。"
+    },
+    "capture_kind": {
+      "type": "string",
+      "enum": [
+        "chaos",
+        "dialog_purpose",
+        "mixed"
+      ],
+      "description": "捕获类型：chaos=未定型内容，dialog_purpose=目的/上下文记录，mixed=两者都有。"
+    },
+    "purpose_status": {
+      "type": "string",
+      "enum": [
+        "clear",
+        "unclear",
+        "pending"
+      ],
+      "description": "目的状态。unclear 的内容不得被转成知识草稿或 active knowledge。"
+    },
+    "created": {
+      "type": "string",
+      "description": "创建日期 YYYY-MM-DD。"
+    },
+    "updated": {
+      "type": "string",
+      "description": "最近更新日期 YYYY-MM-DD。"
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "exit": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "enum": [
+        null,
+        "keep_raw",
+        "pending_card",
+        "draft",
+        "archive",
+        "discard",
+        "superseded"
+      ],
+      "description": "退出出口。archive/discard/superseded 需要 confirmed_by: user 用户确认。"
+    },
+    "confirmed_by": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "enum": [
+        null,
+        "user"
+      ],
+      "description": "不可逆出口（archive/discard/superseded）的用户确认来源；只有 user 代表用户确认，agent 不得自证确认。"
+    },
+    "refined_to": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "exit=draft 时指向的知识草稿路径。"
+    },
+    "replaced_by": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "exit=superseded 时指向的替代内容路径。"
+    }
+  }
+}

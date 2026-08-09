@@ -1,0 +1,29 @@
+{
+  "id": "evt_20260809_120003_codex_knowledge_use_no_match",
+  "timestamp": "2026-08-09T12:00:03+08:00",
+  "actor": {
+    "type": "agent",
+    "name": "codex",
+    "agent_id": "codex",
+    "role": null,
+    "device": "desktop-win"
+  },
+  "event_type": "knowledge_use",
+  "project": "OrbitOS",
+  "summary": "记录一次没有命中知识的调用。",
+  "reason": "no_match 不得伪造引用来源，必须保持空 sources。",
+  "thinking_modes": [],
+  "inputs": [],
+  "knowledge": {
+    "sources": [],
+    "fit": "no_match",
+    "outcome": "pending",
+    "feedback_route": "none",
+    "feedback_ref": null
+  },
+  "actions": [],
+  "outputs": [],
+  "files_changed": [],
+  "review_required": false,
+  "next_steps": []
+}
