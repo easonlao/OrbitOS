@@ -18,6 +18,16 @@
       "package_path": ".orbitos/module-packages/engineering",
       "readiness": "manual_configuration"
     },
+    "experience": {
+      "package_path": ".orbitos/module-packages/experience",
+      "readiness": "immediate",
+      "required_paths": [
+        "README.md",
+        "workflows/experience-capture.md",
+        "rules/experience-record.md",
+        "templates/experience-entry.md"
+      ]
+    },
     "hindsight": {
       "package_path": ".orbitos/module-packages/hindsight",
       "readiness": "manual_configuration"

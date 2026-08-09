@@ -50,13 +50,14 @@ Agent 只需要整理：
 5. 如果属于具体项目且项目状态变化，更新 `STATUS.md`；满足已确认的 ROADMAP 完成条件时，同步勾选条件、日期和总体状态。
 6. 如果本轮处理 handoff，确认其状态、当前负责人、下一步和 BOARD 投影已同步；协作完成时先更新项目 `STATUS.md`，再关闭和归档 handoff，并同步 work index 指针。
 7. 如果本轮处理维护事项，先用 `.orbitos/scripts/maintenance-control.py` 读取当前状态；领取、修复、验证和关闭都必须携带最新 `revision`，存在有效租约时不得覆盖其他执行者。只有新鲜验证 receipt 才能关闭；无法安全继续时进入 `blocked` 并请求用户确认。维护事项不转写为普通 work item。
-8. 运行 `python .orbitos/scripts/run-validation.py`。
-9. validation 失败时停止本轮业务投影并报告失败原因；System Check 可由自动化契约更新维护状态和受管健康区块。
-10. 使用 `.orbitos/scripts/write_event.py` 写入完成凭证；event 记录历史事实，不替代当前维护状态。
-11. 对普通 work item，只有原始来源已完成、验证/证据已记录且无用户待确认时，才将索引更新为 `done`；`work-control.py update --status done` 必须携带 completion evidence。对 collaboration session，只有租约有效、证据存在且没有待审核门禁时，才能关闭。
-12. 按实际变化刷新 `今日.md`；维护状态投影只显示当前开放项，`closed` 与 `expired` 不得继续作为当前故障。
-13. 再运行一次 validation，确认最终状态。
-14. 最终 validation 失败时报告 event 路径和失败原因，不把失败结果描述为完成。
+8. **经验自检（软性，方案 A）**：自检一句"本次有无可沉淀经验"（踩坑、返工、用户纠正、验证过的新做法）。有则按 experience 模块的 `workflows/experience-capture.md` 追加到 `00-系统/agents/{agent_id}-experience.md`；无则跳过。event 的 checklist note 记录 `experience_check: captured` 或 `experience_check: not_applicable`。
+9. 运行 `python .orbitos/scripts/run-validation.py`。
+10. validation 失败时停止本轮业务投影并报告失败原因；System Check 可由自动化契约更新维护状态和受管健康区块。
+11. 使用 `.orbitos/scripts/write_event.py` 写入完成凭证；event 记录历史事实，不替代当前维护状态。
+12. 对普通 work item，只有原始来源已完成、验证/证据已记录且无用户待确认时，才将索引更新为 `done`；`work-control.py update --status done` 必须携带 completion evidence。对 collaboration session，只有租约有效、证据存在且没有待审核门禁时，才能关闭。
+13. 按实际变化刷新 `今日.md`；维护状态投影只显示当前开放项，`closed` 与 `expired` 不得继续作为当前故障。
+14. 再运行一次 validation，确认最终状态。
+15. 最终 validation 失败时报告 event 路径和失败原因，不把失败结果描述为完成。
 
 最小示例：
 
