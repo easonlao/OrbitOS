@@ -42,14 +42,16 @@ tags:
 
 - 队列计划（launch card）必须先经用户显式确认，`plan_status` 才能从 `proposed` 变为 `confirmed`；任何阶段不得在确认前进入 `working`。
 - `return_owner` 在 launch 时持久化为权威值，后续命令一律从投影读取；调用方传入不一致值即拒绝。
-- Builder 与 Editor 阶段必须由不同工具承担；Editor 只能审核已完成的 Builder/Writer 阶段，且其通过证据必须引用被审阶段输出。
+- Builder 与 Editor 阶段必须由不同工具承担；Editor 只能审核已完成的 Builder/Writer 阶段，且其通过必须声明 `reviewed_revision` 等于被审阶段当前 `output_revision`。
+- 每次确认只给最新一条修订盖 `confirmed_at`；被取代的旧修订保持未确认，历史如实。
+- `mark-close` 与 `close` 走同一套门（return owner、阶段完成、最新修订已确认、归档目标在 archive 目录），不能伪造 closure receipt。
 - Formal Handoff Markdown 是跨工具通信合同：阶段结果、证据、未决项与推进信息必须写回 Markdown（`## 阶段记录`），不能只存在机器层 JSON。
 - 任一时刻只有一个 `current_owner` 与一个 `current_stage`；未来阶段的 Agent 不能提前认领或推进。
 - 已完成阶段的结果、证据与未解决项不可变，只能追加不能改写。
 - 阶段推进必须一致更新当前负责人、角色、阶段、下一负责人、下一步，并同步机器层投影与 BOARD。
 - 同一阶段失败两次后必须 re-plan（failure 触发要求已失败两次）；未经用户确认的修订队列（`plan_revision` 单调递增）不能推进，替换 Agent 在确认与所有权更新前不能接手。未确认期间可继续提出新一轮修订，历史完整保留。
 - 只有 `return_owner` 能接受并关闭整个交接；Builder 与 Editor 阶段工具不能关闭。
-- 队列状态不可读（损坏、脚本执行失败）时 begin/close 一律拒绝，不得按“无队列”放行。
+- 队列状态不可读（损坏、脚本执行失败，或 handoff 声明计划但投影记录丢失）时 begin/close 一律拒绝，不得按“无队列”放行。
 - 关闭前所有计划阶段必须完成，closure receipt 保留有序历史、输出、独立审核证据、最终验收与归档引用。
 
 ## 独立性定义

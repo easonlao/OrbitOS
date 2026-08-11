@@ -39,7 +39,8 @@
     },
     {
       "step": "confirm",
-      "by": "agent-a"
+      "by": "agent-a",
+      "receipt": "user accepted"
     },
     {
       "step": "advance",
@@ -58,7 +59,8 @@
       "by": "agent-c",
       "stage_id": "s3",
       "outcome": "done",
-      "evidence": []
+      "evidence": [],
+      "reviewed_revision": 1
     },
     {
       "step": "close",

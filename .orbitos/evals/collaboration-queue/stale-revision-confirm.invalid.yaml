@@ -4,15 +4,61 @@
   "description": "用旧 plan_revision 确认计划（stale revision）必须被拒绝。",
   "return_owner": "agent-a",
   "queue": [
-    {"stage_id": "s1", "tool": "agent-a", "role": "coordinator", "deliverable": "任务定义", "scope": "只读", "acceptance": "定义确认", "next_stage": "s2"},
-    {"stage_id": "s2", "tool": "agent-b", "role": "researcher", "deliverable": "证据收集", "scope": "只读", "acceptance": "证据充分", "next_stage": null}
+    {
+      "stage_id": "s1",
+      "tool": "agent-a",
+      "role": "coordinator",
+      "deliverable": "任务定义",
+      "scope": "只读",
+      "acceptance": "定义确认",
+      "next_stage": "s2"
+    },
+    {
+      "stage_id": "s2",
+      "tool": "agent-b",
+      "role": "researcher",
+      "deliverable": "证据收集",
+      "scope": "只读",
+      "acceptance": "证据充分",
+      "next_stage": null
+    }
   ],
   "steps": [
-    {"step": "launch", "by": "agent-a"},
-    {"step": "replan", "by": "agent-a", "trigger": "scope", "affected_stage": "s2", "revised_queue": [
-      {"stage_id": "s1", "tool": "agent-a", "role": "coordinator", "deliverable": "任务定义", "scope": "只读", "acceptance": "定义确认", "next_stage": "s2"},
-      {"stage_id": "s2", "tool": "agent-b", "role": "researcher", "deliverable": "证据收集与汇总", "scope": "只读", "acceptance": "证据充分", "next_stage": null}
-    ]},
-    {"step": "confirm", "by": "agent-a", "plan_revision": 0}
+    {
+      "step": "launch",
+      "by": "agent-a"
+    },
+    {
+      "step": "replan",
+      "by": "agent-a",
+      "trigger": "scope",
+      "affected_stage": "s2",
+      "revised_queue": [
+        {
+          "stage_id": "s1",
+          "tool": "agent-a",
+          "role": "coordinator",
+          "deliverable": "任务定义",
+          "scope": "只读",
+          "acceptance": "定义确认",
+          "next_stage": "s2"
+        },
+        {
+          "stage_id": "s2",
+          "tool": "agent-b",
+          "role": "researcher",
+          "deliverable": "证据收集与汇总",
+          "scope": "只读",
+          "acceptance": "证据充分",
+          "next_stage": null
+        }
+      ]
+    },
+    {
+      "step": "confirm",
+      "by": "agent-a",
+      "plan_revision": 0,
+      "receipt": "user accepted"
+    }
   ]
 }

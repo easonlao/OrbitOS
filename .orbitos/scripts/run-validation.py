@@ -617,7 +617,7 @@ def collaboration_queue_scenario_errors(data, name):
         if record.get("by") != state["current_owner"]:
             add_error(errors, f"$.steps[{index}]", f"only the current owner can advance: {state['current_owner']}")
             return
-        stage = state["stages"].setdefault(record["stage_id"], {"status": "pending", "failures": 0})
+        stage = state["stages"].setdefault(record["stage_id"], {"status": "pending", "failures": 0, "output_revision": 0})
         if stage["status"] == "complete":
             add_error(errors, f"$.steps[{index}]", "a completed stage cannot advance again")
             return
@@ -633,14 +633,19 @@ def collaboration_queue_scenario_errors(data, name):
                 producer = order[pos - 1]
                 if role_by_stage.get(producer) not in {"builder", "writer"}:
                     add_error(errors, f"$.steps[{index}]", "an editor stage must follow a completed builder/writer stage")
-                if record.get("outcome") == "done" and not any(producer in (item or "") for item in (record.get("evidence") or [])):
-                    add_error(errors, f"$.steps[{index}]", "editor evidence must reference the reviewed stage output")
+                if record.get("outcome") == "done":
+                    if not any(producer in (item or "") for item in (record.get("evidence") or [])):
+                        add_error(errors, f"$.steps[{index}]", "editor evidence must reference the reviewed stage output")
+                    producer_revision = state["stages"].get(producer, {}).get("output_revision")
+                    if record.get("reviewed_revision") != producer_revision:
+                        add_error(errors, f"$.steps[{index}]", f"editor reviewed_revision must match the reviewed stage output revision ({producer_revision})")
         if record.get("outcome") == "blocked":
             stage["failures"] += 1
             stage["status"] = "blocked"
             state["current_owner"] = record.get("by")
             return
         stage["status"] = "complete"
+        stage["output_revision"] = (stage.get("output_revision") or 0) + 1
         next_stage = chain.get(record["stage_id"])
         if next_stage:
             state["current_stage"] = next_stage
@@ -671,6 +676,8 @@ def collaboration_queue_scenario_errors(data, name):
                 add_error(errors, f"$.steps[{index}]", "confirm requires a proposed plan")
             if actor not in {tool_by_stage.get(stage_ids[0]) if stage_ids else None, return_owner}:
                 add_error(errors, f"$.steps[{index}]", "confirm must be executed by the first stage tool or the return owner")
+            if not (step.get("receipt") or "").strip():
+                add_error(errors, f"$.steps[{index}]", "confirm requires a user confirmation receipt")
             if step.get("plan_revision", state["plan_revision"]) != state["plan_revision"]:
                 add_error(errors, f"$.steps[{index}]", "stale plan revision on confirm")
             state["plan_status"] = "confirmed"

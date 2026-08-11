@@ -176,9 +176,12 @@ def append_section(path, heading, lines):
 
 def launch(args, root):
     handoff = active_handoff(root, args.handoff)
-    _text, _match, metadata = frontmatter(handoff)
+    text, _match, metadata = frontmatter(handoff)
     if metadata.get("handoff_status") != "delegated":
         raise ValueError("launch requires a delegated handoff that has not started")
+    declared_return_owner = (metadata.get("return_owner") or "").strip()
+    if declared_return_owner and declared_return_owner != args.return_owner:
+        raise ValueError(f"return owner mismatch: handoff frontmatter holds {declared_return_owner}, launch passed {args.return_owner}")
     relative = relative_path(root, handoff)
     state = load_state(root)
     if relative in state["queues"]:
@@ -200,6 +203,8 @@ def launch(args, root):
             "unresolved": None,
             "outcome": None,
             "failures": 0,
+            "output_revision": 0,
+            "reviewed_revision": None,
             "completed_by": None,
             "completed_at": None,
         }
@@ -210,9 +215,12 @@ def launch(args, root):
     record = {
         "handoff": relative,
         "return_owner": args.return_owner,
+        "prohibited": args.prohibited,
+        "return_format": args.return_format,
         "plan_revision": 0,
         "plan_status": "proposed",
         "confirmed_by": None,
+        "confirmed_receipt": None,
         "current_stage": "none",
         "current_owner": first["tool"],
         "current_role": first["role"],
@@ -228,6 +236,10 @@ def launch(args, root):
     rows = ["| 阶段 | 工具 | 角色 | 交付物 | 范围 | 验收条件 | 下一阶段 |", "|---|---|---|---|---|---|---|"]
     for spec in specs:
         rows.append(f"| {spec['stage_id']} | {spec['tool']} | {spec['role']} | {spec['deliverable']} | {spec['scope']} | {spec['acceptance']} | {spec['next_stage'] or '(回验收方)'} |")
+    rows.append("")
+    rows.append(f"- 禁止事项：{args.prohibited or '未声明'}")
+    rows.append(f"- 返回格式：{args.return_format or '未声明'}")
+    rows.append(f"- 验收方：{args.return_owner}")
     # write Markdown first so content failures never leave a half-persisted queue
     append_section(handoff, "阶段队列", rows)
     state["queues"][relative] = record
@@ -240,7 +252,9 @@ def launch(args, root):
         "plan_revision": 0,
         "stages": [spec["stage_id"] for spec in specs],
         "return_owner": args.return_owner,
-        "confirm_instruction": "请用户确认该队列后执行 confirm --plan-revision 0",
+        "prohibited": args.prohibited,
+        "return_format": args.return_format,
+        "confirm_instruction": "请用户确认该队列后执行 confirm --plan-revision 0 --receipt <确认回执>",
     }, ensure_ascii=False))
 
 
@@ -262,6 +276,8 @@ def confirm(args, root):
     handoff = active_handoff(root, args.handoff)
     relative = relative_path(root, handoff)
     state, record = _confirm_guard(root, relative, args.agent_id, args.plan_revision)
+    if not args.receipt:
+        raise ValueError("confirm requires a --receipt (the user confirmation reference)")
     # The authoritative return owner is the one persisted at launch, not the caller's argument.
     return_owner = record["return_owner"]
     if args.return_owner and args.return_owner != return_owner:
@@ -274,9 +290,13 @@ def confirm(args, root):
     stage = record["stages"][current]
     record["plan_status"] = "confirmed"
     record["confirmed_by"] = "user"
-    for item in record["replans"]:
-        if not item.get("confirmed_at"):
-            item["confirmed_at"] = now()
+    record["confirmed_receipt"] = args.receipt
+    # Only the latest pending re-plan revision is confirmed by this receipt; older
+    # superseded revisions stay unconfirmed so the history stays truthful.
+    if record["replans"]:
+        latest = record["replans"][-1]
+        if not latest.get("confirmed_at"):
+            latest["confirmed_at"] = now()
     record["current_stage"] = current
     record["current_owner"] = stage["tool"]
     record["current_role"] = stage["role"]
@@ -299,6 +319,7 @@ def confirm(args, root):
         "ok": True,
         "plan_status": "confirmed",
         "plan_revision": record["plan_revision"],
+        "confirmed_receipt": args.receipt,
         "current_stage": current,
         "current_owner": stage["tool"],
         "current_role": stage["role"],
@@ -307,7 +328,11 @@ def confirm(args, root):
 
 
 def _pending_replan(record):
-    return next((item for item in reversed(record["replans"]) if not item.get("confirmed_at")), None)
+    """Only the latest re-plan revision gates progress; superseded ones stay historical."""
+    if not record.get("replans"):
+        return None
+    latest = record["replans"][-1]
+    return latest if not latest.get("confirmed_at") else None
 
 
 def advance(args, root):
@@ -343,8 +368,13 @@ def advance(args, root):
         producer = record["stages"][order[index - 1]]
         if producer["role"] not in {"builder", "writer"} or producer["status"] != "complete":
             raise ValueError("an editor stage must follow a completed builder/writer stage")
-        if args.outcome == "done" and not any(order[index - 1] in (item or "") for item in (args.evidence or [])):
-            raise ValueError(f"editor evidence must reference the reviewed stage output ({order[index - 1]})")
+        if args.outcome == "done":
+            if not any(order[index - 1] in (item or "") for item in (args.evidence or [])):
+                raise ValueError(f"editor evidence must reference the reviewed stage output ({order[index - 1]})")
+            if args.reviewed_revision is None:
+                raise ValueError("editor approval requires --reviewed-revision bound to the reviewed stage output")
+            if args.reviewed_revision != producer.get("output_revision"):
+                raise ValueError(f"editor reviewed_revision {args.reviewed_revision} does not match the reviewed stage output revision {producer.get('output_revision')}")
     if args.outcome == "done":
         if not args.result or not args.evidence:
             raise ValueError("a done stage requires --result and at least one --evidence")
@@ -368,6 +398,8 @@ def advance(args, root):
         "evidence": list(args.evidence),
         "unresolved": args.unresolved,
         "outcome": "done",
+        "output_revision": (stage.get("output_revision") or 0) + 1,
+        "reviewed_revision": args.reviewed_revision,
         "completed_by": args.agent_id,
         "completed_at": now(),
     })
@@ -456,6 +488,8 @@ def replan(args, root):
             "unresolved": None,
             "outcome": None,
             "failures": 0,
+            "output_revision": 0,
+            "reviewed_revision": None,
             "completed_by": None,
             "completed_at": None,
         }
@@ -469,6 +503,9 @@ def replan(args, root):
         "trigger": args.trigger,
         "affected_stage": args.affected_stage,
         "reason": args.reason,
+        "valid_results": args.valid_results,
+        "invalidated_assumptions": args.invalidated_assumptions,
+        "replacement_role": args.replacement_role,
         "proposed_by": args.agent_id,
         "proposed_at": now(),
         "confirmed_at": None,
@@ -507,6 +544,26 @@ def mark_close(args, root):
     record = state["queues"].get(relative)
     if not record:
         raise ValueError("handoff has no queue plan")
+    if record.get("close"):
+        raise ValueError("this handoff is already closed")
+    # mark-close is the acceptance receipt: it must satisfy the same gates as close.
+    if record["plan_status"] != "confirmed":
+        raise ValueError("close receipt requires a user-confirmed queue plan")
+    if _pending_replan(record):
+        raise ValueError("a re-plan is still waiting for user confirmation")
+    incomplete = [
+        stage_id
+        for stage_id in record.get("stage_order", [])
+        if record.get("stages", {}).get(stage_id, {}).get("status") != "complete"
+    ]
+    if incomplete:
+        raise ValueError(f"close receipt requires all planned stages complete; pending: {incomplete}")
+    if record.get("current_owner") != args.accepted_by:
+        raise ValueError("close receipt requires the return owner to hold the baton")
+    if record.get("return_owner") != args.accepted_by:
+        raise ValueError("close receipt must be issued by the authoritative return owner")
+    if not args.archived_ref.startswith("00-" + "\u7cfb\u7edf/agents/handoff/archive/"):
+        raise ValueError("close receipt archive reference must live under the archive directory")
     record["close"] = {
         "accepted_by": args.accepted_by,
         "accepted_at": now(),
@@ -541,6 +598,8 @@ def parser():
     launching.add_argument("--agent-id", required=True)
     launching.add_argument("--role", choices=sorted(ROLES), required=True)
     launching.add_argument("--return-owner", required=True)
+    launching.add_argument("--prohibited")
+    launching.add_argument("--return-format")
     launching.add_argument("--next-action", required=True)
     launching.add_argument("--queue", action="append", required=True)
     launching.add_argument("--date", required=True)
@@ -549,6 +608,7 @@ def parser():
     confirming.add_argument("--agent-id", required=True)
     confirming.add_argument("--plan-revision", type=int, required=True)
     confirming.add_argument("--return-owner", required=True)
+    confirming.add_argument("--receipt", required=True)
     confirming.add_argument("--date", required=True)
     advancing = commands.add_parser("advance")
     advancing.add_argument("--handoff", required=True)
@@ -560,6 +620,7 @@ def parser():
     advancing.add_argument("--next-action")
     advancing.add_argument("--result")
     advancing.add_argument("--evidence", action="append")
+    advancing.add_argument("--reviewed-revision", type=int)
     advancing.add_argument("--unresolved")
     advancing.add_argument("--outcome", choices=("done", "blocked"), required=True)
     replanning = commands.add_parser("replan")
@@ -568,6 +629,9 @@ def parser():
     replanning.add_argument("--trigger", choices=sorted(REPLAN_TRIGGERS), required=True)
     replanning.add_argument("--affected-stage", required=True)
     replanning.add_argument("--reason", required=True)
+    replanning.add_argument("--valid-results")
+    replanning.add_argument("--invalidated-assumptions")
+    replanning.add_argument("--replacement-role")
     replanning.add_argument("--proposed-queue", action="append", required=True)
     replanning.add_argument("--date", required=True)
     statusing = commands.add_parser("status")

@@ -30,9 +30,12 @@
         "properties": {
           "handoff": {"type": "string"},
           "return_owner": {"type": "string"},
+          "prohibited": {"type": ["string", "null"]},
+          "return_format": {"type": ["string", "null"]},
           "plan_revision": {"type": "integer"},
           "plan_status": {"enum": ["proposed", "confirmed"]},
           "confirmed_by": {"type": ["string", "null"]},
+          "confirmed_receipt": {"type": ["string", "null"]},
           "current_stage": {"type": "string"},
           "current_owner": {"type": ["string", "null"]},
           "current_role": {"type": ["string", "null"]},
@@ -69,6 +72,8 @@
                 "unresolved": {"type": ["string", "null"]},
                 "outcome": {"enum": ["done", "blocked", null]},
                 "failures": {"type": "integer"},
+                "output_revision": {"type": "integer"},
+                "reviewed_revision": {"type": ["integer", "null"]},
                 "completed_by": {"type": ["string", "null"]},
                 "completed_at": {"type": ["string", "null"]}
               }
@@ -85,6 +90,9 @@
                 "trigger": {"enum": ["unavailable", "scope", "failure"]},
                 "affected_stage": {"type": "string"},
                 "reason": {"type": "string"},
+                "valid_results": {"type": ["string", "null"]},
+                "invalidated_assumptions": {"type": ["string", "null"]},
+                "replacement_role": {"type": ["string", "null"]},
                 "proposed_by": {"type": "string"},
                 "proposed_at": {"type": "string"},
                 "confirmed_at": {"type": ["string", "null"]}

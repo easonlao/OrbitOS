@@ -39,7 +39,8 @@
     },
     {
       "step": "confirm",
-      "by": "agent-a"
+      "by": "agent-a",
+      "receipt": "user accepted"
     },
     {
       "step": "advance",
@@ -67,7 +68,8 @@
       "outcome": "done",
       "evidence": [
         "s2 独立复现验证"
-      ]
+      ],
+      "reviewed_revision": 1
     },
     {
       "step": "close",

@@ -114,6 +114,12 @@ def main():
             read_template(".orbitos/state/collaboration-sessions.json").replace("{now}", NOW),
         )
     )
+    results.append(
+        write_if_missing(
+            ".orbitos/state/handoff-queues.json",
+            read_template(".orbitos/state/handoff-queues.json").replace("{now}", NOW),
+        )
+    )
 
     results.append(
         write_if_missing(

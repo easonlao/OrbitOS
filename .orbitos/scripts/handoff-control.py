@@ -84,8 +84,10 @@ def board_remove(root, stem):
     path = root / "00-系统/agents/BOARD.md"
     text = path.read_text(encoding="utf-8")
     updated, count = re.subn(rf"^- \[\[handoff/{re.escape(stem)}\|[^\n]*\n?", "", text, flags=re.MULTILINE)
-    if count != 1:
-        raise ValueError("handoff board entry is missing or ambiguous")
+    if count > 1:
+        raise ValueError("handoff board entry is ambiguous")
+    if count == 0:
+        return  # already removed; idempotent close
     if "## 当前交接\n\n##" in updated:
         updated = updated.replace("## 当前交接\n\n##", "## 当前交接\n\n暂无开放交接。\n\n##")
     path.write_text(updated, encoding="utf-8", newline="\n")
@@ -124,15 +126,27 @@ def queue_payload(root, handoff_relative):
     return payload.get("queue")
 
 
-def require_queue_position(root, handoff_relative, agent_id, role):
-    """Reject governed work when the handoff has a queue the Agent is not positioned for."""
+def queue_or_die(root, handoff_relative, metadata):
+    """Read the queue projection; fail closed when a handoff declares a plan
+    that its projection no longer carries (record lost, state reset)."""
     queue = queue_payload(root, handoff_relative)
+    if queue is None:
+        declares_plan = (metadata.get("plan_status") or "").strip() not in {"", "none"}
+        declares_stage = (metadata.get("current_stage") or "").strip() not in {"", "none"}
+        if declares_plan or declares_stage:
+            raise ValueError("handoff declares a queue plan but its projection is missing; refusing to bypass queue gates")
+    return queue
+
+
+def require_queue_position(root, handoff_relative, agent_id, role, metadata=None):
+    """Reject governed work when the handoff has a queue the Agent is not positioned for."""
+    queue = queue_or_die(root, handoff_relative, metadata or {})
     if queue is None:
         return
     if queue.get("plan_status") != "confirmed":
         raise ValueError("queue plan must be user-confirmed before work begins")
-    if any(not item.get("confirmed_at") for item in queue.get("replans", [])):
-        raise ValueError("a re-plan is waiting for user confirmation")
+    if queue.get("replans") and not queue["replans"][-1].get("confirmed_at"):
+        raise ValueError("the latest re-plan is waiting for user confirmation")
     if queue.get("current_owner") != agent_id:
         raise ValueError(f"begin requires the current queue owner: {queue.get('current_owner')}")
     current_role = queue.get("current_role")
@@ -152,7 +166,7 @@ def begin(args, root):
     _text, _match, metadata = frontmatter(handoff)
     if metadata.get("handoff_status") not in {"delegated", "returned"}:
         raise ValueError("only delegated or returned handoffs can begin governed work")
-    require_queue_position(root, args.handoff, args.agent_id, args.role)
+    require_queue_position(root, args.handoff, args.agent_id, args.role, metadata)
     work = work_record(root, args.work_id)
     if work["source_type"] != "handoff" or work["source_ref"] != args.handoff:
         raise ValueError("work item must point to this handoff")
@@ -171,16 +185,25 @@ def begin(args, root):
 
 
 def close(args, root):
-    handoff = active_handoff(root, args.handoff)
+    # Idempotent retry: a handoff already archived with a recorded receipt is done.
+    try:
+        handoff = active_handoff(root, args.handoff)
+    except ValueError:
+        archive_candidate = root / ARCHIVE_ROOT / Path(args.handoff).name
+        queue = queue_payload(root, args.handoff)
+        if archive_candidate.is_file() and queue is not None and queue.get("close"):
+            print(json.dumps({"ok": True, "handoff": (ARCHIVE_ROOT / Path(args.handoff).name).as_posix(), "event_ref": None, "already_closed": True}))
+            return
+        raise
     _text, _match, metadata = frontmatter(handoff)
     if metadata.get("return_owner") != args.agent_id:
         raise ValueError("only the return owner can accept and close this handoff")
-    queue = queue_payload(root, args.handoff)
+    queue = queue_or_die(root, args.handoff, metadata)
     if queue is not None:
         if queue.get("plan_status") != "confirmed":
             raise ValueError("close requires a user-confirmed queue plan")
-        if any(not item.get("confirmed_at") for item in queue.get("replans", [])):
-            raise ValueError("a re-plan is still waiting for user confirmation")
+        if queue.get("replans") and not queue["replans"][-1].get("confirmed_at"):
+            raise ValueError("the latest re-plan is still waiting for user confirmation")
         incomplete = [
             stage_id
             for stage_id in queue.get("stage_order", [])

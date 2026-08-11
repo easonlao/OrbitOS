@@ -15,7 +15,20 @@ import sys
 import tempfile
 from pathlib import Path
 
-REPO = Path(__file__).resolve().parents[3]
+def locate_repo():
+    """Locate the Product Repo whether this script runs inside it or under a
+    runtime root (which may carry extra dirs like .runtime that must not be cloned)."""
+    here = Path(__file__).resolve()
+    for parent in here.parents:
+        if (parent / ".orbitos/scripts/handoff-queue.py").is_file() and parent.name == "repo":
+            return parent
+    fallback = here.parents[3] / "03-项目/OrbitOS/repo"
+    if (fallback / ".orbitos/scripts/handoff-queue.py").is_file():
+        return fallback
+    raise RuntimeError("cannot locate the OrbitOS product repo")
+
+
+REPO = locate_repo()
 QUEUE_SCRIPT = REPO / ".orbitos/scripts/handoff-queue.py"
 CONTROL_SCRIPT = REPO / ".orbitos/scripts/handoff-control.py"
 PASSED = 0
@@ -228,7 +241,7 @@ def test_relay_three_agent(tmp):
     run_script(QUEUE_SCRIPT, tmp, "launch", ["--handoff", handoff, "--agent-id", "agent_a", "--role", "coordinator", "--return-owner", "agent_a", "--next-action", "start", "--date", "2026-01-01"] + queue([STAGE_S, STAGE_R, STAGE_C]), True)
     check_state_schema(tmp, "post-launch")
     run_script(QUEUE_SCRIPT, tmp, "advance", ["--handoff", handoff, "--agent-id", "agent_a", "--role", "coordinator", "--stage-id", "s1", "--return-owner", "agent_a", "--date", "2026-01-01", "--outcome", "done", "--result", "ok", "--evidence", "board.md"], False)
-    run_script(QUEUE_SCRIPT, tmp, "confirm", ["--handoff", handoff, "--agent-id", "agent_a", "--plan-revision", "0", "--return-owner", "agent_a", "--date", "2026-01-01"], True)
+    run_script(QUEUE_SCRIPT, tmp, "confirm", ["--handoff", handoff, "--agent-id", "agent_a", "--plan-revision", "0", "--return-owner", "agent_a", "--receipt", "user-accepted", "--date", "2026-01-01"], True)
     run_script(QUEUE_SCRIPT, tmp, "advance", ["--handoff", handoff, "--agent-id", "agent_b", "--role", "researcher", "--stage-id", "s2", "--return-owner", "agent_a", "--date", "2026-01-01", "--outcome", "done", "--result", "nope", "--evidence", "x.md"], False)
     run_script(QUEUE_SCRIPT, tmp, "advance", ["--handoff", handoff, "--agent-id", "agent_a", "--role", "coordinator", "--stage-id", "s1", "--return-owner", "agent_a", "--date", "2026-01-01", "--outcome", "done", "--result", "defined", "--evidence", "board.md"], True)
     run_script(QUEUE_SCRIPT, tmp, "advance", ["--handoff", handoff, "--agent-id", "agent_b", "--role", "researcher", "--stage-id", "s2", "--return-owner", "agent_a", "--date", "2026-01-01", "--outcome", "done", "--result", "evidence", "--evidence", "notes.md"], True)
@@ -248,12 +261,12 @@ def test_replan_unavailable(tmp):
     print("test_replan_unavailable (#17 unavailable substitution)")
     handoff = write_handoff(tmp, "replan")
     run_script(QUEUE_SCRIPT, tmp, "launch", ["--handoff", handoff, "--agent-id", "agent_a", "--role", "coordinator", "--return-owner", "agent_a", "--next-action", "start", "--date", "2026-01-01"] + queue([STAGE_S, STAGE_R2]), True)
-    run_script(QUEUE_SCRIPT, tmp, "confirm", ["--handoff", handoff, "--agent-id", "agent_a", "--plan-revision", "0", "--return-owner", "agent_a", "--date", "2026-01-01"], True)
+    run_script(QUEUE_SCRIPT, tmp, "confirm", ["--handoff", handoff, "--agent-id", "agent_a", "--plan-revision", "0", "--return-owner", "agent_a", "--receipt", "user-accepted", "--date", "2026-01-01"], True)
     revised = [dict(STAGE_S), {**STAGE_R2, "tool": "agent_d"}]
     run_script(QUEUE_SCRIPT, tmp, "replan", ["--handoff", handoff, "--agent-id", "agent_a", "--trigger", "unavailable", "--affected-stage", "s2", "--reason", "agent_b offline", "--date", "2026-01-01"] + proposed_queue(revised), True)
     run_script(QUEUE_SCRIPT, tmp, "advance", ["--handoff", handoff, "--agent-id", "agent_d", "--role", "researcher", "--stage-id", "s2", "--return-owner", "agent_a", "--date", "2026-01-01", "--outcome", "done", "--result", "x", "--evidence", "y"], False)
-    run_script(QUEUE_SCRIPT, tmp, "confirm", ["--handoff", handoff, "--agent-id", "agent_a", "--plan-revision", "0", "--return-owner", "agent_a", "--date", "2026-01-01"], False)
-    run_script(QUEUE_SCRIPT, tmp, "confirm", ["--handoff", handoff, "--agent-id", "agent_a", "--plan-revision", "1", "--return-owner", "agent_a", "--date", "2026-01-01"], True)
+    run_script(QUEUE_SCRIPT, tmp, "confirm", ["--handoff", handoff, "--agent-id", "agent_a", "--plan-revision", "0", "--return-owner", "agent_a", "--receipt", "user-accepted", "--date", "2026-01-01"], False)
+    run_script(QUEUE_SCRIPT, tmp, "confirm", ["--handoff", handoff, "--agent-id", "agent_a", "--plan-revision", "1", "--return-owner", "agent_a", "--receipt", "user-accepted", "--date", "2026-01-01"], True)
     run_script(QUEUE_SCRIPT, tmp, "advance", ["--handoff", handoff, "--agent-id", "agent_a", "--role", "coordinator", "--stage-id", "s1", "--return-owner", "agent_a", "--date", "2026-01-01", "--outcome", "done", "--result", "defined", "--evidence", "board.md"], True)
     run_script(QUEUE_SCRIPT, tmp, "advance", ["--handoff", handoff, "--agent-id", "agent_d", "--role", "researcher", "--stage-id", "s2", "--return-owner", "agent_a", "--date", "2026-01-01", "--outcome", "done", "--result", "evidence", "--evidence", "notes.md"], True)
     record = queue_record(tmp, handoff)
@@ -266,7 +279,7 @@ def test_consecutive_replans(tmp):
     print("test_consecutive_replans (#17 multiple revisions, no partial state)")
     handoff = write_handoff(tmp, "multi-replan")
     run_script(QUEUE_SCRIPT, tmp, "launch", ["--handoff", handoff, "--agent-id", "agent_a", "--role", "coordinator", "--return-owner", "agent_a", "--next-action", "start", "--date", "2026-01-01"] + queue([STAGE_S, STAGE_R2]), True)
-    run_script(QUEUE_SCRIPT, tmp, "confirm", ["--handoff", handoff, "--agent-id", "agent_a", "--plan-revision", "0", "--return-owner", "agent_a", "--date", "2026-01-01"], True)
+    run_script(QUEUE_SCRIPT, tmp, "confirm", ["--handoff", handoff, "--agent-id", "agent_a", "--plan-revision", "0", "--return-owner", "agent_a", "--receipt", "user-accepted", "--date", "2026-01-01"], True)
     run_script(QUEUE_SCRIPT, tmp, "replan", ["--handoff", handoff, "--agent-id", "agent_a", "--trigger", "scope", "--affected-stage", "s2", "--reason", "scope grew", "--date", "2026-01-01"] + proposed_queue([dict(STAGE_S), {**STAGE_R2, "deliverable": "collect more evidence"}]), True)
     run_script(QUEUE_SCRIPT, tmp, "replan", ["--handoff", handoff, "--agent-id", "agent_a", "--trigger", "unavailable", "--affected-stage", "s2", "--reason", "agent_b busy", "--date", "2026-01-01"] + proposed_queue([dict(STAGE_S), {**STAGE_R2, "tool": "agent_d", "deliverable": "collect more evidence"}]), True)
     record = queue_record(tmp, handoff)
@@ -293,12 +306,12 @@ def test_builder_editor_identity_and_close(tmp):
         {"stage_id": "s3", "tool": "agent_c", "role": "editor", "deliverable": "review", "scope": "reproduce", "acceptance": "approved", "next_stage": ""},
     ]
     run_script(QUEUE_SCRIPT, tmp, "launch", ["--handoff", handoff, "--agent-id", "agent_a", "--role", "coordinator", "--return-owner", "agent_a", "--next-action", "start", "--date", "2026-01-01"] + queue(queue_ok), True)
-    run_script(QUEUE_SCRIPT, tmp, "confirm", ["--handoff", handoff, "--agent-id", "agent_a", "--plan-revision", "0", "--return-owner", "agent_a", "--date", "2026-01-01"], True)
+    run_script(QUEUE_SCRIPT, tmp, "confirm", ["--handoff", handoff, "--agent-id", "agent_a", "--plan-revision", "0", "--return-owner", "agent_a", "--receipt", "user-accepted", "--date", "2026-01-01"], True)
     run_script(QUEUE_SCRIPT, tmp, "advance", ["--handoff", handoff, "--agent-id", "agent_a", "--role", "coordinator", "--stage-id", "s1", "--return-owner", "agent_a", "--date", "2026-01-01", "--outcome", "done", "--result", "scoped", "--evidence", "board.md"], True)
     run_script(QUEUE_SCRIPT, tmp, "advance", ["--handoff", handoff, "--agent-id", "agent_b", "--role", "builder", "--stage-id", "s2", "--return-owner", "agent_a", "--date", "2026-01-01", "--outcome", "done", "--result", "impl", "--evidence", "diff.md"], True)
     # editor evidence must reference the reviewed stage
     run_script(QUEUE_SCRIPT, tmp, "advance", ["--handoff", handoff, "--agent-id", "agent_c", "--role", "editor", "--stage-id", "s3", "--return-owner", "agent_a", "--date", "2026-01-01", "--outcome", "done", "--result", "approved", "--evidence", "review.md"], False)
-    run_script(QUEUE_SCRIPT, tmp, "advance", ["--handoff", handoff, "--agent-id", "agent_c", "--role", "editor", "--stage-id", "s3", "--return-owner", "agent_a", "--date", "2026-01-01", "--outcome", "done", "--result", "approved", "--evidence", "s2 review.md"], True)
+    run_script(QUEUE_SCRIPT, tmp, "advance", ["--handoff", handoff, "--agent-id", "agent_c", "--role", "editor", "--stage-id", "s3", "--return-owner", "agent_a", "--date", "2026-01-01", "--outcome", "done", "--result", "approved", "--evidence", "s2 review.md", "--reviewed-revision", "1"], True)
     close = subprocess.run(
         [sys.executable, str(CONTROL_SCRIPT), "--root", str(tmp), "close",
          "--handoff", handoff, "--work-id", "w1", "--expected-work-revision", "1", "--agent-id", "agent_b",
@@ -317,7 +330,7 @@ def test_forged_return_owner(tmp):
     # an unrelated agent cannot confirm itself into the return owner seat
     run_script(QUEUE_SCRIPT, tmp, "confirm", ["--handoff", handoff, "--agent-id", "agent_a", "--plan-revision", "0", "--return-owner", "agent_d", "--date", "2026-01-01"], False)
     run_script(QUEUE_SCRIPT, tmp, "confirm", ["--handoff", handoff, "--agent-id", "agent_d", "--plan-revision", "0", "--return-owner", "agent_d", "--date", "2026-01-01"], False)
-    run_script(QUEUE_SCRIPT, tmp, "confirm", ["--handoff", handoff, "--agent-id", "agent_a", "--plan-revision", "0", "--return-owner", "agent_a", "--date", "2026-01-01"], True)
+    run_script(QUEUE_SCRIPT, tmp, "confirm", ["--handoff", handoff, "--agent-id", "agent_a", "--plan-revision", "0", "--return-owner", "agent_a", "--receipt", "user-accepted", "--date", "2026-01-01"], True)
     record = queue_record(tmp, handoff)
     check(record["return_owner"] == "agent_a" and record["confirmed_by"] == "user", "authoritative return owner recorded at launch")
 
@@ -326,7 +339,7 @@ def test_replan_failure_escalation(tmp):
     print("test_replan_failure_escalation (#17 second failure threshold)")
     handoff = write_handoff(tmp, "escalate")
     run_script(QUEUE_SCRIPT, tmp, "launch", ["--handoff", handoff, "--agent-id", "agent_a", "--role", "coordinator", "--return-owner", "agent_a", "--next-action", "start", "--date", "2026-01-01"] + queue([STAGE_S, STAGE_R2]), True)
-    run_script(QUEUE_SCRIPT, tmp, "confirm", ["--handoff", handoff, "--agent-id", "agent_a", "--plan-revision", "0", "--return-owner", "agent_a", "--date", "2026-01-01"], True)
+    run_script(QUEUE_SCRIPT, tmp, "confirm", ["--handoff", handoff, "--agent-id", "agent_a", "--plan-revision", "0", "--return-owner", "agent_a", "--receipt", "user-accepted", "--date", "2026-01-01"], True)
     run_script(QUEUE_SCRIPT, tmp, "advance", ["--handoff", handoff, "--agent-id", "agent_a", "--role", "coordinator", "--stage-id", "s1", "--return-owner", "agent_a", "--date", "2026-01-01", "--outcome", "done", "--result", "defined", "--evidence", "board.md"], True)
     run_script(QUEUE_SCRIPT, tmp, "advance", ["--handoff", handoff, "--agent-id", "agent_b", "--role", "researcher", "--stage-id", "s2", "--return-owner", "agent_a", "--date", "2026-01-01", "--outcome", "blocked", "--unresolved", "data missing"], True)
     # one failure alone is not enough for a failure re-plan
@@ -334,7 +347,7 @@ def test_replan_failure_escalation(tmp):
     run_script(QUEUE_SCRIPT, tmp, "advance", ["--handoff", handoff, "--agent-id", "agent_b", "--role", "researcher", "--stage-id", "s2", "--return-owner", "agent_a", "--date", "2026-01-01", "--outcome", "blocked", "--unresolved", "still missing"], True)
     run_script(QUEUE_SCRIPT, tmp, "advance", ["--handoff", handoff, "--agent-id", "agent_b", "--role", "researcher", "--stage-id", "s2", "--return-owner", "agent_a", "--date", "2026-01-01", "--outcome", "done", "--result", "x", "--evidence", "y"], False)
     run_script(QUEUE_SCRIPT, tmp, "replan", ["--handoff", handoff, "--agent-id", "agent_b", "--trigger", "failure", "--affected-stage", "s2", "--reason", "second failure", "--date", "2026-01-01"] + proposed_queue([dict(STAGE_S), {**STAGE_R2, "deliverable": "collect evidence again"}]), True)
-    run_script(QUEUE_SCRIPT, tmp, "confirm", ["--handoff", handoff, "--agent-id", "agent_a", "--plan-revision", "1", "--return-owner", "agent_a", "--date", "2026-01-01"], True)
+    run_script(QUEUE_SCRIPT, tmp, "confirm", ["--handoff", handoff, "--agent-id", "agent_a", "--plan-revision", "1", "--return-owner", "agent_a", "--receipt", "user-accepted", "--date", "2026-01-01"], True)
     run_script(QUEUE_SCRIPT, tmp, "advance", ["--handoff", handoff, "--agent-id", "agent_b", "--role", "researcher", "--stage-id", "s2", "--return-owner", "agent_a", "--date", "2026-01-01", "--outcome", "done", "--result", "evidence", "--evidence", "notes.md"], True)
     record = queue_record(tmp, handoff)
     check(record["replans"][0]["trigger"] == "failure" and record["replans"][0]["confirmed_at"], "failure re-plan confirmed after second failure")
@@ -345,40 +358,39 @@ def test_replan_failure_escalation(tmp):
 # --- full clone: real close chain with real validation ---
 
 def clone_runtime():
-    """Copy the Product Repo and reset dynamic state so the real close chain can run."""
+    """Build a fresh runtime: copy the repo asset layer into an empty temp dir,
+    run the official init-runtime.py to create the dynamic state, then seed the
+    test agents. Validation must pass on the resulting environment."""
     root = Path(REPO).resolve()
     top_state = root / ".orbitos/state"
     top_handoff = root / "00-系统/agents/handoff"
     top_events = root / ".orbitos/logs/events"
+    top_registry = root / ".orbitos/agents/registry.yaml"
 
     def ignore(directory, names):
         directory = Path(directory).resolve()
         ignored = set()
         for name in names:
             p = Path(directory) / name
-            if name in {".git", ".pytest_cache", "__pycache__"} or name.endswith(".pyc"):
+            if name in {".git", ".pytest_cache", "__pycache__", ".runtime"} or name.endswith(".pyc"):
                 ignored.add(name)
-            elif p.is_dir() and p == top_handoff:
+            elif p.is_dir() and p in {top_state, top_handoff, top_events}:
                 ignored.add(name)
-            elif p.is_dir() and p == top_state:
-                ignored.add(name)
-            elif p.is_dir() and p == top_events:
+            elif p.is_file() and p == top_registry:
                 ignored.add(name)
         return ignored
 
-    tmp = Path(tempfile.mkdtemp(prefix="handoff-clone-"))
+    tmp = Path(tempfile.mkdtemp(prefix="handoff-init-"))
     shutil.copytree(root, tmp, ignore=ignore, dirs_exist_ok=True)
-    state_dir = tmp / ".orbitos/state"
-    state_dir.mkdir(parents=True, exist_ok=True)
-    for item in (root / ".orbitos/state").iterdir():
-        if item.is_file():
-            shutil.copy2(item, state_dir / item.name)
-    for name, content in {
-        "collaboration-sessions.json": '{"version": 1, "updated_at": "2026-01-01T00:00:00+08:00", "sessions": {}}',
-        "work-items.json": '{"version": 1, "updated_at": "2026-01-01T00:00:00+08:00", "items": {}}',
-        "handoff-queues.json": '{"version": 1, "updated_at": "2026-01-01T00:00:00+08:00", "queues": {}}',
-    }.items():
-        (state_dir / name).write_text(content, encoding="utf-8")
+    # official initialization path
+    init = subprocess.run(
+        [sys.executable, str(tmp / ".orbitos/scripts/init-runtime.py")],
+        capture_output=True, text=True, encoding="utf-8", errors="replace",
+    )
+    if init.returncode != 0:
+        raise RuntimeError(f"init-runtime failed: {init.stderr or init.stdout}")
+    (tmp / ".orbitos/state/handoff-queues.json").write_text(
+        '{"version": 1, "updated_at": "2026-01-01T00:00:00+08:00", "queues": {}}', encoding="utf-8")
     (tmp / "00-系统/agents/handoff/archive").mkdir(parents=True, exist_ok=True)
     (tmp / "00-系统/agents/handoff/archive/.gitkeep").write_text("", encoding="utf-8")
     profiles = tmp / "profiles"
@@ -444,7 +456,7 @@ def test_full_close_two_agent(tmp):
     print("test_full_close_two_agent (real A -> B -> A -> closed chain)")
     handoff = write_handoff(tmp, "two-close", owner="agent_a", return_owner="agent_a")
     run_command(tmp, ".orbitos/scripts/handoff-queue.py", ["launch", "--handoff", handoff, "--agent-id", "agent_a", "--role", "coordinator", "--return-owner", "agent_a", "--next-action", "start", "--date", "2026-01-01"] + queue([STAGE_S, STAGE_R2]), True)
-    run_command(tmp, ".orbitos/scripts/handoff-queue.py", ["confirm", "--handoff", handoff, "--agent-id", "agent_a", "--plan-revision", "0", "--return-owner", "agent_a", "--date", "2026-01-01"], True)
+    run_command(tmp, ".orbitos/scripts/handoff-queue.py", ["confirm", "--handoff", handoff, "--agent-id", "agent_a", "--plan-revision", "0", "--return-owner", "agent_a", "--receipt", "user-accepted", "--date", "2026-01-01"], True)
     run_command(tmp, ".orbitos/scripts/handoff-queue.py", ["advance", "--handoff", handoff, "--agent-id", "agent_a", "--role", "coordinator", "--stage-id", "s1", "--return-owner", "agent_a", "--date", "2026-01-01", "--outcome", "done", "--result", "defined", "--evidence", "board.md"], True)
     run_command(tmp, ".orbitos/scripts/handoff-queue.py", ["advance", "--handoff", handoff, "--agent-id", "agent_b", "--role", "researcher", "--stage-id", "s2", "--return-owner", "agent_a", "--date", "2026-01-01", "--outcome", "done", "--result", "evidence", "--evidence", "notes.md"], True)
     close_chain(tmp, handoff)
@@ -464,7 +476,7 @@ def test_full_close_multi_agent(tmp):
     print("test_full_close_multi_agent (real A -> B -> C -> A -> closed chain)")
     handoff = write_handoff(tmp, "multi-close", owner="agent_a", return_owner="agent_a")
     run_command(tmp, ".orbitos/scripts/handoff-queue.py", ["launch", "--handoff", handoff, "--agent-id", "agent_a", "--role", "coordinator", "--return-owner", "agent_a", "--next-action", "start", "--date", "2026-01-01"] + queue([STAGE_S, STAGE_R, STAGE_C]), True)
-    run_command(tmp, ".orbitos/scripts/handoff-queue.py", ["confirm", "--handoff", handoff, "--agent-id", "agent_a", "--plan-revision", "0", "--return-owner", "agent_a", "--date", "2026-01-01"], True)
+    run_command(tmp, ".orbitos/scripts/handoff-queue.py", ["confirm", "--handoff", handoff, "--agent-id", "agent_a", "--plan-revision", "0", "--return-owner", "agent_a", "--receipt", "user-accepted", "--date", "2026-01-01"], True)
     for tool, role, stage, result_text, evidence in [
         ("agent_a", "coordinator", "s1", "defined", "board.md"),
         ("agent_b", "researcher", "s2", "evidence", "notes.md"),
@@ -487,13 +499,16 @@ def test_full_editor_approve(tmp):
         {"stage_id": "s3", "tool": "agent_c", "role": "editor", "deliverable": "review", "scope": "reproduce", "acceptance": "approved", "next_stage": ""},
     ]
     run_command(tmp, ".orbitos/scripts/handoff-queue.py", ["launch", "--handoff", handoff, "--agent-id", "agent_a", "--role", "coordinator", "--return-owner", "agent_a", "--next-action", "start", "--date", "2026-01-01"] + queue(queue_ok), True)
-    run_command(tmp, ".orbitos/scripts/handoff-queue.py", ["confirm", "--handoff", handoff, "--agent-id", "agent_a", "--plan-revision", "0", "--return-owner", "agent_a", "--date", "2026-01-01"], True)
-    for tool, role, stage, result_text, evidence in [
-        ("agent_a", "coordinator", "s1", "scoped", "board.md"),
-        ("agent_b", "builder", "s2", "impl", "diff.md"),
-        ("agent_c", "editor", "s3", "approved", "s2 reviewed.md"),
+    run_command(tmp, ".orbitos/scripts/handoff-queue.py", ["confirm", "--handoff", handoff, "--agent-id", "agent_a", "--plan-revision", "0", "--return-owner", "agent_a", "--receipt", "user-accepted", "--date", "2026-01-01"], True)
+    for tool, role, stage, result_text, evidence, reviewed in [
+        ("agent_a", "coordinator", "s1", "scoped", "board.md", None),
+        ("agent_b", "builder", "s2", "impl", "diff.md", None),
+        ("agent_c", "editor", "s3", "approved", "s2 reviewed.md", 1),
     ]:
-        run_command(tmp, ".orbitos/scripts/handoff-queue.py", ["advance", "--handoff", handoff, "--agent-id", tool, "--role", role, "--stage-id", stage, "--return-owner", "agent_a", "--date", "2026-01-01", "--outcome", "done", "--result", result_text, "--evidence", evidence], True)
+        args = ["advance", "--handoff", handoff, "--agent-id", tool, "--role", role, "--stage-id", stage, "--return-owner", "agent_a", "--date", "2026-01-01", "--outcome", "done", "--result", result_text, "--evidence", evidence]
+        if reviewed is not None:
+            args += ["--reviewed-revision", str(reviewed)]
+        run_command(tmp, ".orbitos/scripts/handoff-queue.py", args, True)
     close_chain(tmp, handoff)
     check((tmp / "00-系统/agents/handoff/archive/editor-approve.md").is_file(), "editor-approve handoff archived")
     validate_clone(tmp)
@@ -508,7 +523,7 @@ def test_full_editor_reject_rework(tmp):
         {"stage_id": "s3", "tool": "agent_c", "role": "editor", "deliverable": "review", "scope": "reproduce", "acceptance": "approved", "next_stage": ""},
     ]
     run_command(tmp, ".orbitos/scripts/handoff-queue.py", ["launch", "--handoff", handoff, "--agent-id", "agent_a", "--role", "coordinator", "--return-owner", "agent_a", "--next-action", "start", "--date", "2026-01-01"] + queue(queue_ok), True)
-    run_command(tmp, ".orbitos/scripts/handoff-queue.py", ["confirm", "--handoff", handoff, "--agent-id", "agent_a", "--plan-revision", "0", "--return-owner", "agent_a", "--date", "2026-01-01"], True)
+    run_command(tmp, ".orbitos/scripts/handoff-queue.py", ["confirm", "--handoff", handoff, "--agent-id", "agent_a", "--plan-revision", "0", "--return-owner", "agent_a", "--receipt", "user-accepted", "--date", "2026-01-01"], True)
     for tool, role, stage, result_text, evidence in [
         ("agent_a", "coordinator", "s1", "scoped", "board.md"),
         ("agent_b", "builder", "s2", "impl", "diff.md"),
@@ -524,14 +539,75 @@ def test_full_editor_reject_rework(tmp):
         {"stage_id": "s4", "tool": "agent_c", "role": "editor", "deliverable": "re-review", "scope": "reproduce", "acceptance": "approved", "next_stage": ""},
     ]
     run_command(tmp, ".orbitos/scripts/handoff-queue.py", ["replan", "--handoff", handoff, "--agent-id", "agent_c", "--trigger", "scope", "--affected-stage", "s3", "--reason", "scope creep", "--date", "2026-01-01"] + proposed_queue(revised), True)
-    run_command(tmp, ".orbitos/scripts/handoff-queue.py", ["confirm", "--handoff", handoff, "--agent-id", "agent_a", "--plan-revision", "1", "--return-owner", "agent_a", "--date", "2026-01-01"], True)
+    run_command(tmp, ".orbitos/scripts/handoff-queue.py", ["confirm", "--handoff", handoff, "--agent-id", "agent_a", "--plan-revision", "1", "--return-owner", "agent_a", "--receipt", "user-accepted", "--date", "2026-01-01"], True)
     run_command(tmp, ".orbitos/scripts/handoff-queue.py", ["advance", "--handoff", handoff, "--agent-id", "agent_b", "--role", "builder", "--stage-id", "s3", "--return-owner", "agent_a", "--date", "2026-01-01", "--outcome", "done", "--result", "fixed", "--evidence", "fix.md"], True)
-    run_command(tmp, ".orbitos/scripts/handoff-queue.py", ["advance", "--handoff", handoff, "--agent-id", "agent_c", "--role", "editor", "--stage-id", "s4", "--return-owner", "agent_a", "--date", "2026-01-01", "--outcome", "done", "--result", "approved", "--evidence", "s3 re-reviewed.md"], True)
+    run_command(tmp, ".orbitos/scripts/handoff-queue.py", ["advance", "--handoff", handoff, "--agent-id", "agent_c", "--role", "editor", "--stage-id", "s4", "--return-owner", "agent_a", "--date", "2026-01-01", "--outcome", "done", "--result", "approved", "--evidence", "s3 re-reviewed.md", "--reviewed-revision", "1"], True)
     close_chain(tmp, handoff)
     check((tmp / "00-系统/agents/handoff/archive/editor-reject.md").is_file(), "reject-rework handoff archived")
     record = queue_record(tmp, handoff)
     check(record["plan_revision"] == 1 and len(record["replans"]) == 1, "rework plan revision and history preserved")
     validate_clone(tmp)
+
+
+def test_launch_card_full(tmp):
+    print("test_launch_card_full (#15 launch card carries prohibitions, return format, authoritative owner)")
+    handoff = write_handoff(tmp, "card", owner="agent_a", return_owner="agent_a")
+    # frontmatter return_owner mismatch must be rejected at launch
+    run_script(QUEUE_SCRIPT, tmp, "launch", ["--handoff", handoff, "--agent-id", "agent_a", "--role", "coordinator", "--return-owner", "agent_d", "--next-action", "start", "--date", "2026-01-01"] + queue([STAGE_S, STAGE_R2]), False)
+    run_script(QUEUE_SCRIPT, tmp, "launch", ["--handoff", handoff, "--agent-id", "agent_a", "--role", "coordinator", "--return-owner", "agent_a", "--prohibited", "不修改范围外的文件", "--return-format", "结论+证据引用", "--next-action", "start", "--date", "2026-01-01"] + queue([STAGE_S, STAGE_R2]), True)
+    record = queue_record(tmp, handoff)
+    check(record["prohibited"] == "不修改范围外的文件" and record["return_format"] == "结论+证据引用", "launch card carries prohibitions and return format")
+    text = (tmp / "00-系统/agents/handoff/card.md").read_text(encoding="utf-8")
+    check("禁止事项" in text and "返回格式" in text and "验收方" in text, "launch card section written to Markdown")
+    run_script(QUEUE_SCRIPT, tmp, "confirm", ["--handoff", handoff, "--agent-id", "agent_a", "--plan-revision", "0", "--return-owner", "agent_a", "--receipt", "user accepted", "--date", "2026-01-01"], True)
+    check(queue_record(tmp, handoff)["confirmed_receipt"] == "user accepted", "confirm receipt recorded")
+    run_script(QUEUE_SCRIPT, tmp, "confirm", ["--handoff", handoff, "--agent-id", "agent_a", "--plan-revision", "0", "--return-owner", "agent_a", "--receipt", "another", "--date", "2026-01-01"], False)
+
+
+def test_mark_close_forged(tmp):
+    print("test_mark_close_forged (P1: mark-close is gated, cannot forge a receipt)")
+    handoff = write_handoff(tmp, "forge-close", owner="agent_a", return_owner="agent_a")
+    run_script(QUEUE_SCRIPT, tmp, "launch", ["--handoff", handoff, "--agent-id", "agent_a", "--role", "coordinator", "--return-owner", "agent_a", "--next-action", "start", "--date", "2026-01-01"] + queue([STAGE_S, STAGE_R2]), True)
+    run_script(QUEUE_SCRIPT, tmp, "confirm", ["--handoff", handoff, "--agent-id", "agent_a", "--plan-revision", "0", "--return-owner", "agent_a", "--receipt", "user accepted", "--date", "2026-01-01"], True)
+    # not all stages complete -> receipt must be refused
+    run_script(QUEUE_SCRIPT, tmp, "mark-close", ["--handoff", handoff, "--accepted-by", "agent_a", "--archived-ref", "00-系统/agents/handoff/archive/forge-close.md", "--date", "2026-01-01"], False)
+    # non-return-owner forge must be refused
+    run_script(QUEUE_SCRIPT, tmp, "advance", ["--handoff", handoff, "--agent-id", "agent_a", "--role", "coordinator", "--stage-id", "s1", "--return-owner", "agent_a", "--date", "2026-01-01", "--outcome", "done", "--result", "defined", "--evidence", "board.md"], True)
+    run_script(QUEUE_SCRIPT, tmp, "advance", ["--handoff", handoff, "--agent-id", "agent_b", "--role", "researcher", "--stage-id", "s2", "--return-owner", "agent_a", "--date", "2026-01-01", "--outcome", "done", "--result", "evidence", "--evidence", "notes.md"], True)
+    run_script(QUEUE_SCRIPT, tmp, "mark-close", ["--handoff", handoff, "--accepted-by", "agent_b", "--archived-ref", "00-系统/agents/handoff/archive/forge-close.md", "--date", "2026-01-01"], False)
+    run_script(QUEUE_SCRIPT, tmp, "mark-close", ["--handoff", handoff, "--accepted-by", "agent_a", "--archived-ref", "elsewhere.md", "--date", "2026-01-01"], False)
+    run_script(QUEUE_SCRIPT, tmp, "mark-close", ["--handoff", handoff, "--accepted-by", "agent_a", "--archived-ref", "00-系统/agents/handoff/archive/forge-close.md", "--date", "2026-01-01"], True)
+    check(queue_record(tmp, handoff)["close"]["accepted_by"] == "agent_a", "legitimate receipt recorded")
+
+
+def test_queue_record_lost_fail_closed(tmp):
+    print("test_queue_record_lost_fail_closed (P1: plan declared in handoff but projection lost)")
+    handoff = write_handoff(tmp, "lost", owner="agent_a", return_owner="agent_a")
+    run_script(QUEUE_SCRIPT, tmp, "launch", ["--handoff", handoff, "--agent-id", "agent_a", "--role", "coordinator", "--return-owner", "agent_a", "--next-action", "start", "--date", "2026-01-01"] + queue([STAGE_S, STAGE_R2]), True)
+    run_script(QUEUE_SCRIPT, tmp, "confirm", ["--handoff", handoff, "--agent-id", "agent_a", "--plan-revision", "0", "--return-owner", "agent_a", "--receipt", "user accepted", "--date", "2026-01-01"], True)
+    (tmp / ".orbitos/state/handoff-queues.json").write_text(
+        '{"version": 1, "updated_at": "2026-01-01T00:00:00+08:00", "queues": {}}', encoding="utf-8")
+    # begin must fail closed: the handoff frontmatter declares a plan
+    result = run_script(CONTROL_SCRIPT, tmp, "begin", ["--handoff", handoff, "--work-id", "w1", "--expected-work-revision", "1", "--agent-id", "agent_a", "--role", "coordinator", "--session-id", "sess1", "--next-action", "x", "--date", "2026-01-01"], False)
+    check("projection is missing" in (result.stderr or ""), "begin refuses a lost queue projection")
+
+
+def test_replan_structured_and_latest(tmp):
+    print("test_replan_structured_and_latest (#17 structured re-plan + only latest confirmed)")
+    handoff = write_handoff(tmp, "structured", owner="agent_a", return_owner="agent_a")
+    run_script(QUEUE_SCRIPT, tmp, "launch", ["--handoff", handoff, "--agent-id", "agent_a", "--role", "coordinator", "--return-owner", "agent_a", "--next-action", "start", "--date", "2026-01-01"] + queue([STAGE_S, STAGE_R2]), True)
+    run_script(QUEUE_SCRIPT, tmp, "confirm", ["--handoff", handoff, "--agent-id", "agent_a", "--plan-revision", "0", "--return-owner", "agent_a", "--receipt", "user accepted", "--date", "2026-01-01"], True)
+    run_script(QUEUE_SCRIPT, tmp, "replan", ["--handoff", handoff, "--agent-id", "agent_a", "--trigger", "scope", "--affected-stage", "s2", "--reason", "scope grew", "--valid-results", "s1 定义有效", "--invalidated-assumptions", "s2 假设过时", "--replacement-role", "researcher", "--date", "2026-01-01"] + proposed_queue([dict(STAGE_S), {**STAGE_R2, "deliverable": "collect more evidence"}]), True)
+    run_script(QUEUE_SCRIPT, tmp, "replan", ["--handoff", handoff, "--agent-id", "agent_a", "--trigger", "unavailable", "--affected-stage", "s2", "--reason", "agent_b busy", "--valid-results", "s1 定义仍有效", "--invalidated-assumptions", "agent_b 可用", "--replacement-role", "researcher", "--date", "2026-01-01"] + proposed_queue([dict(STAGE_S), {**STAGE_R2, "tool": "agent_d", "deliverable": "collect more evidence"}]), True)
+    # confirming revision 2 must leave revision 1 unconfirmed (truthful history)
+    run_script(QUEUE_SCRIPT, tmp, "confirm", ["--handoff", handoff, "--agent-id", "agent_a", "--plan-revision", "2", "--return-owner", "agent_a", "--receipt", "user accepted v2", "--date", "2026-01-01"], True)
+    record = queue_record(tmp, handoff)
+    check(record["plan_revision"] == 2, "revision advanced to 2")
+    check(record["replans"][0]["confirmed_at"] is None and bool(record["replans"][1]["confirmed_at"]), "only the latest re-plan is confirmed by the receipt")
+    check(record["replans"][0]["valid_results"] == "s1 定义有效" and record["replans"][1]["invalidated_assumptions"] == "agent_b 可用" and record["replans"][1]["replacement_role"] == "researcher", "structured re-plan fields recorded")
+    check(record["stages"]["s2"]["tool"] == "agent_d", "replacement tool applied")
+    # progress is still gated on the confirmed plan
+    run_script(QUEUE_SCRIPT, tmp, "advance", ["--handoff", handoff, "--agent-id", "agent_a", "--role", "coordinator", "--stage-id", "s1", "--return-owner", "agent_a", "--date", "2026-01-01", "--outcome", "done", "--result", "defined", "--evidence", "board.md"], True)
 
 
 def main():
@@ -540,8 +616,12 @@ def main():
     try:
         test_relay_three_agent(tmp)
         test_forged_return_owner(tmp)
+        test_launch_card_full(tmp)
         test_replan_unavailable(tmp)
         test_consecutive_replans(tmp)
+        test_replan_structured_and_latest(tmp)
+        test_mark_close_forged(tmp)
+        test_queue_record_lost_fail_closed(tmp)
         test_builder_editor_identity_and_close(tmp)
         test_replan_failure_escalation(tmp)
     finally:
