@@ -121,6 +121,8 @@ def validate_queue(specs, root, existing=None):
     ids = [spec["stage_id"] for spec in specs]
     if len(ids) != len(set(ids)):
         raise ValueError("stage ids must be unique")
+    if len({spec["tool"] for spec in specs}) < 2:
+        raise ValueError("a multi-stage queue needs at least two different agent tools")
     registered = registered_agents(root)
     for spec in specs:
         if spec["tool"] not in registered:
@@ -130,6 +132,8 @@ def validate_queue(specs, root, existing=None):
     for index, spec in enumerate(specs):
         if index < len(specs) - 1 and spec["next_stage"] != specs[index + 1]["stage_id"]:
             raise ValueError(f"stage chain is broken at {spec['stage_id']}")
+    if specs[-1]["next_stage"]:
+        raise ValueError(f"the last stage cannot loop back: {specs[-1]['stage_id']} -> {specs[-1]['next_stage']}")
     builder_tool = next((spec["tool"] for spec in specs if spec["role"] == "builder"), None)
     editor_tool = next((spec["tool"] for spec in specs if spec["role"] == "editor"), None)
     if builder_tool and editor_tool and builder_tool == editor_tool:
@@ -211,6 +215,7 @@ def launch(args, root):
             "reviewed_revision": None,
             "diff_ref": None,
             "validation_ref": None,
+            "risk": None,
             "session_id": None,
             "completed_by": None,
             "completed_at": None,
@@ -350,10 +355,18 @@ def _session_record(root, session_id):
     return record
 
 
-def _require_session(root, session_id, agent_id, role, handoff_relative):
-    """Bind a stage advance to a governed session for the same agent/role/task."""
+def _require_session(root, session_id, agent_id, role, handoff_relative, bound_session_id=None):
+    """Bind a stage advance to the governed session recorded by handoff-control begin.
+
+    A stage may only advance against the session that `begin` bound to its
+    projection entry; a session opened behind the governed path is rejected.
+    """
     if not session_id:
         raise ValueError("advance requires --session-id bound to this stage's governance session")
+    if not bound_session_id:
+        raise ValueError("stage has no governed session; run handoff-control begin before advancing")
+    if session_id != bound_session_id:
+        raise ValueError(f"stage is bound to session {bound_session_id}, not {session_id}")
     session = _session_record(root, session_id)
     if session.get("agent_id") != agent_id:
         raise ValueError(f"session {session_id} belongs to {session.get('agent_id')}, not {agent_id}")
@@ -361,8 +374,6 @@ def _require_session(root, session_id, agent_id, role, handoff_relative):
         raise ValueError(f"session {session_id} has role {session.get('role')}, not {role}")
     if session.get("task_ref") != handoff_relative:
         raise ValueError(f"session {session_id} is bound to another task: {session.get('task_ref')}")
-    if session.get("status") == "closed":
-        raise ValueError(f"session {session_id} is closed")
     return session
 
 
@@ -391,12 +402,18 @@ def advance(args, root):
         raise ValueError("a completed stage is immutable and cannot advance again")
     if stage["failures"] >= 2:
         raise ValueError("this stage failed twice; a user-confirmed re-plan is required")
-    session = _require_session(root, args.session_id, args.agent_id, args.role, relative)
+    session = _require_session(root, args.session_id, args.agent_id, args.role, relative, bound_session_id=stage.get("session_id"))
+    if stage["role"] == "editor" and session.get("status") != "closed":
+        raise ValueError(f"editor advance requires its governance session to have submitted the review (status={session.get('status')})")
+    if args.outcome == "done" and stage["role"] != "editor" and session.get("status") not in {"returned", "review_required", "closed"}:
+        raise ValueError(f"session {args.session_id} has not delivered its work (status={session.get('status')}); deliver the session result before advancing")
     if stage["role"] == "builder" and args.outcome == "done":
         if not (args.diff_ref or "").strip():
             raise ValueError("a builder stage requires --diff-ref (implementation diff reference)")
         if not (args.validation_ref or "").strip():
             raise ValueError("a builder stage requires --validation-ref (validation evidence reference)")
+        if not (args.risk or "").strip():
+            raise ValueError("a builder stage requires --risk (unresolved risks after delivery)")
     if stage["role"] == "editor":
         order = record["stage_order"]
         index = order.index(args.stage_id)
@@ -405,10 +422,11 @@ def advance(args, root):
         producer = record["stages"][order[index - 1]]
         if producer["role"] not in {"builder", "writer"} or producer["status"] != "complete":
             raise ValueError("an editor stage must follow a completed builder/writer stage")
-        if not (args.review_target_session_id or "").strip():
-            raise ValueError("an editor stage requires --review-target-session-id (the reviewed stage session)")
-        if session.get("review_target_session_id") != args.review_target_session_id:
-            raise ValueError(f"editor session must declare review_target_session_id={args.review_target_session_id}")
+        producer_session_id = producer.get("session_id")
+        if not producer_session_id:
+            raise ValueError("the reviewed stage has no governed session; it must be advanced through handoff-control begin")
+        if args.review_target_session_id != producer_session_id:
+            raise ValueError(f"editor must bind the reviewed stage session ({producer_session_id}), not {args.review_target_session_id or 'none'}")
         target = _session_record(root, args.review_target_session_id)
         if target.get("role") not in {"builder", "writer"}:
             raise ValueError("editor review target must be a builder/writer session")
@@ -416,14 +434,17 @@ def advance(args, root):
             raise ValueError(f"editor review target must belong to the reviewed stage tool ({producer.get('tool')})")
         if target.get("task_ref") != relative:
             raise ValueError("editor review target must be bound to the same handoff")
-        if target.get("status") == "closed":
-            raise ValueError("editor review target session is closed")
         if not any(order[index - 1] in (item or "") for item in (args.evidence or [])):
             raise ValueError(f"editor evidence must reference the reviewed stage output ({order[index - 1]})")
         if args.reviewed_revision is None:
             raise ValueError("an editor stage requires --reviewed-revision bound to the reviewed stage output")
         if args.reviewed_revision != producer.get("output_revision"):
             raise ValueError(f"editor reviewed_revision {args.reviewed_revision} does not match the reviewed stage output revision {producer.get('output_revision')}")
+        target_review_status = (target.get("gate_state") or {}).get("review_status")
+        if args.outcome == "done" and target_review_status != "approved":
+            raise ValueError(f"editor approval requires the reviewed stage review to be approved, got {target_review_status}")
+        if target_review_status == "pending":
+            raise ValueError("editor cannot advance before the independent review is submitted")
     if args.outcome == "done":
         if not args.result or not args.evidence:
             raise ValueError("a done stage requires --result and at least one --evidence")
@@ -453,6 +474,7 @@ def advance(args, root):
         "reviewed_revision": args.reviewed_revision,
         "diff_ref": args.diff_ref,
         "validation_ref": args.validation_ref,
+        "risk": args.risk,
         "session_id": args.session_id,
         "completed_by": args.agent_id,
         "completed_at": now(),
@@ -476,7 +498,14 @@ def advance(args, root):
     record["updated_at"] = now()
     evidence = "；".join(args.evidence or [])
     unresolved = args.unresolved or "无"
-    append_section(handoff, "阶段记录", [f"- {args.stage_id} 由 {args.agent_id} 完成（{stage['role']}）：{args.result}；证据：{evidence}；未决：{unresolved}"])
+    detail = [
+        f"- {args.stage_id} 由 {args.agent_id} 完成（{stage['role']}）：{args.result}",
+        f"  证据：{evidence}；未决：{unresolved}",
+    ]
+    if stage["role"] == "builder":
+        detail.append(f"  diff：{args.diff_ref}；validation：{args.validation_ref}；风险：{args.risk}")
+    detail.append(f"  产出版本：v{stage.get('output_revision')}；审核版本：{args.reviewed_revision if args.reviewed_revision is not None else '-'}；会话：{args.session_id}")
+    append_section(handoff, "阶段记录", detail)
     save_state(root, state)
     update_frontmatter(handoff, {
         "updated": args.date,
@@ -624,6 +653,37 @@ def status(args, root):
     print(json.dumps({"ok": True, "queue": record}, ensure_ascii=False))
 
 
+def bind_session(args, root):
+    """Record which governance session a stage is bound to.
+
+    Only called from the governed `handoff-control.py begin` path, so a stage
+    can never be advanced against a session that was opened behind its back.
+    """
+    handoff = active_handoff(root, args.handoff)
+    relative = relative_path(root, handoff)
+    state = load_state(root)
+    record = state["queues"].get(relative)
+    if not record:
+        raise ValueError("handoff has no queue plan; run launch first")
+    stage = record["stages"].get(args.stage_id)
+    if not stage:
+        raise ValueError(f"unknown stage: {args.stage_id}")
+    if stage["status"] == "complete":
+        raise ValueError(f"cannot bind a session to a completed stage: {args.stage_id}")
+    if stage.get("session_id") and stage["session_id"] != args.session_id:
+        raise ValueError(f"stage {args.stage_id} is already bound to session {stage['session_id']}")
+    session = _session_record(root, args.session_id)
+    if session.get("agent_id") != stage["tool"]:
+        raise ValueError(f"session {args.session_id} belongs to {session.get('agent_id')}, not stage tool {stage['tool']}")
+    if session.get("role") != stage["role"]:
+        raise ValueError(f"session {args.session_id} has role {session.get('role')}, not stage role {stage['role']}")
+    if session.get("task_ref") != relative:
+        raise ValueError(f"session {args.session_id} is bound to another task: {session.get('task_ref')}")
+    stage["session_id"] = args.session_id
+    save_state(root, state)
+    print(json.dumps({"ok": True, "handoff": relative, "stage": args.stage_id, "session_id": args.session_id}, ensure_ascii=False))
+
+
 def _board_replace(root, stem, status, owner, next_action):
     path = root / BOARD
     text = path.read_text(encoding="utf-8")
@@ -670,6 +730,7 @@ def parser():
     advancing.add_argument("--review-target-session-id")
     advancing.add_argument("--diff-ref")
     advancing.add_argument("--validation-ref")
+    advancing.add_argument("--risk")
     advancing.add_argument("--date", required=True)
     advancing.add_argument("--next-action")
     advancing.add_argument("--result")
@@ -690,6 +751,11 @@ def parser():
     replanning.add_argument("--date", required=True)
     statusing = commands.add_parser("status")
     statusing.add_argument("--handoff", required=True)
+    binding = commands.add_parser("bind-session")
+    binding.add_argument("--handoff", required=True)
+    binding.add_argument("--stage-id", required=True)
+    binding.add_argument("--session-id", required=True)
+    binding.add_argument("--date", required=True)
     return root
 
 
@@ -705,6 +771,8 @@ def main():
             advance(args, root)
         elif args.command == "replan":
             replan(args, root)
+        elif args.command == "bind-session":
+            bind_session(args, root)
         else:
             status(args, root)
     except (OSError, ValueError, json.JSONDecodeError) as error:

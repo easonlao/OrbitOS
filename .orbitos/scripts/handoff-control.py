@@ -140,10 +140,11 @@ def queue_or_die(root, handoff_relative, metadata):
 
 
 def require_queue_position(root, handoff_relative, agent_id, role, metadata=None):
-    """Reject governed work when the handoff has a queue the Agent is not positioned for."""
+    """Reject governed work when the handoff has a queue the Agent is not
+    positioned for; returns the queue projection (or None)."""
     queue = queue_or_die(root, handoff_relative, metadata or {})
     if queue is None:
-        return
+        return None
     if queue.get("plan_status") != "confirmed":
         raise ValueError("queue plan must be user-confirmed before work begins")
     if queue.get("replans") and not queue["replans"][-1].get("confirmed_at"):
@@ -153,6 +154,7 @@ def require_queue_position(root, handoff_relative, agent_id, role, metadata=None
     current_role = queue.get("current_role")
     if current_role and current_role != role:
         raise ValueError(f"begin requires the current queue role: {current_role}")
+    return queue
 
 
 def session_record(root, session_id):
@@ -167,7 +169,11 @@ def begin(args, root):
     _text, _match, metadata = frontmatter(handoff)
     if metadata.get("handoff_status") not in {"delegated", "returned"}:
         raise ValueError("only delegated or returned handoffs can begin governed work")
-    require_queue_position(root, args.handoff, args.agent_id, args.role, metadata)
+    queue = require_queue_position(root, args.handoff, args.agent_id, args.role, metadata)
+    stage_id = (queue or {}).get("current_stage")
+    stage = (queue or {}).get("stages", {}).get(stage_id) if queue else None
+    if stage is not None and stage["status"] != "complete" and stage.get("session_id") and stage["session_id"] != args.session_id:
+        raise ValueError(f"stage {stage_id} is already bound to session {stage['session_id']}; do not begin a second session for the same stage")
     work = work_record(root, args.work_id)
     if work["source_type"] != "handoff" or work["source_ref"] != args.handoff:
         raise ValueError("work item must point to this handoff")
@@ -180,6 +186,10 @@ def begin(args, root):
         command += ["--review-target-session-id", args.review_target_session_id]
     run(command, root)
     run([sys.executable, str(root / ".orbitos/scripts/work-control.py"), "--root", str(root), "claim", "--id", args.work_id, "--agent-id", args.agent_id, "--expected-revision", str(args.expected_work_revision), "--lease-seconds", str(args.lease_seconds)], root)
+    if stage is not None and stage["status"] != "complete":
+        # Bind the governed session to the stage projection so a later advance
+        # can only use the session this begin created.
+        run([sys.executable, str(root / ".orbitos/scripts/handoff-queue.py"), "--root", str(root), "bind-session", "--handoff", args.handoff, "--stage-id", stage_id, "--session-id", args.session_id, "--date", args.date], root)
     update_frontmatter(handoff, {"updated": args.date, "handoff_status": "working", "current_owner": args.agent_id, "next_action": args.next_action, "governance_required": "true", "collaboration_session_id": args.session_id})
     board_replace(root, handoff.stem, "working", args.agent_id, args.next_action)
     print(json.dumps({"ok": True, "handoff": args.handoff, "session_id": args.session_id}))
@@ -226,8 +236,10 @@ def _write_close_receipt(root, handoff_relative, accepted_by, archived_ref):
 
 def close(args, root):
     # Recoverable, idempotent close: if the handoff is already archived, the
-    # retry continues the remaining steps (receipt, work item, event, validation)
-    # instead of pretending success.
+    # retry continues the remaining steps (work item, event, validation)
+    # instead of pretending success. Every path still re-verifies the
+    # governance hard gate, so a missing work item or event fails loudly
+    # instead of returning success.
     try:
         handoff = active_handoff(root, args.handoff)
         archived = False
@@ -240,29 +252,14 @@ def close(args, root):
     _text, _match, metadata = frontmatter(handoff)
     if metadata.get("return_owner") != args.agent_id:
         raise ValueError("only the return owner can accept and close this handoff")
+    if metadata.get("collaboration_session_id") != args.session_id:
+        raise ValueError("handoff is not bound to this collaboration session")
+    session = session_record(root, args.session_id)
+    if session["status"] != "closed" or not session["gate_state"]["hard_gate_passed"]:
+        raise ValueError("handoff close requires a closed collaboration session that passed hard gates")
+    if session["agent_id"] != args.agent_id:
+        raise ValueError("only the session owner can close its handoff")
     queue = queue_or_die(root, args.handoff, metadata)
-    if not archived:
-        if queue is not None:
-            if queue.get("plan_status") != "confirmed":
-                raise ValueError("close requires a user-confirmed queue plan")
-            if queue.get("replans") and not queue["replans"][-1].get("confirmed_at"):
-                raise ValueError("the latest re-plan is still waiting for user confirmation")
-            incomplete = [
-                stage_id
-                for stage_id in queue.get("stage_order", [])
-                if queue.get("stages", {}).get(stage_id, {}).get("status") != "complete"
-            ]
-            if incomplete:
-                raise ValueError(f"close requires all planned stages complete; pending: {incomplete}")
-            if queue.get("current_owner") != args.agent_id:
-                raise ValueError("close requires the return owner to hold the baton after all stages complete")
-        if metadata.get("collaboration_session_id") != args.session_id:
-            raise ValueError("handoff is not bound to this collaboration session")
-        session = session_record(root, args.session_id)
-        if session["status"] != "closed" or not session["gate_state"]["hard_gate_passed"]:
-            raise ValueError("handoff close requires a closed collaboration session that passed hard gates")
-        if session["agent_id"] != args.agent_id:
-            raise ValueError("only the session owner can close its handoff")
     for output in args.output:
         if not re.match(r"^[^|]+\|[^|]+(\|[^|]+)*$", output):
             raise ValueError(f"output must use KIND|REF|STATUS[|NOTE]: {output}")
@@ -270,41 +267,30 @@ def close(args, root):
     archive_path = root / archive_relative
     if not archived and archive_path.exists():
         raise ValueError("archive target already exists")
-    if not archived:
-        # receipt first: a failure here leaves nothing half-done
-        if queue is not None:
-            _write_close_receipt(root, args.handoff, args.agent_id, archive_relative)
+    # The queue gates (confirmed plan, latest re-plan confirmed, all stages
+    # complete, return owner holds the baton, archive target location) live in
+    # _write_close_receipt as the single source of truth; close never repeats
+    # them so the gates cannot drift apart. The receipt is written on the first
+    # pass before the archive move and re-applied on recovery (idempotent).
+    if queue is not None:
+        _write_close_receipt(root, args.handoff, args.agent_id, archive_relative)
     # idempotent close-out: frontmatter + board are safe to re-apply on recovery
     update_frontmatter(handoff, {"updated": args.date, "handoff_status": "closed", "current_owner": args.agent_id, "next_action": "无。协作已完成并归档。"})
     board_remove(root, handoff.stem)
     if not archived:
         archive_path.parent.mkdir(parents=True, exist_ok=True)
         shutil.move(str(handoff), str(archive_path))
-    # work item close-out (idempotent: skip when already done or missing)
-    try:
-        work = work_record(root, args.work_id)
-        if work["status"] != "done":
-            run([sys.executable, str(root / ".orbitos/scripts/work-control.py"), "--root", str(root), "update", "--id", args.work_id, "--agent-id", args.agent_id, "--expected-revision", str(args.expected_work_revision), "--status", "done", "--next-action", "closed and archived", "--source-ref", archive_relative, "--evidence", f".orbitos/state/collaboration-sessions.json#{args.session_id}", "--no-user-required"], root)
-    except ValueError:
-        work = None
-    # receipt retry for the archived path
-    if archived and queue is not None:
-        _write_close_receipt(root, args.handoff, args.agent_id, archive_relative)
+    # work item close-out (idempotent when already done; a missing work item
+    # fails the close instead of being silently skipped)
+    work = work_record(root, args.work_id)
+    if work["status"] != "done":
+        run([sys.executable, str(root / ".orbitos/scripts/work-control.py"), "--root", str(root), "update", "--id", args.work_id, "--agent-id", args.agent_id, "--expected-revision", str(args.expected_work_revision), "--status", "done", "--next-action", "closed and archived", "--source-ref", archive_relative, "--evidence", f".orbitos/state/collaboration-sessions.json#{args.session_id}", "--no-user-required"], root)
     validation = run([sys.executable, str(root / ".orbitos/scripts/run-validation.py")], root)
     if "Validation eval passed" not in validation:
         raise ValueError("post-close validation did not pass")
-    if archived:
-        # resume the session record from the projection or skip the event if it already exists
-        session = None
-        try:
-            session = session_record(root, args.session_id)
-        except ValueError:
-            session = None
-    else:
-        session = session_record(root, args.session_id)
     events_root = root / ".orbitos/logs/events"
-    if session is not None and events_root.is_dir() and not any(args.slug in path.name for path in events_root.glob("*.yaml")):
-        event_command = [sys.executable, str(root / ".orbitos/scripts/write_event.py"), "--agent-id", args.agent_id, "--role", session["role"], "--slug", args.slug, "--summary", args.summary, "--reason", args.reason, "--project", (work or {}).get("project", "orbitos"), "--event-type", "progress_sync", "--file", f"moved:{args.handoff}:closed handoff archived", "--file", f"updated:.orbitos/state/work-items.json:closed work item source migrated", "--collaboration-session", args.session_id, "--review-status", session.get("review", {}).get("status", "not_required"), "--validation", "passed", "--thinking-bypassed"]
+    if events_root.is_dir() and not any(args.slug in path.name for path in events_root.glob("*.yaml")):
+        event_command = [sys.executable, str(root / ".orbitos/scripts/write_event.py"), "--agent-id", args.agent_id, "--role", session["role"], "--slug", args.slug, "--summary", args.summary, "--reason", args.reason, "--project", work["project"], "--event-type", "progress_sync", "--file", f"moved:{args.handoff}:closed handoff archived", "--file", f"updated:.orbitos/state/work-items.json:closed work item source migrated", "--collaboration-session", args.session_id, "--review-status", session.get("review", {}).get("status", "not_required"), "--validation", "passed", "--thinking-bypassed"]
         if session.get("review", {}).get("status") == "approved":
             event_command += ["--reviewer-session", session["review"].get("reviewer_session_id"), "--reviewer-agent", session["review"].get("reviewer_agent_id")]
         for output in args.output:

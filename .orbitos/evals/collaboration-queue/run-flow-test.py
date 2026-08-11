@@ -235,6 +235,69 @@ def open_editor_session(tmp, handoff, agent, review_target, stage="editor"):
     return sid
 
 
+def begin_stage(tmp, handoff, agent, role, stage, review_target=None):
+    """Real governed begin: create a work item (idempotent), let handoff-control
+    begin open and bind the session to the stage projection. Returns (sid, work_id)."""
+    stem = Path(handoff).stem
+    sessions = json.loads((tmp / ".orbitos/state/collaboration-sessions.json").read_text(encoding="utf-8"))["sessions"]
+    sid = f"sess-{stem}-{stage}"
+    suffix = 1
+    while sid in sessions:
+        sid = f"sess-{stem}-{stage}-r{suffix}"
+        suffix += 1
+    work_id = "w-" + sid[len("sess-"):]
+    items = json.loads((tmp / ".orbitos/state/work-items.json").read_text(encoding="utf-8"))["items"]
+    revision = items.get(work_id, {}).get("revision", 1)
+    if work_id not in items:
+        run_command(tmp, ".orbitos/scripts/work-control.py", ["create", "--id", work_id, "--title", f"stage {stage}", "--project", "flow-test", "--source-type", "handoff", "--source-ref", handoff, "--next-action", "work"], True)
+    args = ["begin", "--handoff", handoff, "--work-id", work_id, "--expected-work-revision", str(revision),
+            "--agent-id", agent, "--role", role, "--session-id", sid,
+            "--next-action", f"work on {stage}", "--date", "2026-01-01"]
+    if role == "builder":
+        res_sid = f"sess-{stem}-res-{stage}"
+        subprocess.run([sys.executable, str(tmp / ".orbitos/scripts/collab-session.py"), "--root", str(tmp), "open",
+                        "--session-id", res_sid, "--mode", "multi_agent_claim", "--task-ref", handoff,
+                        "--project", "flow-test", "--agent-id", agent, "--role", "researcher"],
+                       capture_output=True, text=True, encoding="utf-8")
+        subprocess.run([sys.executable, str(tmp / ".orbitos/scripts/collab-session.py"), "--root", str(tmp),
+                        "submit-research", "--session-id", res_sid, "--agent-id", agent,
+                        "--expected-revision", "1", "--evidence", "notes.md|human_confirmed|current_primary|reproduced"],
+                       capture_output=True, text=True, encoding="utf-8")
+        args += ["--source-session-id", res_sid]
+    if role == "editor":
+        if not review_target:
+            raise RuntimeError("editor stage requires a review target session")
+        args += ["--review-target-session-id", review_target]
+    run_command(tmp, ".orbitos/scripts/handoff-control.py", args, True)
+    return sid, work_id
+
+
+def finish_session(tmp, sid, agent, status="closed"):
+    """Deliver a stage session so a done advance is accepted (returned/review_required/closed)."""
+    run_command(tmp, ".orbitos/scripts/collab-session.py", ["update", "--session-id", sid, "--agent-id", agent,
+               "--expected-revision", str(_session_revision(tmp, sid)), "--status", status,
+               "--evidence", "notes.md|human_confirmed|current_primary|reproduced"], True)
+
+
+def deliver_builder(tmp, sid, agent):
+    """Move a builder/writer session into review_required (pending review)."""
+    run_command(tmp, ".orbitos/scripts/collab-session.py", ["update", "--session-id", sid, "--agent-id", agent,
+               "--expected-revision", str(_session_revision(tmp, sid)), "--status", "review_required",
+               "--evidence", "notes.md|human_confirmed|current_primary|reproduced"], True)
+
+
+def editor_review(tmp, sid, agent, target_sid, decision="approved", reason=None):
+    """Submit an independent editor review; closes the editor session and stamps
+    the reviewed target's review_status with the decision."""
+    args = ["review", "--session-id", sid, "--agent-id", agent,
+            "--expected-revision", str(_session_revision(tmp, sid)),
+            "--target-expected-revision", str(_session_revision(tmp, target_sid)),
+            "--decision", decision, "--evidence", "review.md|human_confirmed|current_primary|independently_reviewed"]
+    if reason:
+        args += ["--reason", reason]
+    run_command(tmp, ".orbitos/scripts/collab-session.py", args, True)
+
+
 def close_chain(tmp, handoff, owner="agent_a"):
     """Governed acceptance: create work item, begin, close the session, then close the handoff."""
     stem = Path(handoff).stem
@@ -318,8 +381,12 @@ def test_relay_three_agent(tmp):
     # advance without a governance session must be refused
     run_script(QUEUE_SCRIPT, tmp, "advance", ["--handoff", handoff, "--agent-id", "agent_a", "--role", "coordinator", "--stage-id", "s1", "--return-owner", "agent_a", "--session-id", "nope", "--date", "2026-01-01", "--outcome", "done", "--result", "x", "--evidence", "y"], False)
     run_script(QUEUE_SCRIPT, tmp, "confirm", ["--handoff", handoff, "--agent-id", "agent_a", "--plan-revision", "0", "--return-owner", "agent_a", "--receipt", "user accepted", "--date", "2026-01-01"], True)
+    # a session opened behind begin cannot advance: the stage is not bound
+    run_command(tmp, ".orbitos/scripts/collab-session.py", ["open", "--session-id", "sess-relay-rogue", "--mode", "multi_agent_claim", "--task-ref", handoff, "--project", "flow-test", "--agent-id", "agent_a", "--role", "coordinator"], True)
+    run_script(QUEUE_SCRIPT, tmp, "advance", ["--handoff", handoff, "--agent-id", "agent_a", "--role", "coordinator", "--stage-id", "s1", "--return-owner", "agent_a", "--session-id", "sess-relay-rogue", "--date", "2026-01-01", "--outcome", "done", "--result", "x", "--evidence", "y"], False)
     for agent, role, stage in [("agent_a", "coordinator", "s1"), ("agent_b", "researcher", "s2"), ("agent_c", "coordinator", "s3")]:
-        sid = open_stage_session(tmp, handoff, agent, role, stage)
+        sid, _ = begin_stage(tmp, handoff, agent, role, stage)
+        finish_session(tmp, sid, agent)
         args = ["--handoff", handoff, "--agent-id", agent, "--role", role, "--stage-id", stage, "--return-owner", "agent_a", "--session-id", sid, "--date", "2026-01-01", "--outcome", "done", "--result", f"{stage} done", "--evidence", "notes.md"]
         run_script(QUEUE_SCRIPT, tmp, "advance", args, True)
     # a completed stage is immutable: re-advancing s1 is refused
@@ -386,9 +453,11 @@ def test_replan_structured_and_latest(tmp):
     check("仍有效结果" in text and "失效假设" in text and "替换角色" in text, "structured re-plan written to Markdown")
     check(text.count("## 计划修订") == 1 and "plan_revision：1" in text and "plan_revision：2" in text, "re-plan section appended idempotently")
     # replacement agent picks up after confirmation
-    s1 = open_stage_session(tmp, handoff, "agent_a", "coordinator", "s1")
+    s1, _ = begin_stage(tmp, handoff, "agent_a", "coordinator", "s1")
+    finish_session(tmp, s1, "agent_a")
     run_script(QUEUE_SCRIPT, tmp, "advance", ["--handoff", handoff, "--agent-id", "agent_a", "--role", "coordinator", "--stage-id", "s1", "--return-owner", "agent_a", "--session-id", s1, "--date", "2026-01-01", "--outcome", "done", "--result", "defined", "--evidence", "board.md"], True)
-    s2 = open_stage_session(tmp, handoff, "agent_d", "researcher", "s2")
+    s2, _ = begin_stage(tmp, handoff, "agent_d", "researcher", "s2")
+    finish_session(tmp, s2, "agent_d")
     run_script(QUEUE_SCRIPT, tmp, "advance", ["--handoff", handoff, "--agent-id", "agent_d", "--role", "researcher", "--stage-id", "s2", "--return-owner", "agent_a", "--session-id", s2, "--date", "2026-01-01", "--outcome", "done", "--result", "evidence", "--evidence", "notes.md"], True)
     record = queue_record(tmp, handoff)
     check(record["stages"]["s2"]["tool"] == "agent_d" and record["stages"]["s2"]["status"] == "complete", "replacement agent completed the revised stage")
@@ -412,7 +481,7 @@ def test_queue_record_lost_fail_closed(tmp):
 
 
 def test_builder_editor_gates(tmp):
-    print("test_builder_editor_gates (#18 builder refs + editor session binding)")
+    print("test_builder_editor_gates (#18 builder refs/risk + editor session binding)")
     same_tool = write_handoff(tmp, "self-review")
     queue_bad = [
         {"stage_id": "s1", "tool": "agent_a", "role": "coordinator", "deliverable": "scope", "scope": "module x", "acceptance": "scoped", "next_stage": "s2"},
@@ -429,19 +498,30 @@ def test_builder_editor_gates(tmp):
     ]
     run_script(QUEUE_SCRIPT, tmp, "launch", ["--handoff", handoff, "--agent-id", "agent_a", "--role", "coordinator", "--return-owner", "agent_a", "--prohibited", "不越界", "--return-format", "结论+证据", "--next-action", "start", "--date", "2026-01-01"] + queue(queue_ok), True)
     run_script(QUEUE_SCRIPT, tmp, "confirm", ["--handoff", handoff, "--agent-id", "agent_a", "--plan-revision", "0", "--return-owner", "agent_a", "--receipt", "user accepted", "--date", "2026-01-01"], True)
-    s1 = open_stage_session(tmp, handoff, "agent_a", "coordinator", "s1")
+    s1, _ = begin_stage(tmp, handoff, "agent_a", "coordinator", "s1")
+    finish_session(tmp, s1, "agent_a")
     run_script(QUEUE_SCRIPT, tmp, "advance", ["--handoff", handoff, "--agent-id", "agent_a", "--role", "coordinator", "--stage-id", "s1", "--return-owner", "agent_a", "--session-id", s1, "--date", "2026-01-01", "--outcome", "done", "--result", "scoped", "--evidence", "board.md"], True)
-    s2 = open_stage_session(tmp, handoff, "agent_b", "builder", "s2")
-    # builder without diff/validation refs refused
+    s2, _ = begin_stage(tmp, handoff, "agent_b", "builder", "s2")
+    deliver_builder(tmp, s2, "agent_b")
+    # builder without diff/validation refs or risk refused
     run_script(QUEUE_SCRIPT, tmp, "advance", ["--handoff", handoff, "--agent-id", "agent_b", "--role", "builder", "--stage-id", "s2", "--return-owner", "agent_a", "--session-id", s2, "--date", "2026-01-01", "--outcome", "done", "--result", "impl", "--evidence", "diff.md"], False)
-    run_script(QUEUE_SCRIPT, tmp, "advance", ["--handoff", handoff, "--agent-id", "agent_b", "--role", "builder", "--stage-id", "s2", "--return-owner", "agent_a", "--session-id", s2, "--date", "2026-01-01", "--outcome", "done", "--result", "impl", "--evidence", "diff.md", "--diff-ref", "diff/main.md", "--validation-ref", "validation/run.md"], True)
+    run_script(QUEUE_SCRIPT, tmp, "advance", ["--handoff", handoff, "--agent-id", "agent_b", "--role", "builder", "--stage-id", "s2", "--return-owner", "agent_a", "--session-id", s2, "--date", "2026-01-01", "--outcome", "done", "--result", "impl", "--evidence", "diff.md", "--diff-ref", "diff/main.md", "--validation-ref", "validation/run.md"], False)
+    run_script(QUEUE_SCRIPT, tmp, "advance", ["--handoff", handoff, "--agent-id", "agent_b", "--role", "builder", "--stage-id", "s2", "--return-owner", "agent_a", "--session-id", s2, "--date", "2026-01-01", "--outcome", "done", "--result", "impl", "--evidence", "diff.md", "--diff-ref", "diff/main.md", "--validation-ref", "validation/run.md", "--risk", "无未解决风险"], True)
     # editor without a bound review target refused at the governance layer too
     run_command(tmp, ".orbitos/scripts/collab-session.py", ["open", "--session-id", "sess-engineer-no-target", "--mode", "multi_agent_claim", "--task-ref", handoff, "--project", "flow-test", "--agent-id", "agent_c", "--role", "editor"], False)
-    s3 = open_editor_session(tmp, handoff, "agent_c", s2, "s3")
+    # editor approval while the reviewed stage review is still pending is refused
+    e_pending = "sess-engineer-e-pending"
+    run_command(tmp, ".orbitos/scripts/collab-session.py", ["open", "--session-id", e_pending, "--mode", "multi_agent_claim", "--task-ref", handoff, "--project", "flow-test", "--agent-id", "agent_c", "--role", "editor", "--review-target-session-id", s2], True)
+    run_script(QUEUE_SCRIPT, tmp, "advance", ["--handoff", handoff, "--agent-id", "agent_c", "--role", "editor", "--stage-id", "s3", "--return-owner", "agent_a", "--session-id", e_pending, "--review-target-session-id", s2, "--date", "2026-01-01", "--outcome", "done", "--result", "approved", "--evidence", "s2 reviewed.md", "--reviewed-revision", "1"], False)
+    # the real editor session binds the reviewed stage session and reviews it
+    s3, _ = begin_stage(tmp, handoff, "agent_c", "editor", "s3", review_target=s2)
+    editor_review(tmp, s3, "agent_c", s2, "approved")
     run_script(QUEUE_SCRIPT, tmp, "advance", ["--handoff", handoff, "--agent-id", "agent_c", "--role", "editor", "--stage-id", "s3", "--return-owner", "agent_a", "--session-id", s3, "--review-target-session-id", s2, "--date", "2026-01-01", "--outcome", "done", "--result", "approved", "--evidence", "s2 reviewed.md", "--reviewed-revision", "1"], True)
     record = queue_record(tmp, handoff)
     check(record["current_owner"] == "agent_a", "baton returned after editor approval")
-    check(record["stages"]["s2"]["diff_ref"] and record["stages"]["s2"]["validation_ref"], "builder refs recorded")
+    check(record["stages"]["s2"]["diff_ref"] and record["stages"]["s2"]["validation_ref"] and record["stages"]["s2"]["risk"], "builder refs and risk recorded")
+    text = (tmp / "00-系统/agents/handoff/engineer.md").read_text(encoding="utf-8")
+    check("diff：" in text and "validation：" in text and "产出版本：v1" in text and "会话：" in text, "stage record carries handoff evidence for the next tool")
     close = subprocess.run(
         [sys.executable, str(CONTROL_SCRIPT), "--root", str(tmp), "close",
          "--handoff", handoff, "--work-id", "w1", "--expected-work-revision", "1", "--agent-id", "agent_b",
@@ -456,18 +536,78 @@ def test_replan_failure_escalation(tmp):
     handoff = write_handoff(tmp, "escalate")
     run_script(QUEUE_SCRIPT, tmp, "launch", ["--handoff", handoff, "--agent-id", "agent_a", "--role", "coordinator", "--return-owner", "agent_a", "--prohibited", "不越界", "--return-format", "结论+证据", "--next-action", "start", "--date", "2026-01-01"] + queue([STAGE_S, STAGE_R2]), True)
     run_script(QUEUE_SCRIPT, tmp, "confirm", ["--handoff", handoff, "--agent-id", "agent_a", "--plan-revision", "0", "--return-owner", "agent_a", "--receipt", "user accepted", "--date", "2026-01-01"], True)
-    s1 = open_stage_session(tmp, handoff, "agent_a", "coordinator", "s1")
+    s1, _ = begin_stage(tmp, handoff, "agent_a", "coordinator", "s1")
+    finish_session(tmp, s1, "agent_a")
     run_script(QUEUE_SCRIPT, tmp, "advance", ["--handoff", handoff, "--agent-id", "agent_a", "--role", "coordinator", "--stage-id", "s1", "--return-owner", "agent_a", "--session-id", s1, "--date", "2026-01-01", "--outcome", "done", "--result", "defined", "--evidence", "board.md"], True)
-    s2 = open_stage_session(tmp, handoff, "agent_b", "researcher", "s2")
+    s2, _ = begin_stage(tmp, handoff, "agent_b", "researcher", "s2")
     run_script(QUEUE_SCRIPT, tmp, "advance", ["--handoff", handoff, "--agent-id", "agent_b", "--role", "researcher", "--stage-id", "s2", "--return-owner", "agent_a", "--session-id", s2, "--date", "2026-01-01", "--outcome", "blocked", "--unresolved", "data missing"], True)
     run_script(QUEUE_SCRIPT, tmp, "replan", ["--handoff", handoff, "--agent-id", "agent_b", "--trigger", "failure", "--affected-stage", "s2", "--reason", "premature", "--valid-results", "s1 有效", "--invalidated-assumptions", "无", "--replacement-role", "researcher", "--date", "2026-01-01"] + proposed_queue([dict(STAGE_S), {**STAGE_R2, "deliverable": "again"}]), False)
     run_script(QUEUE_SCRIPT, tmp, "advance", ["--handoff", handoff, "--agent-id", "agent_b", "--role", "researcher", "--stage-id", "s2", "--return-owner", "agent_a", "--session-id", s2, "--date", "2026-01-01", "--outcome", "blocked", "--unresolved", "still missing"], True)
     run_script(QUEUE_SCRIPT, tmp, "advance", ["--handoff", handoff, "--agent-id", "agent_b", "--role", "researcher", "--stage-id", "s2", "--return-owner", "agent_a", "--session-id", s2, "--date", "2026-01-01", "--outcome", "done", "--result", "x", "--evidence", "y"], False)
     run_script(QUEUE_SCRIPT, tmp, "replan", ["--handoff", handoff, "--agent-id", "agent_b", "--trigger", "failure", "--affected-stage", "s2", "--reason", "second failure", "--valid-results", "s1 定义有效", "--invalidated-assumptions", "s2 数据源不可用", "--replacement-role", "researcher", "--date", "2026-01-01"] + proposed_queue([dict(STAGE_S), {**STAGE_R2, "deliverable": "again"}]), True)
     run_script(QUEUE_SCRIPT, tmp, "confirm", ["--handoff", handoff, "--agent-id", "agent_a", "--plan-revision", "1", "--return-owner", "agent_a", "--receipt", "user accepted", "--date", "2026-01-01"], True)
-    run_script(QUEUE_SCRIPT, tmp, "advance", ["--handoff", handoff, "--agent-id", "agent_b", "--role", "researcher", "--stage-id", "s2", "--return-owner", "agent_a", "--session-id", s2, "--date", "2026-01-01", "--outcome", "done", "--result", "evidence", "--evidence", "notes.md"], True)
+    s2b, _ = begin_stage(tmp, handoff, "agent_b", "researcher", "s2")
+    finish_session(tmp, s2b, "agent_b")
+    run_script(QUEUE_SCRIPT, tmp, "advance", ["--handoff", handoff, "--agent-id", "agent_b", "--role", "researcher", "--stage-id", "s2", "--return-owner", "agent_a", "--session-id", s2b, "--date", "2026-01-01", "--outcome", "done", "--result", "evidence", "--evidence", "notes.md"], True)
     record = queue_record(tmp, handoff)
     check(record["replans"][0]["trigger"] == "failure" and record["replans"][0]["confirmed_at"], "failure re-plan confirmed after second failure")
+
+
+def test_queue_invariants(tmp):
+    print("test_queue_invariants (#15/16 at least two tools, no loop, no single stage)")
+    # all stages on the same tool
+    h1 = write_handoff(tmp, "same-tool-queue")
+    run_script(QUEUE_SCRIPT, tmp, "launch", ["--handoff", h1, "--agent-id", "agent_a", "--role", "coordinator", "--return-owner", "agent_a", "--prohibited", "不越界", "--return-format", "结论+证据", "--next-action", "start", "--date", "2026-01-01"] + queue([
+        {"stage_id": "s1", "tool": "agent_a", "role": "coordinator", "deliverable": "a", "scope": "x", "acceptance": "ok", "next_stage": "s2"},
+        {"stage_id": "s2", "tool": "agent_a", "role": "researcher", "deliverable": "b", "scope": "x", "acceptance": "ok", "next_stage": ""},
+    ]), False)
+    # the last stage loops back into the chain
+    h2 = write_handoff(tmp, "loop-queue")
+    run_script(QUEUE_SCRIPT, tmp, "launch", ["--handoff", h2, "--agent-id", "agent_a", "--role", "coordinator", "--return-owner", "agent_a", "--prohibited", "不越界", "--return-format", "结论+证据", "--next-action", "start", "--date", "2026-01-01"] + queue([
+        {"stage_id": "s1", "tool": "agent_a", "role": "coordinator", "deliverable": "a", "scope": "x", "acceptance": "ok", "next_stage": "s2"},
+        {"stage_id": "s2", "tool": "agent_b", "role": "researcher", "deliverable": "b", "scope": "x", "acceptance": "ok", "next_stage": "s1"},
+    ]), False)
+    # a single-stage queue cannot be a relay
+    h3 = write_handoff(tmp, "single-queue")
+    run_script(QUEUE_SCRIPT, tmp, "launch", ["--handoff", h3, "--agent-id", "agent_a", "--role", "coordinator", "--return-owner", "agent_a", "--prohibited", "不越界", "--return-format", "结论+证据", "--next-action", "start", "--date", "2026-01-01"] + queue([
+        {"stage_id": "s1", "tool": "agent_a", "role": "coordinator", "deliverable": "a", "scope": "x", "acceptance": "ok", "next_stage": ""},
+    ]), False)
+
+
+def test_editor_fake_target(tmp):
+    print("test_editor_fake_target (#18 reviewer must bind the actual producer session)")
+    handoff = write_handoff(tmp, "fake-target")
+    queue_ok = [
+        {"stage_id": "s1", "tool": "agent_a", "role": "coordinator", "deliverable": "scope", "scope": "module x", "acceptance": "scoped", "next_stage": "s2"},
+        {"stage_id": "s2", "tool": "agent_b", "role": "builder", "deliverable": "implement", "scope": "module x", "acceptance": "verified", "next_stage": "s3"},
+        {"stage_id": "s3", "tool": "agent_c", "role": "editor", "deliverable": "review", "scope": "reproduce", "acceptance": "approved", "next_stage": ""},
+    ]
+    run_script(QUEUE_SCRIPT, tmp, "launch", ["--handoff", handoff, "--agent-id", "agent_a", "--role", "coordinator", "--return-owner", "agent_a", "--prohibited", "不越界", "--return-format", "结论+证据", "--next-action", "start", "--date", "2026-01-01"] + queue(queue_ok), True)
+    run_script(QUEUE_SCRIPT, tmp, "confirm", ["--handoff", handoff, "--agent-id", "agent_a", "--plan-revision", "0", "--return-owner", "agent_a", "--receipt", "user accepted", "--date", "2026-01-01"], True)
+    s1, _ = begin_stage(tmp, handoff, "agent_a", "coordinator", "s1")
+    finish_session(tmp, s1, "agent_a")
+    run_script(QUEUE_SCRIPT, tmp, "advance", ["--handoff", handoff, "--agent-id", "agent_a", "--role", "coordinator", "--stage-id", "s1", "--return-owner", "agent_a", "--session-id", s1, "--date", "2026-01-01", "--outcome", "done", "--result", "scoped", "--evidence", "board.md"], True)
+    # the real producer stage session
+    s2, _ = begin_stage(tmp, handoff, "agent_b", "builder", "s2")
+    deliver_builder(tmp, s2, "agent_b")
+    run_script(QUEUE_SCRIPT, tmp, "advance", ["--handoff", handoff, "--agent-id", "agent_b", "--role", "builder", "--stage-id", "s2", "--return-owner", "agent_a", "--session-id", s2, "--date", "2026-01-01", "--outcome", "done", "--result", "impl", "--evidence", "diff.md", "--diff-ref", "diff/main.md", "--validation-ref", "validation/run.md", "--risk", "无未解决风险"], True)
+    # a fake producer session: same builder agent, different session, also review_required
+    fake_res = "sess-fake-target-fakeres"
+    fake_b = "sess-fake-target-fakeb"
+    subprocess.run([sys.executable, str(tmp / ".orbitos/scripts/collab-session.py"), "--root", str(tmp), "open", "--session-id", fake_res, "--mode", "multi_agent_claim", "--task-ref", handoff, "--project", "flow-test", "--agent-id", "agent_b", "--role", "researcher"], capture_output=True, text=True, encoding="utf-8")
+    subprocess.run([sys.executable, str(tmp / ".orbitos/scripts/collab-session.py"), "--root", str(tmp), "submit-research", "--session-id", fake_res, "--agent-id", "agent_b", "--expected-revision", "1", "--evidence", "notes.md|human_confirmed|current_primary|reproduced"], capture_output=True, text=True, encoding="utf-8")
+    subprocess.run([sys.executable, str(tmp / ".orbitos/scripts/collab-session.py"), "--root", str(tmp), "open", "--session-id", fake_b, "--mode", "multi_agent_claim", "--task-ref", handoff, "--project", "flow-test", "--agent-id", "agent_b", "--role", "builder", "--source-session-id", fake_res], capture_output=True, text=True, encoding="utf-8")
+    subprocess.run([sys.executable, str(tmp / ".orbitos/scripts/collab-session.py"), "--root", str(tmp), "update", "--session-id", fake_b, "--agent-id", "agent_b", "--expected-revision", "1", "--status", "review_required", "--evidence", "notes.md|human_confirmed|current_primary|reproduced"], capture_output=True, text=True, encoding="utf-8")
+    # editor binds the real stage session; a fake target must be refused on advance
+    s3, _ = begin_stage(tmp, handoff, "agent_c", "editor", "s3", review_target=s2)
+    run_script(QUEUE_SCRIPT, tmp, "advance", ["--handoff", handoff, "--agent-id", "agent_c", "--role", "editor", "--stage-id", "s3", "--return-owner", "agent_a", "--session-id", s3, "--review-target-session-id", fake_b, "--date", "2026-01-01", "--outcome", "done", "--result", "approved", "--evidence", "s2 reviewed.md", "--reviewed-revision", "1"], False)
+    # editor session that has not submitted its review (claimed) is refused
+    run_script(QUEUE_SCRIPT, tmp, "advance", ["--handoff", handoff, "--agent-id", "agent_c", "--role", "editor", "--stage-id", "s3", "--return-owner", "agent_a", "--session-id", s3, "--review-target-session-id", s2, "--date", "2026-01-01", "--outcome", "done", "--result", "approved", "--evidence", "s2 reviewed.md", "--reviewed-revision", "1"], False)
+    # the honest chain still works: independent review, then advance
+    editor_review(tmp, s3, "agent_c", s2, "approved")
+    run_script(QUEUE_SCRIPT, tmp, "advance", ["--handoff", handoff, "--agent-id", "agent_c", "--role", "editor", "--stage-id", "s3", "--return-owner", "agent_a", "--session-id", s3, "--review-target-session-id", s2, "--date", "2026-01-01", "--outcome", "done", "--result", "approved", "--evidence", "s2 reviewed.md", "--reviewed-revision", "1"], True)
+    record = queue_record(tmp, handoff)
+    check(record["stages"]["s3"]["status"] == "complete" and record["stages"]["s3"]["reviewed_revision"] == 1, "honest editor chain completes after the negative probes")
 
 
 # --- fresh runtime tests (init-runtime path + real close chain) ---
@@ -529,7 +669,8 @@ def test_full_close_two_agent(tmp):
     run_command(tmp, ".orbitos/scripts/handoff-queue.py", ["launch", "--handoff", handoff, "--agent-id", "agent_a", "--role", "coordinator", "--return-owner", "agent_a", "--prohibited", "不越界", "--return-format", "结论+证据", "--next-action", "start", "--date", "2026-01-01"] + queue([STAGE_S, STAGE_R2]), True)
     run_command(tmp, ".orbitos/scripts/handoff-queue.py", ["confirm", "--handoff", handoff, "--agent-id", "agent_a", "--plan-revision", "0", "--return-owner", "agent_a", "--receipt", "user accepted", "--date", "2026-01-01"], True)
     for agent, role, stage in [("agent_a", "coordinator", "s1"), ("agent_b", "researcher", "s2")]:
-        sid = open_stage_session(tmp, handoff, agent, role, stage)
+        sid, _ = begin_stage(tmp, handoff, agent, role, stage)
+        finish_session(tmp, sid, agent)
         run_command(tmp, ".orbitos/scripts/handoff-queue.py", ["advance", "--handoff", handoff, "--agent-id", agent, "--role", role, "--stage-id", stage, "--return-owner", "agent_a", "--session-id", sid, "--date", "2026-01-01", "--outcome", "done", "--result", f"{stage} done", "--evidence", "notes.md"], True)
     close_chain(tmp, handoff)
     check((tmp / "00-系统/agents/handoff/archive/two-close.md").is_file(), "handoff archived")
@@ -547,7 +688,8 @@ def test_full_close_multi_agent(tmp):
     run_command(tmp, ".orbitos/scripts/handoff-queue.py", ["launch", "--handoff", handoff, "--agent-id", "agent_a", "--role", "coordinator", "--return-owner", "agent_a", "--prohibited", "不越界", "--return-format", "结论+证据", "--next-action", "start", "--date", "2026-01-01"] + queue([STAGE_S, STAGE_R, STAGE_C]), True)
     run_command(tmp, ".orbitos/scripts/handoff-queue.py", ["confirm", "--handoff", handoff, "--agent-id", "agent_a", "--plan-revision", "0", "--return-owner", "agent_a", "--receipt", "user accepted", "--date", "2026-01-01"], True)
     for agent, role, stage in [("agent_a", "coordinator", "s1"), ("agent_b", "researcher", "s2"), ("agent_c", "coordinator", "s3")]:
-        sid = open_stage_session(tmp, handoff, agent, role, stage)
+        sid, _ = begin_stage(tmp, handoff, agent, role, stage)
+        finish_session(tmp, sid, agent)
         run_command(tmp, ".orbitos/scripts/handoff-queue.py", ["advance", "--handoff", handoff, "--agent-id", agent, "--role", role, "--stage-id", stage, "--return-owner", "agent_a", "--session-id", sid, "--date", "2026-01-01", "--outcome", "done", "--result", f"{stage} done", "--evidence", "notes.md"], True)
     close_chain(tmp, handoff)
     check((tmp / "00-系统/agents/handoff/archive/multi-close.md").is_file(), "multi-agent handoff archived")
@@ -564,11 +706,14 @@ def test_full_editor_approve(tmp):
     ]
     run_command(tmp, ".orbitos/scripts/handoff-queue.py", ["launch", "--handoff", handoff, "--agent-id", "agent_a", "--role", "coordinator", "--return-owner", "agent_a", "--prohibited", "不越界", "--return-format", "结论+证据", "--next-action", "start", "--date", "2026-01-01"] + queue(queue_ok), True)
     run_command(tmp, ".orbitos/scripts/handoff-queue.py", ["confirm", "--handoff", handoff, "--agent-id", "agent_a", "--plan-revision", "0", "--return-owner", "agent_a", "--receipt", "user accepted", "--date", "2026-01-01"], True)
-    s1 = open_stage_session(tmp, handoff, "agent_a", "coordinator", "s1")
+    s1, _ = begin_stage(tmp, handoff, "agent_a", "coordinator", "s1")
+    finish_session(tmp, s1, "agent_a")
     run_command(tmp, ".orbitos/scripts/handoff-queue.py", ["advance", "--handoff", handoff, "--agent-id", "agent_a", "--role", "coordinator", "--stage-id", "s1", "--return-owner", "agent_a", "--session-id", s1, "--date", "2026-01-01", "--outcome", "done", "--result", "scoped", "--evidence", "board.md"], True)
-    s2 = open_stage_session(tmp, handoff, "agent_b", "builder", "s2")
-    run_command(tmp, ".orbitos/scripts/handoff-queue.py", ["advance", "--handoff", handoff, "--agent-id", "agent_b", "--role", "builder", "--stage-id", "s2", "--return-owner", "agent_a", "--session-id", s2, "--date", "2026-01-01", "--outcome", "done", "--result", "impl", "--evidence", "diff.md", "--diff-ref", "diff/main.md", "--validation-ref", "validation/run.md"], True)
-    s3 = open_editor_session(tmp, handoff, "agent_c", s2, "s3")
+    s2, _ = begin_stage(tmp, handoff, "agent_b", "builder", "s2")
+    deliver_builder(tmp, s2, "agent_b")
+    run_command(tmp, ".orbitos/scripts/handoff-queue.py", ["advance", "--handoff", handoff, "--agent-id", "agent_b", "--role", "builder", "--stage-id", "s2", "--return-owner", "agent_a", "--session-id", s2, "--date", "2026-01-01", "--outcome", "done", "--result", "impl", "--evidence", "diff.md", "--diff-ref", "diff/main.md", "--validation-ref", "validation/run.md", "--risk", "无未解决风险"], True)
+    s3, _ = begin_stage(tmp, handoff, "agent_c", "editor", "s3", review_target=s2)
+    editor_review(tmp, s3, "agent_c", s2, "approved")
     run_command(tmp, ".orbitos/scripts/handoff-queue.py", ["advance", "--handoff", handoff, "--agent-id", "agent_c", "--role", "editor", "--stage-id", "s3", "--return-owner", "agent_a", "--session-id", s3, "--review-target-session-id", s2, "--date", "2026-01-01", "--outcome", "done", "--result", "approved", "--evidence", "s2 reviewed.md", "--reviewed-revision", "1"], True)
     close_chain(tmp, handoff)
     check((tmp / "00-系统/agents/handoff/archive/editor-approve.md").is_file(), "editor-approve handoff archived")
@@ -585,12 +730,15 @@ def test_full_editor_reject_rework(tmp):
     ]
     run_command(tmp, ".orbitos/scripts/handoff-queue.py", ["launch", "--handoff", handoff, "--agent-id", "agent_a", "--role", "coordinator", "--return-owner", "agent_a", "--prohibited", "不越界", "--return-format", "结论+证据", "--next-action", "start", "--date", "2026-01-01"] + queue(queue_ok), True)
     run_command(tmp, ".orbitos/scripts/handoff-queue.py", ["confirm", "--handoff", handoff, "--agent-id", "agent_a", "--plan-revision", "0", "--return-owner", "agent_a", "--receipt", "user accepted", "--date", "2026-01-01"], True)
-    s1 = open_stage_session(tmp, handoff, "agent_a", "coordinator", "s1")
+    s1, _ = begin_stage(tmp, handoff, "agent_a", "coordinator", "s1")
+    finish_session(tmp, s1, "agent_a")
     run_command(tmp, ".orbitos/scripts/handoff-queue.py", ["advance", "--handoff", handoff, "--agent-id", "agent_a", "--role", "coordinator", "--stage-id", "s1", "--return-owner", "agent_a", "--session-id", s1, "--date", "2026-01-01", "--outcome", "done", "--result", "scoped", "--evidence", "board.md"], True)
-    s2 = open_stage_session(tmp, handoff, "agent_b", "builder", "s2")
-    run_command(tmp, ".orbitos/scripts/handoff-queue.py", ["advance", "--handoff", handoff, "--agent-id", "agent_b", "--role", "builder", "--stage-id", "s2", "--return-owner", "agent_a", "--session-id", s2, "--date", "2026-01-01", "--outcome", "done", "--result", "impl", "--evidence", "diff.md", "--diff-ref", "diff/main.md", "--validation-ref", "validation/run.md"], True)
+    s2, _ = begin_stage(tmp, handoff, "agent_b", "builder", "s2")
+    deliver_builder(tmp, s2, "agent_b")
+    run_command(tmp, ".orbitos/scripts/handoff-queue.py", ["advance", "--handoff", handoff, "--agent-id", "agent_b", "--role", "builder", "--stage-id", "s2", "--return-owner", "agent_a", "--session-id", s2, "--date", "2026-01-01", "--outcome", "done", "--result", "impl", "--evidence", "diff.md", "--diff-ref", "diff/main.md", "--validation-ref", "validation/run.md", "--risk", "无未解决风险"], True)
     # editor rejects: rejection must still carry evidence, review target and revision
-    s3 = open_editor_session(tmp, handoff, "agent_c", s2, "s3")
+    s3, _ = begin_stage(tmp, handoff, "agent_c", "editor", "s3", review_target=s2)
+    editor_review(tmp, s3, "agent_c", s2, "rejected", reason="scope creep")
     run_command(tmp, ".orbitos/scripts/handoff-queue.py", ["advance", "--handoff", handoff, "--agent-id", "agent_c", "--role", "editor", "--stage-id", "s3", "--return-owner", "agent_a", "--session-id", s3, "--review-target-session-id", s2, "--date", "2026-01-01", "--outcome", "blocked", "--unresolved", "scope creep", "--evidence", "s2 reviewed.md", "--reviewed-revision", "1"], True)
     revised = [
         {"stage_id": "s1", "tool": "agent_a", "role": "coordinator", "deliverable": "scope", "scope": "module x", "acceptance": "scoped", "next_stage": "s2"},
@@ -600,9 +748,11 @@ def test_full_editor_reject_rework(tmp):
     ]
     run_command(tmp, ".orbitos/scripts/handoff-queue.py", ["replan", "--handoff", handoff, "--agent-id", "agent_c", "--trigger", "scope", "--affected-stage", "s3", "--reason", "scope creep", "--valid-results", "s1/s2 完成且有效", "--invalidated-assumptions", "s3 审核可一次通过", "--replacement-role", "builder+editor", "--date", "2026-01-01"] + proposed_queue(revised), True)
     run_command(tmp, ".orbitos/scripts/handoff-queue.py", ["confirm", "--handoff", handoff, "--agent-id", "agent_a", "--plan-revision", "1", "--return-owner", "agent_a", "--receipt", "user accepted v2", "--date", "2026-01-01"], True)
-    s3f = open_stage_session(tmp, handoff, "agent_b", "builder", "s3")
-    run_command(tmp, ".orbitos/scripts/handoff-queue.py", ["advance", "--handoff", handoff, "--agent-id", "agent_b", "--role", "builder", "--stage-id", "s3", "--return-owner", "agent_a", "--session-id", s3f, "--date", "2026-01-01", "--outcome", "done", "--result", "fixed", "--evidence", "fix.md", "--diff-ref", "diff/fix.md", "--validation-ref", "validation/fix.md"], True)
-    s4 = open_editor_session(tmp, handoff, "agent_c", s3f, "s4")
+    s3f, _ = begin_stage(tmp, handoff, "agent_b", "builder", "s3")
+    deliver_builder(tmp, s3f, "agent_b")
+    run_command(tmp, ".orbitos/scripts/handoff-queue.py", ["advance", "--handoff", handoff, "--agent-id", "agent_b", "--role", "builder", "--stage-id", "s3", "--return-owner", "agent_a", "--session-id", s3f, "--date", "2026-01-01", "--outcome", "done", "--result", "fixed", "--evidence", "fix.md", "--diff-ref", "diff/fix.md", "--validation-ref", "validation/fix.md", "--risk", "无新风险"], True)
+    s4, _ = begin_stage(tmp, handoff, "agent_c", "editor", "s4", review_target=s3f)
+    editor_review(tmp, s4, "agent_c", s3f, "approved")
     run_command(tmp, ".orbitos/scripts/handoff-queue.py", ["advance", "--handoff", handoff, "--agent-id", "agent_c", "--role", "editor", "--stage-id", "s4", "--return-owner", "agent_a", "--session-id", s4, "--review-target-session-id", s3f, "--date", "2026-01-01", "--outcome", "done", "--result", "approved", "--evidence", "s3 re-reviewed.md", "--reviewed-revision", "1"], True)
     close_chain(tmp, handoff)
     check((tmp / "00-系统/agents/handoff/archive/editor-reject.md").is_file(), "reject-rework handoff archived")
@@ -617,7 +767,8 @@ def test_close_recovery(tmp):
     run_command(tmp, ".orbitos/scripts/handoff-queue.py", ["launch", "--handoff", handoff, "--agent-id", "agent_a", "--role", "coordinator", "--return-owner", "agent_a", "--prohibited", "不越界", "--return-format", "结论+证据", "--next-action", "start", "--date", "2026-01-01"] + queue([STAGE_S, STAGE_R2]), True)
     run_command(tmp, ".orbitos/scripts/handoff-queue.py", ["confirm", "--handoff", handoff, "--agent-id", "agent_a", "--plan-revision", "0", "--return-owner", "agent_a", "--receipt", "user accepted", "--date", "2026-01-01"], True)
     for agent, role, stage in [("agent_a", "coordinator", "s1"), ("agent_b", "researcher", "s2")]:
-        sid = open_stage_session(tmp, handoff, agent, role, stage)
+        sid, _ = begin_stage(tmp, handoff, agent, role, stage)
+        finish_session(tmp, sid, agent)
         run_command(tmp, ".orbitos/scripts/handoff-queue.py", ["advance", "--handoff", handoff, "--agent-id", agent, "--role", role, "--stage-id", stage, "--return-owner", "agent_a", "--session-id", sid, "--date", "2026-01-01", "--outcome", "done", "--result", f"{stage} done", "--evidence", "notes.md"], True)
     # fault injection: run the first half of close (receipt + frontmatter + board + move)
     # but skip the work item / event steps, then re-run close to recover.
@@ -659,6 +810,8 @@ def main():
         test_queue_record_lost_fail_closed(tmp)
         test_builder_editor_gates(tmp)
         test_replan_failure_escalation(tmp)
+        test_queue_invariants(tmp)
+        test_editor_fake_target(tmp)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     clone = clone_runtime()

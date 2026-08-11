@@ -64,7 +64,8 @@
       ],
       "session_id": "sess-2",
       "diff_ref": "diff/main.md",
-      "validation_ref": "validation/run.md"
+      "validation_ref": "validation/run.md",
+      "risk": "无未解决风险"
     },
     {
       "step": "advance",
@@ -144,7 +145,8 @@
       "session_id": "sess-3",
       "reviewed_revision": 1,
       "diff_ref": "diff/fix.md",
-      "validation_ref": "validation/fix.md"
+      "validation_ref": "validation/fix.md",
+      "risk": "复检后无未解决风险"
     },
     {
       "step": "advance",

@@ -65,7 +65,8 @@
       ],
       "session_id": "sess-2",
       "diff_ref": "diff/main.md",
-      "validation_ref": "validation/run.md"
+      "validation_ref": "validation/run.md",
+      "risk": "无未解决风险"
     },
     {
       "step": "advance",

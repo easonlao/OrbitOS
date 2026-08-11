@@ -576,6 +576,11 @@ def collaboration_queue_scenario_errors(data, name):
         stage_ids.append(spec["stage_id"])
     if len(stage_ids) != len(set(stage_ids)):
         add_error(errors, "$.queue", "stage ids must be unique")
+    tools = {spec.get("role"): spec.get("tool") for spec in queue if isinstance(spec, dict)}
+    if len(set(spec.get("tool") for spec in queue if isinstance(spec, dict))) < 2:
+        add_error(errors, "$.queue", "a multi-stage queue needs at least two different agent tools")
+    if tools.get("builder") and tools.get("editor") and tools["builder"] == tools["editor"]:
+        add_error(errors, "$.queue", "Editor tool identity must differ from the Builder tool identity")
     chain = {}
     for spec in queue:
         if isinstance(spec, dict) and spec.get("stage_id"):
@@ -586,9 +591,8 @@ def collaboration_queue_scenario_errors(data, name):
     for index, spec in enumerate(queue):
         if index < len(queue) - 1 and isinstance(spec, dict) and spec.get("next_stage") != queue[index + 1].get("stage_id"):
             add_error(errors, f"$.queue:{spec.get('stage_id')}", "stage chain must be ordered")
-    tools = {spec.get("role"): spec.get("tool") for spec in queue if isinstance(spec, dict)}
-    if tools.get("builder") and tools.get("editor") and tools["builder"] == tools["editor"]:
-        add_error(errors, "$.queue", "Editor tool identity must differ from the Builder tool identity")
+    if queue and isinstance(queue[-1], dict) and queue[-1].get("next_stage"):
+        add_error(errors, f"$.queue:{queue[-1].get('stage_id')}", "the last stage cannot loop back")
 
     steps = data.get("steps")
     if not isinstance(steps, list) or not steps:
@@ -633,6 +637,8 @@ def collaboration_queue_scenario_errors(data, name):
                 add_error(errors, f"$.steps[{index}]", "a builder stage must carry diff_ref (implementation diff reference)")
             if not (record.get("validation_ref") or "").strip():
                 add_error(errors, f"$.steps[{index}]", "a builder stage must carry validation_ref (validation evidence reference)")
+            if not (record.get("risk") or "").strip():
+                add_error(errors, f"$.steps[{index}]", "a builder stage must carry risk (unresolved risks after delivery)")
         if role_by_stage.get(record["stage_id"]) == "editor":
             order = state["stage_order"]
             pos = order.index(record["stage_id"]) if record["stage_id"] in order else -1
@@ -1053,7 +1059,11 @@ def collaboration_consistency_errors():
         if work.get("source_type") == "handoff" and isinstance(source_ref, str) and source_ref:
             source_path = ROOT / source_ref.split("#", 1)[0]
             if not source_path.is_file():
-                add_error(errors, f".orbitos/state/work-items.json#{work_id}", "work item source_ref does not exist")
+                # the handoff may have been archived by close; its archive twin
+                # is an acceptable source for stage work items
+                archive_twin = ROOT / ("00-" + "\u7cfb\u7edf/agents/handoff/archive") / Path(source_ref.split("#", 1)[0]).name
+                if not archive_twin.is_file():
+                    add_error(errors, f".orbitos/state/work-items.json#{work_id}", "work item source_ref does not exist")
         if work.get("status") == "done" and not work.get("evidence_refs"):
             add_error(errors, f".orbitos/state/work-items.json#{work_id}", "done work item requires evidence_refs")
 
