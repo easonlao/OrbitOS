@@ -26,7 +26,9 @@
   "steps": [
     {
       "step": "launch",
-      "by": "agent-a"
+      "by": "agent-a",
+      "prohibited": "不越界、不伪造证据",
+      "return_format": "结论+证据引用"
     },
     {
       "step": "confirm",
@@ -37,14 +39,16 @@
       "step": "advance",
       "by": "agent-a",
       "stage_id": "s1",
-      "outcome": "done"
+      "outcome": "done",
+      "session_id": "sess-1"
     },
     {
       "step": "advance",
       "by": "agent-b",
       "stage_id": "s2",
       "outcome": "blocked",
-      "unresolved": "数据缺失"
+      "unresolved": "数据缺失",
+      "session_id": "sess-2"
     },
     {
       "step": "advance",

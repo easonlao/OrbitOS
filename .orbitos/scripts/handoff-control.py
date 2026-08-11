@@ -6,6 +6,7 @@ import re
 import shutil
 import subprocess
 import sys
+from datetime import datetime
 from pathlib import Path
 
 
@@ -184,73 +185,137 @@ def begin(args, root):
     print(json.dumps({"ok": True, "handoff": args.handoff, "session_id": args.session_id}))
 
 
+def _write_close_receipt(root, handoff_relative, accepted_by, archived_ref):
+    """Persist the acceptance receipt in the queue projection (idempotent).
+
+    The receipt is only ever written from the governed close path; there is no
+    public command that can forge it.
+    """
+    path = root / ".orbitos/state/handoff-queues.json"
+    data = read_json(path)
+    record = data["queues"].get(handoff_relative)
+    if record is None:
+        raise ValueError("handoff has no queue plan")
+    if record.get("close"):
+        return
+    if record.get("plan_status") != "confirmed":
+        raise ValueError("close receipt requires a user-confirmed queue plan")
+    if record.get("replans") and not record["replans"][-1].get("confirmed_at"):
+        raise ValueError("the latest re-plan is still waiting for user confirmation")
+    incomplete = [
+        stage_id
+        for stage_id in record.get("stage_order", [])
+        if record.get("stages", {}).get(stage_id, {}).get("status") != "complete"
+    ]
+    if incomplete:
+        raise ValueError(f"close receipt requires all planned stages complete; pending: {incomplete}")
+    if record.get("return_owner") != accepted_by:
+        raise ValueError("close receipt must be issued by the authoritative return owner")
+    if record.get("current_owner") != accepted_by:
+        raise ValueError("close receipt requires the return owner to hold the baton")
+    if not archived_ref.startswith("00-" + "\u7cfb\u7edf/agents/handoff/archive/"):
+        raise ValueError("close receipt archive reference must live under the archive directory")
+    record["close"] = {
+        "accepted_by": accepted_by,
+        "accepted_at": datetime.now().astimezone().isoformat(timespec="seconds"),
+        "archived_ref": archived_ref,
+    }
+    record["updated_at"] = record["close"]["accepted_at"]
+    path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n")
+
+
 def close(args, root):
-    # Idempotent retry: a handoff already archived with a recorded receipt is done.
+    # Recoverable, idempotent close: if the handoff is already archived, the
+    # retry continues the remaining steps (receipt, work item, event, validation)
+    # instead of pretending success.
     try:
         handoff = active_handoff(root, args.handoff)
+        archived = False
     except ValueError:
         archive_candidate = root / ARCHIVE_ROOT / Path(args.handoff).name
-        queue = queue_payload(root, args.handoff)
-        if archive_candidate.is_file() and queue is not None and queue.get("close"):
-            print(json.dumps({"ok": True, "handoff": (ARCHIVE_ROOT / Path(args.handoff).name).as_posix(), "event_ref": None, "already_closed": True}))
-            return
-        raise
+        if not archive_candidate.is_file():
+            raise
+        handoff = archive_candidate
+        archived = True
     _text, _match, metadata = frontmatter(handoff)
     if metadata.get("return_owner") != args.agent_id:
         raise ValueError("only the return owner can accept and close this handoff")
     queue = queue_or_die(root, args.handoff, metadata)
-    if queue is not None:
-        if queue.get("plan_status") != "confirmed":
-            raise ValueError("close requires a user-confirmed queue plan")
-        if queue.get("replans") and not queue["replans"][-1].get("confirmed_at"):
-            raise ValueError("the latest re-plan is still waiting for user confirmation")
-        incomplete = [
-            stage_id
-            for stage_id in queue.get("stage_order", [])
-            if queue.get("stages", {}).get(stage_id, {}).get("status") != "complete"
-        ]
-        if incomplete:
-            raise ValueError(f"close requires all planned stages complete; pending: {incomplete}")
-        if queue.get("current_owner") != args.agent_id:
-            raise ValueError("close requires the return owner to hold the baton after all stages complete")
-    if metadata.get("collaboration_session_id") != args.session_id:
-        raise ValueError("handoff is not bound to this collaboration session")
-    session = session_record(root, args.session_id)
-    if session["status"] != "closed" or not session["gate_state"]["hard_gate_passed"]:
-        raise ValueError("handoff close requires a closed collaboration session that passed hard gates")
-    if session["agent_id"] != args.agent_id:
-        raise ValueError("only the session owner can close its handoff")
-    work = work_record(root, args.work_id)
-    if work["revision"] != args.expected_work_revision or work["source_ref"] != args.handoff:
-        raise ValueError("work item no longer matches this handoff revision/source")
+    if not archived:
+        if queue is not None:
+            if queue.get("plan_status") != "confirmed":
+                raise ValueError("close requires a user-confirmed queue plan")
+            if queue.get("replans") and not queue["replans"][-1].get("confirmed_at"):
+                raise ValueError("the latest re-plan is still waiting for user confirmation")
+            incomplete = [
+                stage_id
+                for stage_id in queue.get("stage_order", [])
+                if queue.get("stages", {}).get(stage_id, {}).get("status") != "complete"
+            ]
+            if incomplete:
+                raise ValueError(f"close requires all planned stages complete; pending: {incomplete}")
+            if queue.get("current_owner") != args.agent_id:
+                raise ValueError("close requires the return owner to hold the baton after all stages complete")
+        if metadata.get("collaboration_session_id") != args.session_id:
+            raise ValueError("handoff is not bound to this collaboration session")
+        session = session_record(root, args.session_id)
+        if session["status"] != "closed" or not session["gate_state"]["hard_gate_passed"]:
+            raise ValueError("handoff close requires a closed collaboration session that passed hard gates")
+        if session["agent_id"] != args.agent_id:
+            raise ValueError("only the session owner can close its handoff")
     for output in args.output:
         if not re.match(r"^[^|]+\|[^|]+(\|[^|]+)*$", output):
             raise ValueError(f"output must use KIND|REF|STATUS[|NOTE]: {output}")
-    archive_relative = (ARCHIVE_ROOT / handoff.name).as_posix()
+    archive_relative = (ARCHIVE_ROOT / Path(args.handoff).name).as_posix()
     archive_path = root / archive_relative
-    if archive_path.exists():
+    if not archived and archive_path.exists():
         raise ValueError("archive target already exists")
-    # Persist the acceptance receipt in the queue projection before any close side effects.
-    if queue is not None:
-        run([sys.executable, str(root / ".orbitos/scripts/handoff-queue.py"), "--root", str(root), "mark-close", "--handoff", args.handoff, "--accepted-by", args.agent_id, "--archived-ref", archive_relative, "--date", args.date], root)
+    if not archived:
+        # receipt first: a failure here leaves nothing half-done
+        if queue is not None:
+            _write_close_receipt(root, args.handoff, args.agent_id, archive_relative)
+    # idempotent close-out: frontmatter + board are safe to re-apply on recovery
     update_frontmatter(handoff, {"updated": args.date, "handoff_status": "closed", "current_owner": args.agent_id, "next_action": "无。协作已完成并归档。"})
     board_remove(root, handoff.stem)
-    archive_path.parent.mkdir(parents=True, exist_ok=True)
-    shutil.move(str(handoff), str(archive_path))
-    run([sys.executable, str(root / ".orbitos/scripts/work-control.py"), "--root", str(root), "update", "--id", args.work_id, "--agent-id", args.agent_id, "--expected-revision", str(args.expected_work_revision), "--status", "done", "--next-action", "closed and archived", "--source-ref", archive_relative, "--evidence", f".orbitos/state/collaboration-sessions.json#{args.session_id}", "--no-user-required"], root)
+    if not archived:
+        archive_path.parent.mkdir(parents=True, exist_ok=True)
+        shutil.move(str(handoff), str(archive_path))
+    # work item close-out (idempotent: skip when already done or missing)
+    try:
+        work = work_record(root, args.work_id)
+        if work["status"] != "done":
+            run([sys.executable, str(root / ".orbitos/scripts/work-control.py"), "--root", str(root), "update", "--id", args.work_id, "--agent-id", args.agent_id, "--expected-revision", str(args.expected_work_revision), "--status", "done", "--next-action", "closed and archived", "--source-ref", archive_relative, "--evidence", f".orbitos/state/collaboration-sessions.json#{args.session_id}", "--no-user-required"], root)
+    except ValueError:
+        work = None
+    # receipt retry for the archived path
+    if archived and queue is not None:
+        _write_close_receipt(root, args.handoff, args.agent_id, archive_relative)
     validation = run([sys.executable, str(root / ".orbitos/scripts/run-validation.py")], root)
     if "Validation eval passed" not in validation:
         raise ValueError("post-close validation did not pass")
-    event_command = [sys.executable, str(root / ".orbitos/scripts/write_event.py"), "--agent-id", args.agent_id, "--role", session["role"], "--slug", args.slug, "--summary", args.summary, "--reason", args.reason, "--project", work["project"], "--event-type", "progress_sync", "--file", f"moved:{args.handoff}:closed handoff archived", "--file", f"updated:.orbitos/state/work-items.json:closed work item source migrated", "--collaboration-session", args.session_id, "--review-status", session["review"]["status"], "--validation", "passed", "--thinking-bypassed"]
-    if session["review"]["status"] == "approved":
-        event_command += ["--reviewer-session", session["review"]["reviewer_session_id"], "--reviewer-agent", session["review"]["reviewer_agent_id"]]
-    for output in args.output:
-        event_command += ["--output", output]
-    event_ref = run(event_command, root)
+    if archived:
+        # resume the session record from the projection or skip the event if it already exists
+        session = None
+        try:
+            session = session_record(root, args.session_id)
+        except ValueError:
+            session = None
+    else:
+        session = session_record(root, args.session_id)
+    events_root = root / ".orbitos/logs/events"
+    if session is not None and events_root.is_dir() and not any(args.slug in path.name for path in events_root.glob("*.yaml")):
+        event_command = [sys.executable, str(root / ".orbitos/scripts/write_event.py"), "--agent-id", args.agent_id, "--role", session["role"], "--slug", args.slug, "--summary", args.summary, "--reason", args.reason, "--project", (work or {}).get("project", "orbitos"), "--event-type", "progress_sync", "--file", f"moved:{args.handoff}:closed handoff archived", "--file", f"updated:.orbitos/state/work-items.json:closed work item source migrated", "--collaboration-session", args.session_id, "--review-status", session.get("review", {}).get("status", "not_required"), "--validation", "passed", "--thinking-bypassed"]
+        if session.get("review", {}).get("status") == "approved":
+            event_command += ["--reviewer-session", session["review"].get("reviewer_session_id"), "--reviewer-agent", session["review"].get("reviewer_agent_id")]
+        for output in args.output:
+            event_command += ["--output", output]
+        event_ref = run(event_command, root)
+    else:
+        event_ref = None
     final_validation = run([sys.executable, str(root / ".orbitos/scripts/run-validation.py")], root)
     if "Validation eval passed" not in final_validation:
         raise ValueError("final validation did not pass")
-    print(json.dumps({"ok": True, "handoff": archive_relative, "event_ref": event_ref}))
+    print(json.dumps({"ok": True, "handoff": archive_relative, "event_ref": event_ref, "already_closed": archived}))
 
 
 def parser():

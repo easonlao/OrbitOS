@@ -193,6 +193,10 @@ def launch(args, root):
         raise ValueError(f"return owner is not a registered agent tool: {args.return_owner}")
     if args.role not in ROLES:
         raise ValueError(f"unknown launch role: {args.role}")
+    if not (args.prohibited or "").strip():
+        raise ValueError("launch card requires --prohibited (prohibited actions)")
+    if not (args.return_format or "").strip():
+        raise ValueError("launch card requires --return-format (return format)")
     timestamp = now()
     stages = {
         spec["stage_id"]: {
@@ -205,6 +209,9 @@ def launch(args, root):
             "failures": 0,
             "output_revision": 0,
             "reviewed_revision": None,
+            "diff_ref": None,
+            "validation_ref": None,
+            "session_id": None,
             "completed_by": None,
             "completed_at": None,
         }
@@ -335,6 +342,30 @@ def _pending_replan(record):
     return latest if not latest.get("confirmed_at") else None
 
 
+def _session_record(root, session_id):
+    data = read_json(root / ".orbitos/state/collaboration-sessions.json")
+    record = data.get("sessions", {}).get(session_id)
+    if not record:
+        raise ValueError(f"governance session not found: {session_id}")
+    return record
+
+
+def _require_session(root, session_id, agent_id, role, handoff_relative):
+    """Bind a stage advance to a governed session for the same agent/role/task."""
+    if not session_id:
+        raise ValueError("advance requires --session-id bound to this stage's governance session")
+    session = _session_record(root, session_id)
+    if session.get("agent_id") != agent_id:
+        raise ValueError(f"session {session_id} belongs to {session.get('agent_id')}, not {agent_id}")
+    if session.get("role") != role:
+        raise ValueError(f"session {session_id} has role {session.get('role')}, not {role}")
+    if session.get("task_ref") != handoff_relative:
+        raise ValueError(f"session {session_id} is bound to another task: {session.get('task_ref')}")
+    if session.get("status") == "closed":
+        raise ValueError(f"session {session_id} is closed")
+    return session
+
+
 def advance(args, root):
     handoff = active_handoff(root, args.handoff)
     relative = relative_path(root, handoff)
@@ -360,6 +391,12 @@ def advance(args, root):
         raise ValueError("a completed stage is immutable and cannot advance again")
     if stage["failures"] >= 2:
         raise ValueError("this stage failed twice; a user-confirmed re-plan is required")
+    session = _require_session(root, args.session_id, args.agent_id, args.role, relative)
+    if stage["role"] == "builder" and args.outcome == "done":
+        if not (args.diff_ref or "").strip():
+            raise ValueError("a builder stage requires --diff-ref (implementation diff reference)")
+        if not (args.validation_ref or "").strip():
+            raise ValueError("a builder stage requires --validation-ref (validation evidence reference)")
     if stage["role"] == "editor":
         order = record["stage_order"]
         index = order.index(args.stage_id)
@@ -368,13 +405,25 @@ def advance(args, root):
         producer = record["stages"][order[index - 1]]
         if producer["role"] not in {"builder", "writer"} or producer["status"] != "complete":
             raise ValueError("an editor stage must follow a completed builder/writer stage")
-        if args.outcome == "done":
-            if not any(order[index - 1] in (item or "") for item in (args.evidence or [])):
-                raise ValueError(f"editor evidence must reference the reviewed stage output ({order[index - 1]})")
-            if args.reviewed_revision is None:
-                raise ValueError("editor approval requires --reviewed-revision bound to the reviewed stage output")
-            if args.reviewed_revision != producer.get("output_revision"):
-                raise ValueError(f"editor reviewed_revision {args.reviewed_revision} does not match the reviewed stage output revision {producer.get('output_revision')}")
+        if not (args.review_target_session_id or "").strip():
+            raise ValueError("an editor stage requires --review-target-session-id (the reviewed stage session)")
+        if session.get("review_target_session_id") != args.review_target_session_id:
+            raise ValueError(f"editor session must declare review_target_session_id={args.review_target_session_id}")
+        target = _session_record(root, args.review_target_session_id)
+        if target.get("role") not in {"builder", "writer"}:
+            raise ValueError("editor review target must be a builder/writer session")
+        if target.get("agent_id") != producer.get("tool"):
+            raise ValueError(f"editor review target must belong to the reviewed stage tool ({producer.get('tool')})")
+        if target.get("task_ref") != relative:
+            raise ValueError("editor review target must be bound to the same handoff")
+        if target.get("status") == "closed":
+            raise ValueError("editor review target session is closed")
+        if not any(order[index - 1] in (item or "") for item in (args.evidence or [])):
+            raise ValueError(f"editor evidence must reference the reviewed stage output ({order[index - 1]})")
+        if args.reviewed_revision is None:
+            raise ValueError("an editor stage requires --reviewed-revision bound to the reviewed stage output")
+        if args.reviewed_revision != producer.get("output_revision"):
+            raise ValueError(f"editor reviewed_revision {args.reviewed_revision} does not match the reviewed stage output revision {producer.get('output_revision')}")
     if args.outcome == "done":
         if not args.result or not args.evidence:
             raise ValueError("a done stage requires --result and at least one --evidence")
@@ -384,6 +433,8 @@ def advance(args, root):
         stage["failures"] += 1
         stage["status"] = "blocked"
         stage["unresolved"] = args.unresolved
+        stage["session_id"] = args.session_id
+        stage["reviewed_revision"] = args.reviewed_revision
         record["next_action"] = args.next_action or "同阶段重试或请求 re-plan"
         record["updated_at"] = now()
         append_section(handoff, "阶段记录", [f"- {args.stage_id} 由 {args.agent_id} 阻塞（{stage['role']}）：{args.unresolved}（failures={stage['failures']}）"])
@@ -400,6 +451,9 @@ def advance(args, root):
         "outcome": "done",
         "output_revision": (stage.get("output_revision") or 0) + 1,
         "reviewed_revision": args.reviewed_revision,
+        "diff_ref": args.diff_ref,
+        "validation_ref": args.validation_ref,
+        "session_id": args.session_id,
         "completed_by": args.agent_id,
         "completed_at": now(),
     })
@@ -469,6 +523,12 @@ def replan(args, root):
             raise ValueError("failure trigger requires a stage that already failed twice")
     if args.trigger != "failure" and args.affected_stage not in record["stages"]:
         raise ValueError(f"unknown affected stage: {args.affected_stage}")
+    if not (args.valid_results or "").strip():
+        raise ValueError("re-plan requires --valid-results (still-valid completed results)")
+    if not (args.invalidated_assumptions or "").strip():
+        raise ValueError("re-plan requires --invalidated-assumptions (assumptions that no longer hold)")
+    if not (args.replacement_role or "").strip():
+        raise ValueError("re-plan requires --replacement-role (the replacement Agent/role)")
     specs = validate_queue([parse_stage(raw) for raw in args.proposed_queue], root, existing=record)
     new_order = [spec["stage_id"] for spec in specs]
     old_stages = record["stages"]
@@ -515,7 +575,17 @@ def replan(args, root):
     rows = ["| 阶段 | 工具 | 角色 | 交付物 | 范围 | 验收条件 | 下一阶段 |", "|---|---|---|---|---|---|---|"]
     for spec in specs:
         rows.append(f"| {spec['stage_id']} | {spec['tool']} | {spec['role']} | {spec['deliverable']} | {spec['scope']} | {spec['acceptance']} | {spec['next_stage'] or '(回验收方)'} |")
-    lines = [f"- 触发：{args.trigger}", f"- 受影响阶段：{args.affected_stage}", f"- 原因：{args.reason}", f"- 修订 plan_revision：{revision}", f"- 提议者：{args.agent_id}", ""] + rows
+    lines = [
+        f"- 触发：{args.trigger}",
+        f"- 受影响阶段：{args.affected_stage}",
+        f"- 原因：{args.reason}",
+        f"- 仍有效结果：{args.valid_results}",
+        f"- 失效假设：{args.invalidated_assumptions}",
+        f"- 替换角色：{args.replacement_role}",
+        f"- 修订 plan_revision：{revision}",
+        f"- 提议者：{args.agent_id}",
+        "",
+    ] + rows
     # write Markdown first: a failed append must not leave revision advanced in the projection
     append_section(handoff, "计划修订", lines)
     save_state(root, state)
@@ -529,49 +599,29 @@ def replan(args, root):
     }, ensure_ascii=False))
 
 
+def active_or_archived_handoff(root, relative):
+    """Resolve a handoff that may still be active or already archived (for status queries)."""
+    active_root = (root / ("00-" + "\u7cfb\u7edf/agents/handoff")).resolve()
+    archive_root = active_root / "archive"
+    candidates = [root / relative]
+    prefix = ("00-" + "\u7cfb\u7edf/agents/handoff/")
+    if str(relative).startswith(prefix):
+        candidates.append(root / prefix / "archive" / Path(relative).name)
+    for candidate in candidates:
+        path = candidate.resolve()
+        if path.suffix == ".md" and path.is_file():
+            if active_root not in path.parents and archive_root not in path.parents:
+                raise ValueError("handoff must live under the active or archive handoff directories")
+            return path
+    raise ValueError("handoff must be an existing Markdown file under the handoff directories")
+
+
 def status(args, root):
-    handoff = active_handoff(root, args.handoff)
-    relative = relative_path(root, handoff)
+    handoff = active_or_archived_handoff(root, args.handoff)
+    # projection keys always use the canonical active path, even for archived handoffs
+    relative = ("00-" + "\u7cfb\u7edf/agents/handoff/") + Path(handoff).name
     record = queue_for(root, relative)
     print(json.dumps({"ok": True, "queue": record}, ensure_ascii=False))
-
-
-def mark_close(args, root):
-    relative = args.handoff.replace("\\", "/")
-    if not relative.startswith("00-" + "\u7cfb\u7edf/agents/handoff/") or not relative.endswith(".md"):
-        raise ValueError("handoff must be under the active handoff directory")
-    state = load_state(root)
-    record = state["queues"].get(relative)
-    if not record:
-        raise ValueError("handoff has no queue plan")
-    if record.get("close"):
-        raise ValueError("this handoff is already closed")
-    # mark-close is the acceptance receipt: it must satisfy the same gates as close.
-    if record["plan_status"] != "confirmed":
-        raise ValueError("close receipt requires a user-confirmed queue plan")
-    if _pending_replan(record):
-        raise ValueError("a re-plan is still waiting for user confirmation")
-    incomplete = [
-        stage_id
-        for stage_id in record.get("stage_order", [])
-        if record.get("stages", {}).get(stage_id, {}).get("status") != "complete"
-    ]
-    if incomplete:
-        raise ValueError(f"close receipt requires all planned stages complete; pending: {incomplete}")
-    if record.get("current_owner") != args.accepted_by:
-        raise ValueError("close receipt requires the return owner to hold the baton")
-    if record.get("return_owner") != args.accepted_by:
-        raise ValueError("close receipt must be issued by the authoritative return owner")
-    if not args.archived_ref.startswith("00-" + "\u7cfb\u7edf/agents/handoff/archive/"):
-        raise ValueError("close receipt archive reference must live under the archive directory")
-    record["close"] = {
-        "accepted_by": args.accepted_by,
-        "accepted_at": now(),
-        "archived_ref": args.archived_ref,
-    }
-    record["updated_at"] = now()
-    save_state(root, state)
-    print(json.dumps({"ok": True, "handoff": relative, "close": record["close"]}, ensure_ascii=False))
 
 
 def _board_replace(root, stem, status, owner, next_action):
@@ -616,6 +666,10 @@ def parser():
     advancing.add_argument("--role", choices=sorted(ROLES), required=True)
     advancing.add_argument("--stage-id", required=True)
     advancing.add_argument("--return-owner", required=True)
+    advancing.add_argument("--session-id", required=True)
+    advancing.add_argument("--review-target-session-id")
+    advancing.add_argument("--diff-ref")
+    advancing.add_argument("--validation-ref")
     advancing.add_argument("--date", required=True)
     advancing.add_argument("--next-action")
     advancing.add_argument("--result")
@@ -629,18 +683,13 @@ def parser():
     replanning.add_argument("--trigger", choices=sorted(REPLAN_TRIGGERS), required=True)
     replanning.add_argument("--affected-stage", required=True)
     replanning.add_argument("--reason", required=True)
-    replanning.add_argument("--valid-results")
-    replanning.add_argument("--invalidated-assumptions")
-    replanning.add_argument("--replacement-role")
+    replanning.add_argument("--valid-results", required=True)
+    replanning.add_argument("--invalidated-assumptions", required=True)
+    replanning.add_argument("--replacement-role", required=True)
     replanning.add_argument("--proposed-queue", action="append", required=True)
     replanning.add_argument("--date", required=True)
     statusing = commands.add_parser("status")
     statusing.add_argument("--handoff", required=True)
-    closing = commands.add_parser("mark-close")
-    closing.add_argument("--handoff", required=True)
-    closing.add_argument("--accepted-by", required=True)
-    closing.add_argument("--archived-ref", required=True)
-    closing.add_argument("--date", required=True)
     return root
 
 
@@ -656,8 +705,6 @@ def main():
             advance(args, root)
         elif args.command == "replan":
             replan(args, root)
-        elif args.command == "mark-close":
-            mark_close(args, root)
         else:
             status(args, root)
     except (OSError, ValueError, json.JSONDecodeError) as error:

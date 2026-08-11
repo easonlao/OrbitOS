@@ -26,7 +26,9 @@
   "steps": [
     {
       "step": "launch",
-      "by": "agent-a"
+      "by": "agent-a",
+      "prohibited": "不越界、不伪造证据",
+      "return_format": "结论+证据引用"
     },
     {
       "step": "replan",
@@ -52,7 +54,10 @@
           "acceptance": "证据充分",
           "next_stage": null
         }
-      ]
+      ],
+      "valid_results": "已完成阶段仍有效",
+      "invalidated_assumptions": "原计划假设失效",
+      "replacement_role": "researcher"
     },
     {
       "step": "confirm",

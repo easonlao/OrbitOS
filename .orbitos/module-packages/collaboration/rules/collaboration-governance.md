@@ -40,11 +40,13 @@ tags:
 
 ## 队列硬边界
 
-- 队列计划（launch card）必须先经用户显式确认，`plan_status` 才能从 `proposed` 变为 `confirmed`；任何阶段不得在确认前进入 `working`。
+- 队列计划（launch card）必须先经用户显式确认，`plan_status` 才能从 `proposed` 变为 `confirmed`；任何阶段不得在确认前进入 `working`。launch card 的禁止事项与返回格式为必填。
 - `return_owner` 在 launch 时持久化为权威值，后续命令一律从投影读取；调用方传入不一致值即拒绝。
-- Builder 与 Editor 阶段必须由不同工具承担；Editor 只能审核已完成的 Builder/Writer 阶段，且其通过必须声明 `reviewed_revision` 等于被审阶段当前 `output_revision`。
+- **每个阶段推进必须绑定该阶段的 governance session**（agent/role/task 匹配、未关闭），不能绕过 `handoff-control begin` 直接推进。
+- Builder 与 Editor 阶段必须由不同工具承担；Builder 的 done 必须携带 diff 引用与验证证据引用；Editor 只能审核已完成的 Builder/Writer 阶段，其 session 必须声明 `review_target_session_id` 指向被审阶段 session（独立审核），且无论通过或驳回都必须携带 `reviewed_revision`（等于被审阶段当前 `output_revision`）与引用被审阶段的证据。
 - 每次确认只给最新一条修订盖 `confirmed_at`；被取代的旧修订保持未确认，历史如实。
-- `mark-close` 与 `close` 走同一套门（return owner、阶段完成、最新修订已确认、归档目标在 archive 目录），不能伪造 closure receipt。
+- **closure receipt 只能由受控 close 写入**（`_write_close_receipt`），不存在可伪造收据的公开命令。
+- close 是可恢复的顺序收口：归档后任一步失败，重跑 close 恢复完成剩余步骤；全部完成后再次 close 返回 `already_closed`。
 - Formal Handoff Markdown 是跨工具通信合同：阶段结果、证据、未决项与推进信息必须写回 Markdown（`## 阶段记录`），不能只存在机器层 JSON。
 - 任一时刻只有一个 `current_owner` 与一个 `current_stage`；未来阶段的 Agent 不能提前认领或推进。
 - 已完成阶段的结果、证据与未解决项不可变，只能追加不能改写。

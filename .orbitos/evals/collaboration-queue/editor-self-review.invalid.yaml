@@ -35,7 +35,9 @@
   "steps": [
     {
       "step": "launch",
-      "by": "agent-a"
+      "by": "agent-a",
+      "prohibited": "不越界、不伪造证据",
+      "return_format": "结论+证据引用"
     },
     {
       "step": "confirm",

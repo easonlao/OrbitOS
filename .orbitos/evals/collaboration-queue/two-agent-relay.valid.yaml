@@ -27,7 +27,9 @@
     {
       "step": "launch",
       "by": "agent-a",
-      "plan_revision": 0
+      "plan_revision": 0,
+      "prohibited": "不越界、不伪造证据",
+      "return_format": "结论+证据引用"
     },
     {
       "step": "confirm",
@@ -42,7 +44,8 @@
       "outcome": "done",
       "evidence": [
         "问题边界确认"
-      ]
+      ],
+      "session_id": "sess-1"
     },
     {
       "step": "advance",
@@ -51,7 +54,8 @@
       "outcome": "done",
       "evidence": [
         "调研笔记.md"
-      ]
+      ],
+      "session_id": "sess-2"
     },
     {
       "step": "close",

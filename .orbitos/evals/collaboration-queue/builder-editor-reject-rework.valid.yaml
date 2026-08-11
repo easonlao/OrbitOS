@@ -35,7 +35,9 @@
   "steps": [
     {
       "step": "launch",
-      "by": "agent-a"
+      "by": "agent-a",
+      "prohibited": "不越界、不伪造证据",
+      "return_format": "结论+证据引用"
     },
     {
       "step": "confirm",
@@ -49,7 +51,8 @@
       "outcome": "done",
       "evidence": [
         "边界确认"
-      ]
+      ],
+      "session_id": "sess-1"
     },
     {
       "step": "advance",
@@ -58,14 +61,23 @@
       "outcome": "done",
       "evidence": [
         "diff 引用"
-      ]
+      ],
+      "session_id": "sess-2",
+      "diff_ref": "diff/main.md",
+      "validation_ref": "validation/run.md"
     },
     {
       "step": "advance",
       "by": "agent-c",
       "stage_id": "s3",
       "outcome": "blocked",
-      "unresolved": "边界外改动需回退"
+      "unresolved": "边界外改动需回退",
+      "session_id": "sess-3",
+      "review_target_session_id": "sess-2",
+      "evidence": [
+        "s2 审核记录"
+      ],
+      "reviewed_revision": 1
     },
     {
       "step": "replan",
@@ -109,7 +121,10 @@
           "acceptance": "复检通过",
           "next_stage": null
         }
-      ]
+      ],
+      "valid_results": "已完成阶段仍有效",
+      "invalidated_assumptions": "原计划假设失效",
+      "replacement_role": "researcher"
     },
     {
       "step": "confirm",
@@ -124,7 +139,12 @@
       "outcome": "done",
       "evidence": [
         "修正后的 diff 引用"
-      ]
+      ],
+      "review_target_session_id": "sess-2",
+      "session_id": "sess-3",
+      "reviewed_revision": 1,
+      "diff_ref": "diff/fix.md",
+      "validation_ref": "validation/fix.md"
     },
     {
       "step": "advance",
@@ -134,7 +154,9 @@
       "evidence": [
         "s3 复检通过"
       ],
-      "reviewed_revision": 1
+      "reviewed_revision": 1,
+      "session_id": "sess-7",
+      "review_target_session_id": "sess-3"
     },
     {
       "step": "close",

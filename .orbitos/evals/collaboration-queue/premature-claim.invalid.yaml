@@ -26,7 +26,9 @@
   "steps": [
     {
       "step": "launch",
-      "by": "agent-a"
+      "by": "agent-a",
+      "prohibited": "不越界、不伪造证据",
+      "return_format": "结论+证据引用"
     },
     {
       "step": "confirm",
@@ -40,7 +42,8 @@
       "outcome": "done",
       "evidence": [
         "越权推进"
-      ]
+      ],
+      "session_id": "sess-2"
     }
   ]
 }

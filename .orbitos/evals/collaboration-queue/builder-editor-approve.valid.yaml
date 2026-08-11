@@ -35,7 +35,9 @@
   "steps": [
     {
       "step": "launch",
-      "by": "agent-a"
+      "by": "agent-a",
+      "prohibited": "不越界、不伪造证据",
+      "return_format": "结论+证据引用"
     },
     {
       "step": "confirm",
@@ -49,7 +51,8 @@
       "outcome": "done",
       "evidence": [
         "边界确认"
-      ]
+      ],
+      "session_id": "sess-1"
     },
     {
       "step": "advance",
@@ -59,7 +62,10 @@
       "evidence": [
         "diff 引用",
         "validation 通过"
-      ]
+      ],
+      "session_id": "sess-2",
+      "diff_ref": "diff/main.md",
+      "validation_ref": "validation/run.md"
     },
     {
       "step": "advance",
@@ -69,7 +75,9 @@
       "evidence": [
         "s2 独立复现验证"
       ],
-      "reviewed_revision": 1
+      "reviewed_revision": 1,
+      "session_id": "sess-3",
+      "review_target_session_id": "sess-2"
     },
     {
       "step": "close",

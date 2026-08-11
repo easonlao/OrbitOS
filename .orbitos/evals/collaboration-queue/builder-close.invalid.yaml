@@ -35,7 +35,9 @@
   "steps": [
     {
       "step": "launch",
-      "by": "agent-a"
+      "by": "agent-a",
+      "prohibited": "不越界、不伪造证据",
+      "return_format": "结论+证据引用"
     },
     {
       "step": "confirm",
@@ -46,21 +48,29 @@
       "step": "advance",
       "by": "agent-a",
       "stage_id": "s1",
-      "outcome": "done"
+      "outcome": "done",
+      "session_id": "sess-1"
     },
     {
       "step": "advance",
       "by": "agent-b",
       "stage_id": "s2",
-      "outcome": "done"
+      "outcome": "done",
+      "session_id": "sess-2",
+      "diff_ref": "diff/main.md",
+      "validation_ref": "validation/run.md"
     },
     {
       "step": "advance",
       "by": "agent-c",
       "stage_id": "s3",
       "outcome": "done",
-      "evidence": [],
-      "reviewed_revision": 1
+      "evidence": [
+        "s2 审核记录"
+      ],
+      "reviewed_revision": 1,
+      "session_id": "sess-3",
+      "review_target_session_id": "sess-2"
     },
     {
       "step": "close",

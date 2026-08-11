@@ -74,6 +74,9 @@
                 "failures": {"type": "integer"},
                 "output_revision": {"type": "integer"},
                 "reviewed_revision": {"type": ["integer", "null"]},
+                "diff_ref": {"type": ["string", "null"]},
+                "validation_ref": {"type": ["string", "null"]},
+                "session_id": {"type": ["string", "null"]},
                 "completed_by": {"type": ["string", "null"]},
                 "completed_at": {"type": ["string", "null"]}
               }

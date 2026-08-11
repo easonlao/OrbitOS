@@ -604,6 +604,7 @@ def collaboration_queue_scenario_errors(data, name):
         "current_owner": None,
         "stage_order": [],
         "stages": {stage_id: {"status": "pending", "failures": 0} for stage_id in stage_ids},
+        "session_by_stage": {},
         "pending_replan": False,
         "closed": False,
     }
@@ -617,6 +618,9 @@ def collaboration_queue_scenario_errors(data, name):
         if record.get("by") != state["current_owner"]:
             add_error(errors, f"$.steps[{index}]", f"only the current owner can advance: {state['current_owner']}")
             return
+        if not (record.get("session_id") or "").strip():
+            add_error(errors, f"$.steps[{index}]", "advance must carry the governance session_id for this stage")
+            return
         stage = state["stages"].setdefault(record["stage_id"], {"status": "pending", "failures": 0, "output_revision": 0})
         if stage["status"] == "complete":
             add_error(errors, f"$.steps[{index}]", "a completed stage cannot advance again")
@@ -624,6 +628,11 @@ def collaboration_queue_scenario_errors(data, name):
         if stage["failures"] >= 2:
             add_error(errors, f"$.steps[{index}]", "a stage that failed twice requires a user-confirmed re-plan")
             return
+        if role_by_stage.get(record["stage_id"]) == "builder" and record.get("outcome") == "done":
+            if not (record.get("diff_ref") or "").strip():
+                add_error(errors, f"$.steps[{index}]", "a builder stage must carry diff_ref (implementation diff reference)")
+            if not (record.get("validation_ref") or "").strip():
+                add_error(errors, f"$.steps[{index}]", "a builder stage must carry validation_ref (validation evidence reference)")
         if role_by_stage.get(record["stage_id"]) == "editor":
             order = state["stage_order"]
             pos = order.index(record["stage_id"]) if record["stage_id"] in order else -1
@@ -633,12 +642,15 @@ def collaboration_queue_scenario_errors(data, name):
                 producer = order[pos - 1]
                 if role_by_stage.get(producer) not in {"builder", "writer"}:
                     add_error(errors, f"$.steps[{index}]", "an editor stage must follow a completed builder/writer stage")
-                if record.get("outcome") == "done":
-                    if not any(producer in (item or "") for item in (record.get("evidence") or [])):
-                        add_error(errors, f"$.steps[{index}]", "editor evidence must reference the reviewed stage output")
-                    producer_revision = state["stages"].get(producer, {}).get("output_revision")
-                    if record.get("reviewed_revision") != producer_revision:
-                        add_error(errors, f"$.steps[{index}]", f"editor reviewed_revision must match the reviewed stage output revision ({producer_revision})")
+                producer_session = state["session_by_stage"].get(producer)
+                if record.get("review_target_session_id") != producer_session:
+                    add_error(errors, f"$.steps[{index}]", "editor review_target_session_id must match the reviewed stage session")
+                if not any(producer in (item or "") for item in (record.get("evidence") or [])):
+                    add_error(errors, f"$.steps[{index}]", "editor evidence must reference the reviewed stage output")
+                producer_revision = state["stages"].get(producer, {}).get("output_revision")
+                if record.get("reviewed_revision") != producer_revision:
+                    add_error(errors, f"$.steps[{index}]", f"editor reviewed_revision must match the reviewed stage output revision ({producer_revision})")
+        state["session_by_stage"][record["stage_id"]] = record.get("session_id")
         if record.get("outcome") == "blocked":
             stage["failures"] += 1
             stage["status"] = "blocked"
@@ -666,6 +678,10 @@ def collaboration_queue_scenario_errors(data, name):
         if step_name == "launch":
             if index != 0:
                 add_error(errors, f"$.steps[{index}]", "launch must be the first step")
+            if not (step.get("prohibited") or "").strip():
+                add_error(errors, f"$.steps[{index}]", "launch card requires prohibited actions")
+            if not (step.get("return_format") or "").strip():
+                add_error(errors, f"$.steps[{index}]", "launch card requires a return format")
             state["plan_status"] = "proposed"
             state["plan_revision"] = 0
             state["stage_order"] = list(stage_ids)
@@ -697,6 +713,9 @@ def collaboration_queue_scenario_errors(data, name):
                 add_error(errors, f"$.steps[{index}]", f"only the current owner can re-plan: {state['current_owner']}")
             if step.get("trigger") not in QUEUE_TRIGGER_VALUES:
                 add_error(errors, f"$.steps[{index}].trigger", "invalid re-plan trigger")
+            for field, label in [("valid_results", "valid_results"), ("invalidated_assumptions", "invalidated_assumptions"), ("replacement_role", "replacement_role")]:
+                if not (step.get(field) or "").strip():
+                    add_error(errors, f"$.steps[{index}]", f"re-plan requires {label}")
             if step.get("trigger") == "failure":
                 affected = state["stages"].get(step.get("affected_stage")) or {}
                 if affected.get("failures", 0) < 2:
@@ -803,9 +822,16 @@ def collaboration_queue_asset_errors():
     script_path = ROOT / ".orbitos/scripts/handoff-queue.py"
     if script_path.is_file():
         script = script_path.read_text(encoding="utf-8")
-        for term in ["def launch", "def confirm", "def advance", "def replan", "def mark_close", "stage_order", "replans"]:
+        for term in ["def launch", "def confirm", "def advance", "def replan", "def _require_session", "def active_or_archived_handoff", "stage_order", "replans"]:
             if term not in script:
                 add_error(errors, str(script_path.relative_to(ROOT)), f"handoff queue script is missing required term: {term}")
+
+    control_path = ROOT / ".orbitos/scripts/handoff-control.py"
+    if control_path.is_file():
+        control = control_path.read_text(encoding="utf-8")
+        for term in ["def _write_close_receipt", "def queue_or_die", "already_closed"]:
+            if term not in control:
+                add_error(errors, str(control_path.relative_to(ROOT)), f"handoff control script is missing required term: {term}")
 
     if (ROOT / ".orbitos/templates/.orbitos/state/handoff-queues.json").is_file():
         validate_value(
