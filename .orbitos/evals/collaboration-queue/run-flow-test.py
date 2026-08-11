@@ -255,12 +255,66 @@ def validate_clone(tmp, expect_pass=True):
     return result
 
 
+# --- schema probe (mirrors run-validation.validate_value for the queue schema) ---
+
+def probe_type(value, types):
+    if not types:
+        return True
+    for schema_type in types:
+        if schema_type == "null" and value is None:
+            return True
+        if schema_type == "array" and isinstance(value, list):
+            return True
+        if schema_type == "integer" and isinstance(value, int) and not isinstance(value, bool):
+            return True
+        if schema_type == "object" and isinstance(value, dict):
+            return True
+        if schema_type == "string" and isinstance(value, str):
+            return True
+        if schema_type == "boolean" and isinstance(value, bool):
+            return True
+    return False
+
+
+def probe_schema(value, schema, path_text, errors):
+    types = schema.get("type")
+    types = types if isinstance(types, list) else ([types] if types else [])
+    if not probe_type(value, types):
+        errors.append(f"{path_text}: type mismatch")
+        return
+    if "enum" in schema and value not in schema["enum"]:
+        errors.append(f"{path_text}: value is not in enum")
+    if "object" in types and isinstance(value, dict):
+        for name in schema.get("required", []):
+            if name not in value:
+                errors.append(f"{path_text}.{name}: missing required field")
+        if schema.get("additionalProperties") is False:
+            for name in value:
+                if name not in schema.get("properties", {}):
+                    errors.append(f"{path_text}.{name}: additional property")
+        for name, prop in schema.get("properties", {}).items():
+            if name in value:
+                probe_schema(value[name], prop, f"{path_text}.{name}", errors)
+    if "array" in types and isinstance(value, list) and "items" in schema:
+        for index, item in enumerate(value):
+            probe_schema(item, schema["items"], f"{path_text}[{index}]", errors)
+
+
+def check_state_schema(tmp, label):
+    schema = json.loads((REPO / ".orbitos/schemas/handoff-queue.schema.yaml").read_text(encoding="utf-8"))
+    state = json.loads((tmp / ".orbitos/state/handoff-queues.json").read_text(encoding="utf-8"))
+    errors = []
+    probe_schema(state, schema, "$", errors)
+    check(not errors, f"{label} queue state schema valid (errors={errors})")
+
+
 # --- mini runtime tests ---
 
 def test_relay_three_agent(tmp):
     print("test_relay_three_agent (#16 relay + session binding)")
     handoff = write_handoff(tmp, "relay")
     run_script(QUEUE_SCRIPT, tmp, "launch", ["--handoff", handoff, "--agent-id", "agent_a", "--role", "coordinator", "--return-owner", "agent_a", "--prohibited", "不越界", "--return-format", "结论+证据", "--next-action", "start", "--date", "2026-01-01"] + queue([STAGE_S, STAGE_R, STAGE_C]), True)
+    check_state_schema(tmp, "post-launch")
     # advance without a governance session must be refused
     run_script(QUEUE_SCRIPT, tmp, "advance", ["--handoff", handoff, "--agent-id", "agent_a", "--role", "coordinator", "--stage-id", "s1", "--return-owner", "agent_a", "--session-id", "nope", "--date", "2026-01-01", "--outcome", "done", "--result", "x", "--evidence", "y"], False)
     run_script(QUEUE_SCRIPT, tmp, "confirm", ["--handoff", handoff, "--agent-id", "agent_a", "--plan-revision", "0", "--return-owner", "agent_a", "--receipt", "user accepted", "--date", "2026-01-01"], True)
@@ -268,12 +322,31 @@ def test_relay_three_agent(tmp):
         sid = open_stage_session(tmp, handoff, agent, role, stage)
         args = ["--handoff", handoff, "--agent-id", agent, "--role", role, "--stage-id", stage, "--return-owner", "agent_a", "--session-id", sid, "--date", "2026-01-01", "--outcome", "done", "--result", f"{stage} done", "--evidence", "notes.md"]
         run_script(QUEUE_SCRIPT, tmp, "advance", args, True)
+    # a completed stage is immutable: re-advancing s1 is refused
+    run_script(QUEUE_SCRIPT, tmp, "advance", ["--handoff", handoff, "--agent-id", "agent_a", "--role", "coordinator", "--stage-id", "s1", "--return-owner", "agent_a", "--session-id", "sess-relay-s1", "--date", "2026-01-01", "--outcome", "done", "--result", "again", "--evidence", "x"], False)
+    # future stage cannot be claimed early while s3 is current... verify owner gate at final stage
+    run_script(QUEUE_SCRIPT, tmp, "advance", ["--handoff", handoff, "--agent-id", "agent_b", "--role", "researcher", "--stage-id", "s3", "--return-owner", "agent_a", "--session-id", "sess-relay-s2", "--date", "2026-01-01", "--outcome", "done", "--result", "x", "--evidence", "y"], False)
     record = queue_record(tmp, handoff)
     check(record["current_owner"] == "agent_a", "baton returned to return owner")
     check(all(record["stages"][sid]["status"] == "complete" for sid in record["stage_order"]), "all stages complete")
     text = (tmp / "00-系统/agents/handoff/relay.md").read_text(encoding="utf-8")
     check("## 阶段记录" in text and "s1 由 agent_a 完成" in text, "stage records written to Markdown")
+    check("next_owner:" in text and "current_role:" in text, "frontmatter carries next_owner/current_role")
     check(all(record["stages"][sid]["session_id"] for sid in record["stage_order"]), "stage sessions recorded")
+    # forged return owner on advance is refused
+    run_script(QUEUE_SCRIPT, tmp, "advance", ["--handoff", handoff, "--agent-id", "agent_a", "--role", "coordinator", "--stage-id", "s3", "--return-owner", "agent_d", "--session-id", "sess-relay-s3", "--date", "2026-01-01", "--outcome", "done", "--result", "x", "--evidence", "y"], False)
+
+
+def test_forged_return_owner(tmp):
+    print("test_forged_return_owner (P1: authoritative return owner blocks forged confirm)")
+    handoff = write_handoff(tmp, "forge")
+    run_script(QUEUE_SCRIPT, tmp, "launch", ["--handoff", handoff, "--agent-id", "agent_a", "--role", "coordinator", "--return-owner", "agent_a", "--prohibited", "不越界", "--return-format", "结论+证据", "--next-action", "start", "--date", "2026-01-01"] + queue([STAGE_S, STAGE_R2]), True)
+    # an unrelated agent cannot confirm itself into the return owner seat
+    run_script(QUEUE_SCRIPT, tmp, "confirm", ["--handoff", handoff, "--agent-id", "agent_a", "--plan-revision", "0", "--return-owner", "agent_d", "--receipt", "fake", "--date", "2026-01-01"], False)
+    run_script(QUEUE_SCRIPT, tmp, "confirm", ["--handoff", handoff, "--agent-id", "agent_d", "--plan-revision", "0", "--return-owner", "agent_d", "--receipt", "fake", "--date", "2026-01-01"], False)
+    run_script(QUEUE_SCRIPT, tmp, "confirm", ["--handoff", handoff, "--agent-id", "agent_a", "--plan-revision", "0", "--return-owner", "agent_a", "--receipt", "user accepted", "--date", "2026-01-01"], True)
+    record = queue_record(tmp, handoff)
+    check(record["return_owner"] == "agent_a" and record["confirmed_by"] == "user", "authoritative return owner held at confirm")
 
 
 def test_launch_card_full(tmp):
@@ -311,6 +384,14 @@ def test_replan_structured_and_latest(tmp):
     check(record["replans"][0]["valid_results"] and record["replans"][1]["invalidated_assumptions"] and record["replans"][1]["replacement_role"], "structured re-plan fields recorded")
     text = (tmp / "00-系统/agents/handoff/structured.md").read_text(encoding="utf-8")
     check("仍有效结果" in text and "失效假设" in text and "替换角色" in text, "structured re-plan written to Markdown")
+    check(text.count("## 计划修订") == 1 and "plan_revision：1" in text and "plan_revision：2" in text, "re-plan section appended idempotently")
+    # replacement agent picks up after confirmation
+    s1 = open_stage_session(tmp, handoff, "agent_a", "coordinator", "s1")
+    run_script(QUEUE_SCRIPT, tmp, "advance", ["--handoff", handoff, "--agent-id", "agent_a", "--role", "coordinator", "--stage-id", "s1", "--return-owner", "agent_a", "--session-id", s1, "--date", "2026-01-01", "--outcome", "done", "--result", "defined", "--evidence", "board.md"], True)
+    s2 = open_stage_session(tmp, handoff, "agent_d", "researcher", "s2")
+    run_script(QUEUE_SCRIPT, tmp, "advance", ["--handoff", handoff, "--agent-id", "agent_d", "--role", "researcher", "--stage-id", "s2", "--return-owner", "agent_a", "--session-id", s2, "--date", "2026-01-01", "--outcome", "done", "--result", "evidence", "--evidence", "notes.md"], True)
+    record = queue_record(tmp, handoff)
+    check(record["stages"]["s2"]["tool"] == "agent_d" and record["stages"]["s2"]["status"] == "complete", "replacement agent completed the revised stage")
 
 
 def test_mark_close_removed(tmp):
@@ -571,6 +652,7 @@ def main():
     print(f"mini runtime: {tmp}")
     try:
         test_relay_three_agent(tmp)
+        test_forged_return_owner(tmp)
         test_launch_card_full(tmp)
         test_replan_structured_and_latest(tmp)
         test_mark_close_removed(tmp)
