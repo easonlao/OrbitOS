@@ -130,6 +130,10 @@ def validate_queue(specs, root, existing=None):
     for index, spec in enumerate(specs):
         if index < len(specs) - 1 and spec["next_stage"] != specs[index + 1]["stage_id"]:
             raise ValueError(f"stage chain is broken at {spec['stage_id']}")
+    builder_tool = next((spec["tool"] for spec in specs if spec["role"] == "builder"), None)
+    editor_tool = next((spec["tool"] for spec in specs if spec["role"] == "editor"), None)
+    if builder_tool and editor_tool and builder_tool == editor_tool:
+        raise ValueError("the Editor tool identity must differ from the Builder tool identity")
     if existing:
         completed = [
             stage_id
@@ -155,11 +159,19 @@ def validate_queue(specs, root, existing=None):
 
 
 def append_section(path, heading, lines):
+    """Append a section; if the heading already exists, extend it instead of failing."""
     text = path.read_text(encoding="utf-8")
-    section = "\n## " + heading + "\n\n" + "\n".join(lines) + "\n"
-    if f"## {heading}" in text:
-        raise ValueError(f"handoff already has a {heading} section")
-    path.write_text(text.rstrip() + "\n" + section, encoding="utf-8", newline="\n")
+    section = "\n".join(lines) + "\n"
+    marker = f"## {heading}\n"
+    index = text.find(marker)
+    if index == -1:
+        path.write_text(text.rstrip() + "\n## " + heading + "\n\n" + section, encoding="utf-8", newline="\n")
+        return
+    head = text[:index]
+    rest = text[index + len(marker):]
+    match = re.search(r"\n## ", rest)
+    body, tail = (rest[:match.start()], rest[match.start():]) if match else (rest, "")
+    path.write_text(head + marker + body.rstrip("\n") + "\n" + section + tail, encoding="utf-8", newline="\n")
 
 
 def launch(args, root):
@@ -174,6 +186,8 @@ def launch(args, root):
     specs = validate_queue([parse_stage(raw) for raw in args.queue], root)
     if args.agent_id not in registered_agents(root):
         raise ValueError(f"agent is not registered: {args.agent_id}")
+    if args.return_owner not in registered_agents(root):
+        raise ValueError(f"return owner is not a registered agent tool: {args.return_owner}")
     if args.role not in ROLES:
         raise ValueError(f"unknown launch role: {args.role}")
     timestamp = now()
@@ -195,6 +209,7 @@ def launch(args, root):
     second = specs[1] if len(specs) > 1 else None
     record = {
         "handoff": relative,
+        "return_owner": args.return_owner,
         "plan_revision": 0,
         "plan_status": "proposed",
         "confirmed_by": None,
@@ -210,13 +225,14 @@ def launch(args, root):
         "created_at": timestamp,
         "updated_at": timestamp,
     }
-    state["queues"][relative] = record
-    save_state(root, state)
-    update_frontmatter(handoff, {"updated": args.date, "plan_status": "proposed", "plan_revision": "0", "current_stage": "none"})
     rows = ["| 阶段 | 工具 | 角色 | 交付物 | 范围 | 验收条件 | 下一阶段 |", "|---|---|---|---|---|---|---|"]
     for spec in specs:
         rows.append(f"| {spec['stage_id']} | {spec['tool']} | {spec['role']} | {spec['deliverable']} | {spec['scope']} | {spec['acceptance']} | {spec['next_stage'] or '(回验收方)'} |")
+    # write Markdown first so content failures never leave a half-persisted queue
     append_section(handoff, "阶段队列", rows)
+    state["queues"][relative] = record
+    save_state(root, state)
+    update_frontmatter(handoff, {"updated": args.date, "plan_status": "proposed", "plan_revision": "0", "current_stage": "none", "next_owner": record["next_owner"], "current_role": first["role"]})
     print(json.dumps({
         "ok": True,
         "handoff": args.handoff,
@@ -246,9 +262,13 @@ def confirm(args, root):
     handoff = active_handoff(root, args.handoff)
     relative = relative_path(root, handoff)
     state, record = _confirm_guard(root, relative, args.agent_id, args.plan_revision)
+    # The authoritative return owner is the one persisted at launch, not the caller's argument.
+    return_owner = record["return_owner"]
+    if args.return_owner and args.return_owner != return_owner:
+        raise ValueError(f"return owner mismatch: plan holds {return_owner}, caller passed {args.return_owner}")
     # The user confirms in the launching conversation; require the initiator tool or the return owner.
     first_tool = record["stages"][record["stage_order"][0]]["tool"]
-    if args.agent_id not in {first_tool, args.return_owner}:
+    if args.agent_id not in {first_tool, return_owner}:
         raise ValueError("confirm must be executed by the first stage tool or the return owner")
     current = next((stage_id for stage_id in record["stage_order"] if record["stages"][stage_id]["status"] != "complete"), record["stage_order"][0])
     stage = record["stages"][current]
@@ -260,7 +280,7 @@ def confirm(args, root):
     record["current_stage"] = current
     record["current_owner"] = stage["tool"]
     record["current_role"] = stage["role"]
-    record["next_owner"] = stage["next_stage"] and record["stages"][stage["next_stage"]]["tool"] or args.return_owner
+    record["next_owner"] = stage["next_stage"] and record["stages"][stage["next_stage"]]["tool"] or return_owner
     record["next_action"] = stage["deliverable"] + "；说：获取交接工作"
     record["updated_at"] = now()
     save_state(root, state)
@@ -270,6 +290,8 @@ def confirm(args, root):
         "plan_revision": str(record["plan_revision"]),
         "current_stage": current,
         "current_owner": stage["tool"],
+        "current_role": stage["role"],
+        "next_owner": record["next_owner"],
         "next_action": record["next_action"],
     })
     _board_replace(root, handoff.stem, "delegated", stage["tool"], record["next_action"])
@@ -295,6 +317,9 @@ def advance(args, root):
     record = state["queues"].get(relative)
     if not record:
         raise ValueError("handoff has no queue plan; run launch first")
+    return_owner = record["return_owner"]
+    if args.return_owner and args.return_owner != return_owner:
+        raise ValueError(f"return owner mismatch: plan holds {return_owner}, caller passed {args.return_owner}")
     if record["plan_status"] != "confirmed":
         raise ValueError("the queue must be confirmed by the user before any stage advances")
     if _pending_replan(record):
@@ -310,6 +335,16 @@ def advance(args, root):
         raise ValueError("a completed stage is immutable and cannot advance again")
     if stage["failures"] >= 2:
         raise ValueError("this stage failed twice; a user-confirmed re-plan is required")
+    if stage["role"] == "editor":
+        order = record["stage_order"]
+        index = order.index(args.stage_id)
+        if index == 0:
+            raise ValueError("an editor stage cannot be the first stage")
+        producer = record["stages"][order[index - 1]]
+        if producer["role"] not in {"builder", "writer"} or producer["status"] != "complete":
+            raise ValueError("an editor stage must follow a completed builder/writer stage")
+        if args.outcome == "done" and not any(order[index - 1] in (item or "") for item in (args.evidence or [])):
+            raise ValueError(f"editor evidence must reference the reviewed stage output ({order[index - 1]})")
     if args.outcome == "done":
         if not args.result or not args.evidence:
             raise ValueError("a done stage requires --result and at least one --evidence")
@@ -321,8 +356,9 @@ def advance(args, root):
         stage["unresolved"] = args.unresolved
         record["next_action"] = args.next_action or "同阶段重试或请求 re-plan"
         record["updated_at"] = now()
+        append_section(handoff, "阶段记录", [f"- {args.stage_id} 由 {args.agent_id} 阻塞（{stage['role']}）：{args.unresolved}（failures={stage['failures']}）"])
         save_state(root, state)
-        update_frontmatter(handoff, {"updated": args.date, "handoff_status": "delegated", "next_action": record["next_action"]})
+        update_frontmatter(handoff, {"updated": args.date, "handoff_status": "delegated", "current_role": stage["role"], "next_owner": record["next_owner"], "next_action": record["next_action"]})
         _board_replace(root, handoff.stem, "delegated", record["current_owner"], record["next_action"])
         print(json.dumps({"ok": True, "stage": args.stage_id, "status": "blocked", "failures": stage["failures"], "replan_required": stage["failures"] >= 2}, ensure_ascii=False))
         return
@@ -341,23 +377,28 @@ def advance(args, root):
         record["current_stage"] = next_stage
         record["current_owner"] = target["tool"]
         record["current_role"] = target["role"]
-        record["next_owner"] = target["next_stage"] and record["stages"][target["next_stage"]]["tool"] or args.return_owner
+        record["next_owner"] = target["next_stage"] and record["stages"][target["next_stage"]]["tool"] or return_owner
         record["next_action"] = target["deliverable"] + "；说：获取交接工作"
         handoff_status, next_action = "delegated", record["next_action"]
     else:
         record["current_stage"] = args.stage_id
-        record["current_owner"] = args.return_owner
+        record["current_owner"] = return_owner
         record["current_role"] = None
-        record["next_owner"] = args.return_owner
+        record["next_owner"] = return_owner
         record["next_action"] = "验收：核对全部阶段产出后关闭交接"
         handoff_status, next_action = "returned", record["next_action"]
     record["updated_at"] = now()
+    evidence = "；".join(args.evidence or [])
+    unresolved = args.unresolved or "无"
+    append_section(handoff, "阶段记录", [f"- {args.stage_id} 由 {args.agent_id} 完成（{stage['role']}）：{args.result}；证据：{evidence}；未决：{unresolved}"])
     save_state(root, state)
     update_frontmatter(handoff, {
         "updated": args.date,
         "handoff_status": handoff_status,
         "current_stage": record["current_stage"],
         "current_owner": record["current_owner"],
+        "current_role": record["current_role"],
+        "next_owner": record["next_owner"],
         "next_action": next_action,
     })
     _board_replace(root, handoff.stem, handoff_status, record["current_owner"], next_action)
@@ -376,8 +417,8 @@ def advance(args, root):
             "ok": True,
             "stage": args.stage_id,
             "all_stages_complete": True,
-            "return_owner": args.return_owner,
-            "acceptance_instruction": f"在 {args.return_owner} 中验收并关闭交接",
+            "return_owner": return_owner,
+            "acceptance_instruction": f"在 {return_owner} 中验收并关闭交接",
         }, ensure_ascii=False))
 
 
@@ -390,12 +431,10 @@ def replan(args, root):
         raise ValueError("handoff has no queue plan; run launch first")
     if record["current_owner"] != args.agent_id:
         raise ValueError(f"only the current owner can trigger a re-plan: {record['current_owner']}")
-    if _pending_replan(record):
-        raise ValueError("a previous re-plan is still waiting for confirmation")
     if args.trigger == "failure":
         affected = record["stages"].get(args.affected_stage)
-        if not affected or affected.get("failures", 0) < 1:
-            raise ValueError("failure trigger requires a stage that already failed once")
+        if not affected or affected.get("failures", 0) < 2:
+            raise ValueError("failure trigger requires a stage that already failed twice")
     if args.trigger != "failure" and args.affected_stage not in record["stages"]:
         raise ValueError(f"unknown affected stage: {args.affected_stage}")
     specs = validate_queue([parse_stage(raw) for raw in args.proposed_queue], root, existing=record)
@@ -436,13 +475,14 @@ def replan(args, root):
     })
     record["next_action"] = f"等待用户确认修订队列（plan_revision={revision}）"
     record["updated_at"] = now()
-    save_state(root, state)
-    update_frontmatter(handoff, {"updated": args.date, "plan_status": "proposed", "plan_revision": str(revision), "next_action": record["next_action"]})
     rows = ["| 阶段 | 工具 | 角色 | 交付物 | 范围 | 验收条件 | 下一阶段 |", "|---|---|---|---|---|---|---|"]
     for spec in specs:
         rows.append(f"| {spec['stage_id']} | {spec['tool']} | {spec['role']} | {spec['deliverable']} | {spec['scope']} | {spec['acceptance']} | {spec['next_stage'] or '(回验收方)'} |")
     lines = [f"- 触发：{args.trigger}", f"- 受影响阶段：{args.affected_stage}", f"- 原因：{args.reason}", f"- 修订 plan_revision：{revision}", f"- 提议者：{args.agent_id}", ""] + rows
+    # write Markdown first: a failed append must not leave revision advanced in the projection
     append_section(handoff, "计划修订", lines)
+    save_state(root, state)
+    update_frontmatter(handoff, {"updated": args.date, "plan_status": "proposed", "plan_revision": str(revision), "next_action": record["next_action"]})
     print(json.dumps({
         "ok": True,
         "plan_revision": revision,
@@ -456,8 +496,6 @@ def status(args, root):
     handoff = active_handoff(root, args.handoff)
     relative = relative_path(root, handoff)
     record = queue_for(root, relative)
-    if not record:
-        raise ValueError("handoff has no queue plan")
     print(json.dumps({"ok": True, "queue": record}, ensure_ascii=False))
 
 

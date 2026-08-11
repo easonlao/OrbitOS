@@ -13,6 +13,7 @@
         "additionalProperties": false,
         "required": [
           "handoff",
+          "return_owner",
           "plan_revision",
           "plan_status",
           "current_stage",
@@ -28,6 +29,7 @@
         ],
         "properties": {
           "handoff": {"type": "string"},
+          "return_owner": {"type": "string"},
           "plan_revision": {"type": "integer"},
           "plan_status": {"enum": ["proposed", "confirmed"]},
           "confirmed_by": {"type": ["string", "null"]},
@@ -65,7 +67,7 @@
                 "result": {"type": ["string", "null"]},
                 "evidence": {"type": "array", "items": {"type": "string"}},
                 "unresolved": {"type": ["string", "null"]},
-                "outcome": {"enum": ["done", "blocked"]},
+                "outcome": {"enum": ["done", "blocked", null]},
                 "failures": {"type": "integer"},
                 "completed_by": {"type": ["string", "null"]},
                 "completed_at": {"type": ["string", "null"]}

@@ -33,12 +33,12 @@ Agent Handoff 承接 `execution_mode=delegated` 的跨 Agent 或跨会话工作�
 
 两个以上独立 Agent 工具接力时，走 `handoff-queue.py` 的队列契约；它不替代 `handoff-control.py begin/close` 的治理链，而是约束“谁在哪个阶段可以做什么”。
 
-1. **launch（提出计划）**：发起 Agent 用 `handoff-queue.py launch` 提出 launch card——参与工具、角色、执行顺序、交付物、范围、验收条件、返回格式与 `return_owner`。任何阶段进入 `working` 之前，都必须先得到一次显式用户确认。
-2. **confirm（用户确认）**：确认后 `plan_status: confirmed`、`current_stage` 指向首个阶段；未确认前任何 advance 都被拒绝。
-3. **接力（advance）**：只有 `current_owner` 且角色匹配当前阶段的 Agent 可以 `advance`。完成阶段必须写回结果、证据、未解决项与 outcome；阶段记录一经完成不可变。推进时同步更新当前负责人、角色、阶段、下一负责人与下一步，并一致更新机器层投影与 BOARD。每次推进的用户可见响应必须指名下一 Agent 工具与 pickup 指令（“获取交接工作”）。最后一个阶段完成后把棒交回 `return_owner` 验收。
-4. **失败与阻塞**：阶段第一次失败记为 `blocked` 并计数；同一阶段失败两次后，任何继续推进都会被拒绝，必须走 re-plan。
-5. **re-plan（修订计划）**：Agent 不可用、任务超出已确认范围或同阶段第二次失败时，当前 Agent 停止推进，记录触发原因、受影响阶段、仍然有效的结果与失效假设，用 `handoff-queue.py replan` 提议修订后的剩余队列（已完成阶段与证据保持不可变），`plan_revision` 单调 +1，等待用户再次确认。未确认的修订队列不允许任何 Agent 推进；修订确认后替换 Agent 才能接手。
-6. **验收关闭**：只有 `return_owner` 可以 `handoff-control.py close`；Builder 与 Editor 阶段工具不能关闭整个交接。关闭前所有计划阶段必须完成且没有未确认的修订；关闭时投影写入 `close`（验收人、时间与归档引用），构成 closure receipt 的一部分。
+1. **launch（提出计划）**：发起 Agent 用 `handoff-queue.py launch` 提出 launch card——参与工具、角色、执行顺序、交付物、范围、验收条件、返回格式与 `return_owner`。`return_owner` 在 launch 时校验并持久化为权威值，后续命令不得篡改；Builder 与 Editor 阶段必须由不同工具承担。任何阶段进入 `working` 之前，都必须先得到一次显式用户确认。
+2. **confirm（用户确认）**：确认后 `plan_status: confirmed`、`current_stage` 指向首个阶段；未确认前任何 advance 都被拒绝。确认与后续推进都从投影读取权威 `return_owner`，调用方传入不一致的值会被拒绝。
+3. **接力（advance）**：只有 `current_owner` 且角色匹配当前阶段的 Agent 可以 `advance`。完成阶段必须写回结果、证据、未解决项与 outcome，**同步写入 handoff Markdown 的 `## 阶段记录`**——Formal Handoff Markdown 是跨工具通信合同，下一个独立 Agent 只读 Markdown 即可接手；阶段记录一经完成不可变。推进时同步更新当前负责人、角色、阶段、下一负责人与下一步，并一致更新机器层投影与 BOARD（顺序写入 + 预校验，非事务性，因此失败会在写入前被拦截）。每次推进的用户可见响应必须指名下一 Agent 工具与 pickup 指令（“获取交接工作”）。最后一个阶段完成后把棒交回 `return_owner` 验收。Editor 阶段必须紧跟已完成的 Builder/Writer 阶段，且其证据必须引用被审阶段输出。
+4. **失败与阻塞**：阶段第一次失败记为 `blocked` 并计数；同一阶段失败两次后，任何继续推进都会被拒绝，必须走 re-plan（failure 触发要求已失败两次）。
+5. **re-plan（修订计划）**：Agent 不可用、任务超出已确认范围或同阶段第二次失败时，当前 Agent 停止推进，记录触发原因、受影响阶段、仍然有效的结果与失效假设，用 `handoff-queue.py replan` 提议修订后的剩余队列（已完成阶段与证据保持不可变），`plan_revision` 单调 +1，等待用户再次确认。未确认的修订队列不允许任何 Agent 推进；修订确认后替换 Agent 才能接手。在未确认期间允许继续提出新一轮修订（修订历史完整保留），但推进始终被锁。
+6. **验收关闭**：只有 `return_owner` 可以 `handoff-control.py close`；Builder 与 Editor 阶段工具不能关闭整个交接。关闭前所有计划阶段必须完成且没有未确认的修订；`--output` 格式（KIND|REF|STATUS[|NOTE]）在副作用前预校验。关闭时投影写入 `close`（验收人、时间与归档引用），构成 closure receipt 的一部分。队列状态不可读（损坏、脚本失败）时 begin/close 一律拒绝，不按“无队列”放行。
 
 ## 创建与更新
 

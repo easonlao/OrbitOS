@@ -99,6 +99,11 @@ def work_record(root, work_id):
 
 
 def queue_payload(root, handoff_relative):
+    """Return the queue projection, or None when the handoff has no queue plan.
+
+    Failures (corrupt state, missing script) raise instead of being treated as
+    "no queue", so begin/close fail closed when the queue is unreadable.
+    """
     result = subprocess.run(
         [sys.executable, str(root / ".orbitos/scripts/handoff-queue.py"), "--root", str(root), "status", "--handoff", handoff_relative],
         capture_output=True,
@@ -107,11 +112,16 @@ def queue_payload(root, handoff_relative):
         errors="replace",
     )
     if result.returncode:
-        return None
+        raise ValueError(
+            (result.stderr or "").strip()
+            or (result.stdout or "").strip()
+            or "handoff queue status failed"
+        )
     try:
-        return json.loads(result.stdout).get("queue")
-    except json.JSONDecodeError:
-        return None
+        payload = json.loads(result.stdout)
+    except json.JSONDecodeError as error:
+        raise ValueError(f"handoff queue status returned invalid JSON: {error}")
+    return payload.get("queue")
 
 
 def require_queue_position(root, handoff_relative, agent_id, role):
@@ -123,8 +133,11 @@ def require_queue_position(root, handoff_relative, agent_id, role):
         raise ValueError("queue plan must be user-confirmed before work begins")
     if any(not item.get("confirmed_at") for item in queue.get("replans", [])):
         raise ValueError("a re-plan is waiting for user confirmation")
-    if queue.get("current_owner") != agent_id or queue.get("current_role") != role:
-        raise ValueError(f"begin requires the current queue position: {queue.get('current_owner')}/{queue.get('current_role')}")
+    if queue.get("current_owner") != agent_id:
+        raise ValueError(f"begin requires the current queue owner: {queue.get('current_owner')}")
+    current_role = queue.get("current_role")
+    if current_role and current_role != role:
+        raise ValueError(f"begin requires the current queue role: {current_role}")
 
 
 def session_record(root, session_id):
@@ -187,19 +200,20 @@ def close(args, root):
     work = work_record(root, args.work_id)
     if work["revision"] != args.expected_work_revision or work["source_ref"] != args.handoff:
         raise ValueError("work item no longer matches this handoff revision/source")
+    for output in args.output:
+        if not re.match(r"^[^|]+\|[^|]+(\|[^|]+)*$", output):
+            raise ValueError(f"output must use KIND|REF|STATUS[|NOTE]: {output}")
     archive_relative = (ARCHIVE_ROOT / handoff.name).as_posix()
     archive_path = root / archive_relative
     if archive_path.exists():
         raise ValueError("archive target already exists")
+    # Persist the acceptance receipt in the queue projection before any close side effects.
+    if queue is not None:
+        run([sys.executable, str(root / ".orbitos/scripts/handoff-queue.py"), "--root", str(root), "mark-close", "--handoff", args.handoff, "--accepted-by", args.agent_id, "--archived-ref", archive_relative, "--date", args.date], root)
     update_frontmatter(handoff, {"updated": args.date, "handoff_status": "closed", "current_owner": args.agent_id, "next_action": "无。协作已完成并归档。"})
     board_remove(root, handoff.stem)
     archive_path.parent.mkdir(parents=True, exist_ok=True)
     shutil.move(str(handoff), str(archive_path))
-    queue_mark = [sys.executable, str(root / ".orbitos/scripts/handoff-queue.py"), "--root", str(root), "mark-close", "--handoff", args.handoff, "--accepted-by", args.agent_id, "--archived-ref", archive_relative, "--date", args.date]
-    try:
-        run(queue_mark, root)
-    except ValueError:
-        pass  # handoffs without a queue plan have no projection to mark
     run([sys.executable, str(root / ".orbitos/scripts/work-control.py"), "--root", str(root), "update", "--id", args.work_id, "--agent-id", args.agent_id, "--expected-revision", str(args.expected_work_revision), "--status", "done", "--next-action", "closed and archived", "--source-ref", archive_relative, "--evidence", f".orbitos/state/collaboration-sessions.json#{args.session_id}", "--no-user-required"], root)
     validation = run([sys.executable, str(root / ".orbitos/scripts/run-validation.py")], root)
     if "Validation eval passed" not in validation:

@@ -596,6 +596,7 @@ def collaboration_queue_scenario_errors(data, name):
         return errors
     return_owner = data.get("return_owner")
     tool_by_stage = {spec.get("stage_id"): spec.get("tool") for spec in queue if isinstance(spec, dict)}
+    role_by_stage = {spec.get("stage_id"): spec.get("role") for spec in queue if isinstance(spec, dict)}
     state = {
         "plan_status": "none",
         "plan_revision": 0,
@@ -623,6 +624,17 @@ def collaboration_queue_scenario_errors(data, name):
         if stage["failures"] >= 2:
             add_error(errors, f"$.steps[{index}]", "a stage that failed twice requires a user-confirmed re-plan")
             return
+        if role_by_stage.get(record["stage_id"]) == "editor":
+            order = state["stage_order"]
+            pos = order.index(record["stage_id"]) if record["stage_id"] in order else -1
+            if pos <= 0:
+                add_error(errors, f"$.steps[{index}]", "an editor stage cannot be the first stage")
+            else:
+                producer = order[pos - 1]
+                if role_by_stage.get(producer) not in {"builder", "writer"}:
+                    add_error(errors, f"$.steps[{index}]", "an editor stage must follow a completed builder/writer stage")
+                if record.get("outcome") == "done" and not any(producer in (item or "") for item in (record.get("evidence") or [])):
+                    add_error(errors, f"$.steps[{index}]", "editor evidence must reference the reviewed stage output")
         if record.get("outcome") == "blocked":
             stage["failures"] += 1
             stage["status"] = "blocked"
@@ -657,6 +669,8 @@ def collaboration_queue_scenario_errors(data, name):
         elif step_name == "confirm":
             if state["plan_status"] != "proposed":
                 add_error(errors, f"$.steps[{index}]", "confirm requires a proposed plan")
+            if actor not in {tool_by_stage.get(stage_ids[0]) if stage_ids else None, return_owner}:
+                add_error(errors, f"$.steps[{index}]", "confirm must be executed by the first stage tool or the return owner")
             if step.get("plan_revision", state["plan_revision"]) != state["plan_revision"]:
                 add_error(errors, f"$.steps[{index}]", "stale plan revision on confirm")
             state["plan_status"] = "confirmed"
@@ -674,14 +688,12 @@ def collaboration_queue_scenario_errors(data, name):
         elif step_name == "replan":
             if actor != state["current_owner"]:
                 add_error(errors, f"$.steps[{index}]", f"only the current owner can re-plan: {state['current_owner']}")
-            if state["pending_replan"]:
-                add_error(errors, f"$.steps[{index}]", "a previous re-plan is still waiting for confirmation")
             if step.get("trigger") not in QUEUE_TRIGGER_VALUES:
                 add_error(errors, f"$.steps[{index}].trigger", "invalid re-plan trigger")
             if step.get("trigger") == "failure":
                 affected = state["stages"].get(step.get("affected_stage")) or {}
-                if affected.get("failures", 0) < 1:
-                    add_error(errors, f"$.steps[{index}]", "failure trigger requires a stage that already failed once")
+                if affected.get("failures", 0) < 2:
+                    add_error(errors, f"$.steps[{index}]", "failure trigger requires a stage that already failed twice")
             revised = step.get("revised_queue")
             if isinstance(revised, list) and len(revised) >= 2:
                 completed = [sid for sid, s in state["stages"].items() if s["status"] == "complete"]
@@ -704,6 +716,7 @@ def collaboration_queue_scenario_errors(data, name):
                 for spec in revised:
                     if isinstance(spec, dict) and spec.get("stage_id"):
                         tool_by_stage[spec["stage_id"]] = spec.get("tool")
+                        role_by_stage[spec["stage_id"]] = spec.get("role")
                         chain[spec["stage_id"]] = spec.get("next_stage")
             elif step.get("replacement_tool"):
                 replacement = step.get("replacement_tool")
@@ -807,15 +820,19 @@ def collaboration_queue_state_errors():
     queues = state.get("queues", {})
     if not isinstance(queues, dict):
         return errors
-    active_root = ROOT / "00-" + chr(0x7CFB) + chr(0x7EDF) / "agents/handoff"
+    active_root = ROOT / ("00-" + chr(0x7CFB) + chr(0x7EDF) + "/agents/handoff")
     for relative, queue in queues.items():
         if not isinstance(queue, dict):
             continue
         handoff_path = ROOT / relative
+        close = queue.get("close") if isinstance(queue.get("close"), dict) else None
+        if close:
+            archived = ROOT / str(close.get("archived_ref", ""))
+            if not archived.is_file():
+                add_error(errors, f".orbitos/state/handoff-queues.json:{relative}", "closed queue must reference an archived handoff")
+            continue
         if not handoff_path.is_file():
             add_error(errors, f".orbitos/state/handoff-queues.json:{relative}", "queue handoff file does not exist")
-        if queue.get("close") and not (ROOT / str(queue["close"].get("archived_ref", ""))).is_file():
-            add_error(errors, f".orbitos/state/handoff-queues.json:{relative}", "closed queue must reference an archived handoff")
         if handoff_path.is_file():
             text = handoff_path.read_text(encoding="utf-8")
             parts = text.split("---", 2)
