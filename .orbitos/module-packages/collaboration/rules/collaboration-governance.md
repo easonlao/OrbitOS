@@ -38,6 +38,16 @@ tags:
 - 审核结果必须写回被审 session 的 `review` 记录，包含 reviewer session、reviewer agent、证据引用、结论和时间。
 - 被驳回的产出只能回到 `returned` 重新修正，不能从驳回状态直接关闭。
 
+## 队列硬边界
+
+- 队列计划（launch card）必须先经用户显式确认，`plan_status` 才能从 `proposed` 变为 `confirmed`；任何阶段不得在确认前进入 `working`。
+- 任一时刻只有一个 `current_owner` 与一个 `current_stage`；未来阶段的 Agent 不能提前认领或推进。
+- 已完成阶段的结果、证据与未解决项不可变，只能追加不能改写。
+- 阶段推进必须一致更新当前负责人、角色、阶段、下一负责人、下一步，并同步机器层投影与 BOARD。
+- 同一阶段失败两次后必须 re-plan；未经用户确认的修订队列（`plan_revision` 单调递增）不能推进，替换 Agent 在确认与所有权更新前不能接手。
+- 只有 `return_owner` 能接受并关闭整个交接；Builder 与 Editor 阶段工具不能关闭。
+- 关闭前所有计划阶段必须完成，closure receipt 保留有序历史、输出、独立审核证据、最终验收与归档引用。
+
 ## 独立性定义
 
 同一 Agent 的不同 profile/session 只能表示角色视角隔离，不能直接声称独立审核。正式 `approved` 必须由不同 Agent 认领 Editor session，并留下可追溯的审核证据和审核结论。

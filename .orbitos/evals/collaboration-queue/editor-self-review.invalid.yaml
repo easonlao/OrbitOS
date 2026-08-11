@@ -1,0 +1,15 @@
+{
+  "scenario": "collaboration_queue",
+  "name": "editor_self_review_rejected",
+  "description": "#18 Editor 工具身份必须与 Builder 不同，同一工具自审无效。",
+  "return_owner": "agent-a",
+  "queue": [
+    {"stage_id": "s1", "tool": "agent-a", "role": "coordinator", "deliverable": "实现边界", "scope": "指定模块", "acceptance": "边界确认", "next_stage": "s2"},
+    {"stage_id": "s2", "tool": "agent-b", "role": "builder", "deliverable": "实现", "scope": "指定模块", "acceptance": "验证通过", "next_stage": "s3"},
+    {"stage_id": "s3", "tool": "agent-b", "role": "editor", "deliverable": "审核", "scope": "复现验证", "acceptance": "审核通过", "next_stage": null}
+  ],
+  "steps": [
+    {"step": "launch", "by": "agent-a"},
+    {"step": "confirm", "by": "agent-a"}
+  ]
+}

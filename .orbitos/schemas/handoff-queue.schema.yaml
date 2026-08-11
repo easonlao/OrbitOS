@@ -1,0 +1,108 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "updated_at", "queues"],
+  "properties": {
+    "version": {"const": 1},
+    "updated_at": {"type": "string"},
+    "queues": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "handoff",
+          "plan_revision",
+          "plan_status",
+          "current_stage",
+          "current_owner",
+          "current_role",
+          "next_owner",
+          "next_action",
+          "stage_order",
+          "stages",
+          "replans",
+          "created_at",
+          "updated_at"
+        ],
+        "properties": {
+          "handoff": {"type": "string"},
+          "plan_revision": {"type": "integer"},
+          "plan_status": {"enum": ["proposed", "confirmed"]},
+          "confirmed_by": {"type": ["string", "null"]},
+          "current_stage": {"type": "string"},
+          "current_owner": {"type": ["string", "null"]},
+          "current_role": {"type": ["string", "null"]},
+          "next_owner": {"type": ["string", "null"]},
+          "next_action": {"type": "string"},
+          "stage_order": {"type": "array", "items": {"type": "string"}},
+          "stages": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "stage_id",
+                "tool",
+                "role",
+                "deliverable",
+                "scope",
+                "acceptance",
+                "next_stage",
+                "status",
+                "failures"
+              ],
+              "properties": {
+                "stage_id": {"type": "string"},
+                "tool": {"type": "string"},
+                "role": {"enum": ["coordinator", "researcher", "writer", "builder", "editor"]},
+                "deliverable": {"type": "string"},
+                "scope": {"type": "string"},
+                "acceptance": {"type": "string"},
+                "next_stage": {"type": ["string", "null"]},
+                "status": {"enum": ["pending", "complete", "blocked"]},
+                "result": {"type": ["string", "null"]},
+                "evidence": {"type": "array", "items": {"type": "string"}},
+                "unresolved": {"type": ["string", "null"]},
+                "outcome": {"enum": ["done", "blocked"]},
+                "failures": {"type": "integer"},
+                "completed_by": {"type": ["string", "null"]},
+                "completed_at": {"type": ["string", "null"]}
+              }
+            }
+          },
+          "replans": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["revision", "trigger", "affected_stage", "reason", "proposed_by", "proposed_at"],
+              "properties": {
+                "revision": {"type": "integer"},
+                "trigger": {"enum": ["unavailable", "scope", "failure"]},
+                "affected_stage": {"type": "string"},
+                "reason": {"type": "string"},
+                "proposed_by": {"type": "string"},
+                "proposed_at": {"type": "string"},
+                "confirmed_at": {"type": ["string", "null"]}
+              }
+            }
+          },
+          "close": {
+            "type": ["object", "null"],
+            "additionalProperties": false,
+            "required": ["accepted_by", "accepted_at", "archived_ref"],
+            "properties": {
+              "accepted_by": {"type": "string"},
+              "accepted_at": {"type": "string"},
+              "archived_ref": {"type": "string"}
+            }
+          },
+          "created_at": {"type": "string"},
+          "updated_at": {"type": "string"}
+        }
+      }
+    }
+  }
+}

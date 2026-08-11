@@ -1,0 +1,19 @@
+{
+  "scenario": "collaboration_queue",
+  "name": "builder_editor_approve",
+  "description": "#18 工程交付链：Coordinator -> Builder -> Editor -> Coordinator 关闭，Editor 独立审核通过。",
+  "return_owner": "agent-a",
+  "queue": [
+    {"stage_id": "s1", "tool": "agent-a", "role": "coordinator", "deliverable": "实现边界与验收标准", "scope": "指定模块", "acceptance": "边界确认", "next_stage": "s2"},
+    {"stage_id": "s2", "tool": "agent-b", "role": "builder", "deliverable": "实现 + 验证证据", "scope": "指定模块", "acceptance": "验证通过", "next_stage": "s3"},
+    {"stage_id": "s3", "tool": "agent-c", "role": "editor", "deliverable": "独立审核结论", "scope": "复现验证", "acceptance": "审核通过", "next_stage": null}
+  ],
+  "steps": [
+    {"step": "launch", "by": "agent-a"},
+    {"step": "confirm", "by": "agent-a"},
+    {"step": "advance", "by": "agent-a", "stage_id": "s1", "outcome": "done", "evidence": ["边界确认"]},
+    {"step": "advance", "by": "agent-b", "stage_id": "s2", "outcome": "done", "evidence": ["diff 引用", "validation 通过"]},
+    {"step": "advance", "by": "agent-c", "stage_id": "s3", "outcome": "done", "evidence": ["独立复现验证"]},
+    {"step": "close", "by": "agent-a"}
+  ]
+}

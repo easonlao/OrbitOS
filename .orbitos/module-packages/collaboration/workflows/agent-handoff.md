@@ -27,6 +27,19 @@ Agent Handoff 承接 `execution_mode=delegated` 的跨 Agent 或跨会话工作�
 
 前三种状态留在 `00-系统/agents/handoff/` 并出现在 BOARD。`closed` handoff 必须立即移入 `handoff/archive/`；这是系统协作记录的收口，不需要用户额外说“归档”。
 
+多阶段接力时，frontmatter 额外携带 `plan_status`（`proposed`/`confirmed`）、`plan_revision`（单调递增）与 `current_stage`；队列本体与阶段记录由 `.orbitos/state/handoff-queues.json` 机器层投影承载，handoff 正文的 `## 阶段队列` 与 `## 计划修订` 段落保持人工可读。
+
+## 多阶段接力队列（Formal Handoff Queue）
+
+两个以上独立 Agent 工具接力时，走 `handoff-queue.py` 的队列契约；它不替代 `handoff-control.py begin/close` 的治理链，而是约束“谁在哪个阶段可以做什么”。
+
+1. **launch（提出计划）**：发起 Agent 用 `handoff-queue.py launch` 提出 launch card——参与工具、角色、执行顺序、交付物、范围、验收条件、返回格式与 `return_owner`。任何阶段进入 `working` 之前，都必须先得到一次显式用户确认。
+2. **confirm（用户确认）**：确认后 `plan_status: confirmed`、`current_stage` 指向首个阶段；未确认前任何 advance 都被拒绝。
+3. **接力（advance）**：只有 `current_owner` 且角色匹配当前阶段的 Agent 可以 `advance`。完成阶段必须写回结果、证据、未解决项与 outcome；阶段记录一经完成不可变。推进时同步更新当前负责人、角色、阶段、下一负责人与下一步，并一致更新机器层投影与 BOARD。每次推进的用户可见响应必须指名下一 Agent 工具与 pickup 指令（“获取交接工作”）。最后一个阶段完成后把棒交回 `return_owner` 验收。
+4. **失败与阻塞**：阶段第一次失败记为 `blocked` 并计数；同一阶段失败两次后，任何继续推进都会被拒绝，必须走 re-plan。
+5. **re-plan（修订计划）**：Agent 不可用、任务超出已确认范围或同阶段第二次失败时，当前 Agent 停止推进，记录触发原因、受影响阶段、仍然有效的结果与失效假设，用 `handoff-queue.py replan` 提议修订后的剩余队列（已完成阶段与证据保持不可变），`plan_revision` 单调 +1，等待用户再次确认。未确认的修订队列不允许任何 Agent 推进；修订确认后替换 Agent 才能接手。
+6. **验收关闭**：只有 `return_owner` 可以 `handoff-control.py close`；Builder 与 Editor 阶段工具不能关闭整个交接。关闭前所有计划阶段必须完成且没有未确认的修订；关闭时投影写入 `close`（验收人、时间与归档引用），构成 closure receipt 的一部分。
+
 ## 创建与更新
 
 1. 确认当前工作确实需要 `execution_mode=delegated`，而不是普通项目状态更新。
@@ -40,9 +53,9 @@ Agent Handoff 承接 `execution_mode=delegated` 的跨 Agent 或跨会话工作�
 5. 填写项目归属、目标、边界、已完成、未完成、风险、证据与接手动作。
 6. 在 `00-系统/agents/BOARD.md` 当前交接区登记链接、状态、负责人和下一步。
 7. 为需要跨 Agent 或跨会话继续的交接创建一个 `source_type=handoff` 的 work item，`source_ref` 指向 handoff 文件；work item 只记录负责人、状态、租约、下一步和证据，不复制 handoff 正文。
-8. 接手方真正开始时，使用 `.orbitos/scripts/handoff-control.py begin`；它会原子地创建 `multi_agent_claim` governance session、claim 对应 work item、写入 `working`、`governance_required: true`、`collaboration_session_id` 并同步 BOARD。不得手工绕过这条链。
+8. 接手方真正开始时，使用 `.orbitos/scripts/handoff-control.py begin`；它会原子地创建 `multi_agent_claim` governance session、claim 对应 work item、写入 `working`、`governance_required: true`、`collaboration_session_id` 并同步 BOARD。不得手工绕过这条链。存在队列计划时，begin 只允许队列的当前负责人与当前角色执行。
 9. 本轮完成且要他人继续时改为 `returned`，同步 work item 为 `waiting`。用户未指定下一位负责人时，`current_owner` 默认回填 `return_owner`，并更新下一步。
-10. 协作合同完成时，最后处理的 Agent 先更新项目 `STATUS.md`，再使用 `.orbitos/scripts/handoff-control.py close`。它只接受已通过 hard gate 的 session，并原子地归档 handoff、回写 work item `done` 与 archive source_ref、写入带 role/output/review 的完成 event。
+10. 协作合同完成时，最后处理的 Agent 先更新项目 `STATUS.md`，再使用 `.orbitos/scripts/handoff-control.py close`。它只接受已通过 hard gate 的 session；存在队列计划时还要求全部阶段完成、无未确认修订，且只有 `return_owner` 可以关闭。关闭原子地归档 handoff、回写 work item `done` 与 archive source_ref、写入带 role/output/review 的完成 event，并在队列投影记录验收。
 11. 在 Progress Sync 前运行 `python .orbitos/scripts/run-validation.py`。
 
 ## 最小内容

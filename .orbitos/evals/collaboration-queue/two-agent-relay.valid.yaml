@@ -1,0 +1,17 @@
+{
+  "scenario": "collaboration_queue",
+  "name": "two_agent_relay",
+  "description": "#15 双 Agent 显式接力闭环：A 提出计划 -> 用户确认 -> B 接手 -> 回交 A 验收关闭。",
+  "return_owner": "agent-a",
+  "queue": [
+    {"stage_id": "s1", "tool": "agent-a", "role": "coordinator", "deliverable": "调研问题与边界", "scope": "只读调研", "acceptance": "边界清晰", "next_stage": "s2"},
+    {"stage_id": "s2", "tool": "agent-b", "role": "researcher", "deliverable": "证据与结论", "scope": "只读调研", "acceptance": "证据充分", "next_stage": null}
+  ],
+  "steps": [
+    {"step": "launch", "by": "agent-a", "plan_revision": 0},
+    {"step": "confirm", "by": "agent-a", "plan_revision": 0},
+    {"step": "advance", "by": "agent-a", "stage_id": "s1", "outcome": "done", "evidence": ["问题边界确认"]},
+    {"step": "advance", "by": "agent-b", "stage_id": "s2", "outcome": "done", "evidence": ["调研笔记.md"]},
+    {"step": "close", "by": "agent-a"}
+  ]
+}

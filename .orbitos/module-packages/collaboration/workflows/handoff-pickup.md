@@ -31,12 +31,14 @@ tags:
 
 ## 执行流程
 
-1. 读取候选 handoff 的状态、目标、边界、已完成、未完成、风险、待确认和 `next_action`。
-2. 简要告诉用户：当前目标、已完成、仍待确认与接手后的第一步。
-3. 用户明确要求开始后，先为 handoff 创建 `source_type=handoff` work item（若尚不存在），再使用 `.orbitos/scripts/handoff-control.py begin`。该命令会创建 governance session、写入 `handoff_status: working`、同步 BOARD 并 claim work item；不得拆开或手工模拟这些状态变更。
+1. 读取候选 handoff 的状态、目标、边界、已完成、未完成、风险、待确认和 `next_action`。存在队列计划时，同时读取 `.orbitos/state/handoff-queues.json` 中该 handoff 的投影：确认 `plan_status`、`current_stage`、`current_owner`、`current_role` 与未确认的 re-plan。
+2. 简要告诉用户：当前目标、当前阶段、已完成、仍待确认与接手后的第一步。
+3. 只接手自己名下的阶段：当投影的 `current_owner` 与 `current_role` 匹配当前 Agent 时，用户明确要求开始后，先为 handoff 创建 `source_type=handoff` work item（若尚不存在），再使用 `.orbitos/scripts/handoff-control.py begin`。该命令会创建 governance session、写入 `handoff_status: working`、同步 BOARD 并 claim work item；不得拆开或手工模拟这些状态变更。未来阶段或未确认的修订队列不能被认领。
 4. 完成本轮后：
+   - 队列模式：使用 `.orbitos/scripts/handoff-queue.py advance` 记录阶段结果、证据、未解决项与 outcome，推进到下一阶段；用户可见响应必须指名下一 Agent 工具与 pickup 指令（“获取交接工作”）。
    - 仍要另一位 Agent 继续时，写入 `returned`，把 `current_owner` 和 `next_action` 改为下一位 Agent，并把对应 work item 更新为 `waiting`；用户未指定下一位 Agent 时，默认交回 `return_owner` 验收。
-   - 协作合同已完成时，先更新项目 `STATUS.md`，再使用 `.orbitos/scripts/handoff-control.py close`；该命令归档到 `handoff/archive/`，完成 event 后将对应 work item 更新为 `done`。
+   - 阶段失败或计划失效时，使用 `.orbitos/scripts/handoff-queue.py replan` 提议修订队列并等待用户确认；未经确认不得继续推进。
+   - 协作合同已完成时（全部阶段完成、棒已回到 `return_owner`），先更新项目 `STATUS.md`，再由 `return_owner` 使用 `.orbitos/scripts/handoff-control.py close`；该命令归档到 `handoff/archive/`，完成 event 后将对应 work item 更新为 `done`。
 5. 按 Progress Sync 记录实际结果并通过 validation。
 
 ## 写入边界

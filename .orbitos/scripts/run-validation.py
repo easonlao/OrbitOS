@@ -554,6 +554,281 @@ def closed_loop_scenario_errors(data, name):
     return errors
 
 
+QUEUE_ROLE_VALUES = {"coordinator", "researcher", "writer", "builder", "editor"}
+QUEUE_STEP_VALUES = {"launch", "confirm", "advance", "replan", "close"}
+QUEUE_TRIGGER_VALUES = {"unavailable", "scope", "failure"}
+
+
+def collaboration_queue_scenario_errors(data, name):
+    errors = []
+    if not isinstance(data, dict) or data.get("scenario") != "collaboration_queue":
+        add_error(errors, "$", "collaboration-queue scenario requires scenario=collaboration_queue")
+        return errors
+    queue = data.get("queue")
+    if not isinstance(queue, list) or len(queue) < 2:
+        add_error(errors, "$.queue", "queue requires at least two ordered stages")
+        queue = []
+    stage_ids = []
+    for index, spec in enumerate(queue):
+        if not isinstance(spec, dict) or not spec.get("stage_id") or not spec.get("tool") or spec.get("role") not in QUEUE_ROLE_VALUES:
+            add_error(errors, f"$.queue[{index}]", "stage must declare stage_id, tool and a registered role")
+            continue
+        stage_ids.append(spec["stage_id"])
+    if len(stage_ids) != len(set(stage_ids)):
+        add_error(errors, "$.queue", "stage ids must be unique")
+    chain = {}
+    for spec in queue:
+        if isinstance(spec, dict) and spec.get("stage_id"):
+            chain[spec["stage_id"]] = spec.get("next_stage")
+    for stage_id, next_stage in chain.items():
+        if next_stage and next_stage not in chain:
+            add_error(errors, f"$.queue:{stage_id}", "next_stage must point to a planned stage")
+    for index, spec in enumerate(queue):
+        if index < len(queue) - 1 and isinstance(spec, dict) and spec.get("next_stage") != queue[index + 1].get("stage_id"):
+            add_error(errors, f"$.queue:{spec.get('stage_id')}", "stage chain must be ordered")
+    tools = {spec.get("role"): spec.get("tool") for spec in queue if isinstance(spec, dict)}
+    if tools.get("builder") and tools.get("editor") and tools["builder"] == tools["editor"]:
+        add_error(errors, "$.queue", "Editor tool identity must differ from the Builder tool identity")
+
+    steps = data.get("steps")
+    if not isinstance(steps, list) or not steps:
+        add_error(errors, "$.steps", "scenario requires a non-empty steps list")
+        return errors
+    return_owner = data.get("return_owner")
+    tool_by_stage = {spec.get("stage_id"): spec.get("tool") for spec in queue if isinstance(spec, dict)}
+    state = {
+        "plan_status": "none",
+        "plan_revision": 0,
+        "current_stage": None,
+        "current_owner": None,
+        "stage_order": [],
+        "stages": {stage_id: {"status": "pending", "failures": 0} for stage_id in stage_ids},
+        "pending_replan": False,
+        "closed": False,
+    }
+
+    def stage_record(record, index):
+        if record is None:
+            return
+        if record.get("stage_id") != state["current_stage"]:
+            add_error(errors, f"$.steps[{index}]", f"only the current stage can advance: {state['current_stage']}")
+            return
+        if record.get("by") != state["current_owner"]:
+            add_error(errors, f"$.steps[{index}]", f"only the current owner can advance: {state['current_owner']}")
+            return
+        stage = state["stages"].setdefault(record["stage_id"], {"status": "pending", "failures": 0})
+        if stage["status"] == "complete":
+            add_error(errors, f"$.steps[{index}]", "a completed stage cannot advance again")
+            return
+        if stage["failures"] >= 2:
+            add_error(errors, f"$.steps[{index}]", "a stage that failed twice requires a user-confirmed re-plan")
+            return
+        if record.get("outcome") == "blocked":
+            stage["failures"] += 1
+            stage["status"] = "blocked"
+            state["current_owner"] = record.get("by")
+            return
+        stage["status"] = "complete"
+        next_stage = chain.get(record["stage_id"])
+        if next_stage:
+            state["current_stage"] = next_stage
+            state["current_owner"] = tool_by_stage.get(next_stage)
+        else:
+            state["current_stage"] = record["stage_id"]
+            state["current_owner"] = return_owner
+
+    for index, step in enumerate(steps):
+        if not isinstance(step, dict):
+            add_error(errors, f"$.steps[{index}]", "step must be an object")
+            continue
+        step_name = step.get("step")
+        actor = step.get("by")
+        if step_name not in QUEUE_STEP_VALUES:
+            add_error(errors, f"$.steps[{index}].step", f"unknown collaboration-queue step: {step_name}")
+            continue
+        if step_name == "launch":
+            if index != 0:
+                add_error(errors, f"$.steps[{index}]", "launch must be the first step")
+            state["plan_status"] = "proposed"
+            state["plan_revision"] = 0
+            state["stage_order"] = list(stage_ids)
+            state["current_stage"] = stage_ids[0] if stage_ids else None
+            state["current_owner"] = tool_by_stage.get(stage_ids[0]) if stage_ids else None
+        elif step_name == "confirm":
+            if state["plan_status"] != "proposed":
+                add_error(errors, f"$.steps[{index}]", "confirm requires a proposed plan")
+            if step.get("plan_revision", state["plan_revision"]) != state["plan_revision"]:
+                add_error(errors, f"$.steps[{index}]", "stale plan revision on confirm")
+            state["plan_status"] = "confirmed"
+            state["pending_replan"] = False
+            order = state["stage_order"]
+            current = next((stage_id for stage_id in order if state["stages"][stage_id]["status"] != "complete"), order[0] if order else None)
+            state["current_stage"] = current
+            state["current_owner"] = tool_by_stage.get(current)
+        elif step_name == "advance":
+            if state["plan_status"] != "confirmed":
+                add_error(errors, f"$.steps[{index}]", "advance requires a user-confirmed plan")
+            if state["pending_replan"]:
+                add_error(errors, f"$.steps[{index}]", "advance is blocked while a re-plan waits for confirmation")
+            stage_record(step, index)
+        elif step_name == "replan":
+            if actor != state["current_owner"]:
+                add_error(errors, f"$.steps[{index}]", f"only the current owner can re-plan: {state['current_owner']}")
+            if state["pending_replan"]:
+                add_error(errors, f"$.steps[{index}]", "a previous re-plan is still waiting for confirmation")
+            if step.get("trigger") not in QUEUE_TRIGGER_VALUES:
+                add_error(errors, f"$.steps[{index}].trigger", "invalid re-plan trigger")
+            if step.get("trigger") == "failure":
+                affected = state["stages"].get(step.get("affected_stage")) or {}
+                if affected.get("failures", 0) < 1:
+                    add_error(errors, f"$.steps[{index}]", "failure trigger requires a stage that already failed once")
+            revised = step.get("revised_queue")
+            if isinstance(revised, list) and len(revised) >= 2:
+                completed = [sid for sid, s in state["stages"].items() if s["status"] == "complete"]
+                if len(revised) < len(completed):
+                    add_error(errors, f"$.steps[{index}].revised_queue", "revised queue must keep completed stages")
+                else:
+                    for pos, stage_id in enumerate(completed):
+                        new_spec = revised[pos]
+                        old = state["stages"][stage_id]
+                        if not isinstance(new_spec, dict) or new_spec.get("stage_id") != stage_id:
+                            add_error(errors, f"$.steps[{index}].revised_queue", "revised queue must keep completed stages in place")
+                            break
+                        if new_spec.get("tool") != tool_by_stage.get(stage_id) or new_spec.get("next_stage") != chain.get(stage_id):
+                            add_error(errors, f"$.steps[{index}].revised_queue", "revised queue must keep completed stages unmodified")
+                            break
+                new_order = [spec.get("stage_id") for spec in revised if isinstance(spec, dict)]
+                state["stage_order"] = new_order
+                for stage_id in new_order:
+                    state["stages"].setdefault(stage_id, {"status": "pending", "failures": 0})
+                for spec in revised:
+                    if isinstance(spec, dict) and spec.get("stage_id"):
+                        tool_by_stage[spec["stage_id"]] = spec.get("tool")
+                        chain[spec["stage_id"]] = spec.get("next_stage")
+            elif step.get("replacement_tool"):
+                replacement = step.get("replacement_tool")
+                affected = step.get("affected_stage")
+                if affected in state["stages"]:
+                    state["stages"][affected] = {"status": "pending", "failures": 0}
+                    tool_by_stage[affected] = replacement
+                    if state["current_stage"] == affected:
+                        state["current_owner"] = replacement
+            state["plan_revision"] += 1
+            state["plan_status"] = "proposed"
+            state["pending_replan"] = True
+        elif step_name == "close":
+            if state["closed"]:
+                add_error(errors, f"$.steps[{index}]", "close can only happen once")
+            if actor != return_owner:
+                add_error(errors, f"$.steps[{index}]", "only the return owner can close the handoff")
+            if tools.get("builder") == actor or tools.get("editor") == actor:
+                add_error(errors, f"$.steps[{index}]", "the Builder or Editor cannot close the whole handoff")
+            incomplete = [stage_id for stage_id, s in state["stages"].items() if s["status"] != "complete"]
+            if incomplete:
+                add_error(errors, f"$.steps[{index}]", f"close requires all stages complete; pending: {incomplete}")
+            if state["pending_replan"]:
+                add_error(errors, f"$.steps[{index}]", "close is blocked while a re-plan waits for confirmation")
+            if index != len(steps) - 1:
+                add_error(errors, f"$.steps[{index}]", "close must be the final step")
+            state["closed"] = True
+    return errors
+
+
+def collaboration_queue_asset_errors():
+    errors = []
+    required_paths = [
+        ROOT / ".orbitos/schemas/handoff-queue.schema.yaml",
+        ROOT / ".orbitos/templates/.orbitos/state/handoff-queues.json",
+        ROOT / ".orbitos/scripts/handoff-queue.py",
+    ]
+    for path in required_paths:
+        if not path.is_file():
+            add_error(errors, str(path.relative_to(ROOT)), "collaboration queue asset is missing")
+
+    template_path = ROOT / ".orbitos/templates/00-系统/agents/handoff/TEMPLATE.md"
+    if template_path.is_file():
+        template = template_path.read_text(encoding="utf-8")
+        for term in ["plan_status:", "plan_revision:", "current_stage:", "## 队列计划（可选）"]:
+            if term not in template:
+                add_error(errors, ".orbitos/templates/00-系统/agents/handoff/TEMPLATE.md", f"handoff template is missing queue field: {term}")
+
+    workflow_path = ROOT / ".orbitos/module-packages/collaboration/workflows/agent-handoff.md"
+    if workflow_path.is_file():
+        workflow = workflow_path.read_text(encoding="utf-8")
+        for term in ["launch", "阶段队列", "plan_revision", "current_stage", "advance", "re-plan", "return_owner"]:
+            if term not in workflow:
+                add_error(errors, str(workflow_path.relative_to(ROOT)), f"handoff workflow is missing queue term: {term}")
+
+    pickup_path = ROOT / ".orbitos/module-packages/collaboration/workflows/handoff-pickup.md"
+    if pickup_path.is_file():
+        pickup = pickup_path.read_text(encoding="utf-8")
+        for term in ["current_stage", "current_owner", "获取交接工作"]:
+            if term not in pickup:
+                add_error(errors, str(pickup_path.relative_to(ROOT)), f"handoff pickup is missing queue term: {term}")
+
+    rule_path = ROOT / ".orbitos/module-packages/collaboration/rules/collaboration-governance.md"
+    if rule_path.is_file():
+        rule = rule_path.read_text(encoding="utf-8")
+        for term in ["return_owner", "plan_revision", "不可变", "当前负责人"]:
+            if term not in rule:
+                add_error(errors, str(rule_path.relative_to(ROOT)), f"collaboration governance rule is missing queue term: {term}")
+
+    guide_path = ROOT / "00-系统/07-Agent协作.md"
+    if guide_path.is_file():
+        guide = guide_path.read_text(encoding="utf-8")
+        for term in ["确认", "阶段队列", "获取交接工作", "验收"]:
+            if term not in guide:
+                add_error(errors, "00-系统/07-Agent协作.md", f"agent collaboration guide is missing queue term: {term}")
+
+    script_path = ROOT / ".orbitos/scripts/handoff-queue.py"
+    if script_path.is_file():
+        script = script_path.read_text(encoding="utf-8")
+        for term in ["def launch", "def confirm", "def advance", "def replan", "def mark_close", "stage_order", "replans"]:
+            if term not in script:
+                add_error(errors, str(script_path.relative_to(ROOT)), f"handoff queue script is missing required term: {term}")
+
+    if (ROOT / ".orbitos/templates/.orbitos/state/handoff-queues.json").is_file():
+        validate_value(
+            read_json_like(".orbitos/templates/.orbitos/state/handoff-queues.json"),
+            SCHEMAS["handoff-queue"],
+            "$",
+            errors,
+        )
+    return errors
+
+
+def collaboration_queue_state_errors():
+    errors = []
+    state_path = ROOT / ".orbitos/state/handoff-queues.json"
+    if not state_path.is_file():
+        return errors
+    state = read_json_like(".orbitos/state/handoff-queues.json")
+    validate_value(state, SCHEMAS["handoff-queue"], "$", errors)
+    queues = state.get("queues", {})
+    if not isinstance(queues, dict):
+        return errors
+    active_root = ROOT / "00-" + chr(0x7CFB) + chr(0x7EDF) / "agents/handoff"
+    for relative, queue in queues.items():
+        if not isinstance(queue, dict):
+            continue
+        handoff_path = ROOT / relative
+        if not handoff_path.is_file():
+            add_error(errors, f".orbitos/state/handoff-queues.json:{relative}", "queue handoff file does not exist")
+        if queue.get("close") and not (ROOT / str(queue["close"].get("archived_ref", ""))).is_file():
+            add_error(errors, f".orbitos/state/handoff-queues.json:{relative}", "closed queue must reference an archived handoff")
+        if handoff_path.is_file():
+            text = handoff_path.read_text(encoding="utf-8")
+            parts = text.split("---", 2)
+            metadata = dict(re.findall(r"^([a-z_]+):\s*(.*?)\s*$", parts[1] if len(parts) >= 3 else "", re.MULTILINE))
+            if queue.get("current_owner") and metadata.get("current_owner") != queue["current_owner"]:
+                add_error(errors, f".orbitos/state/handoff-queues.json:{relative}", "queue current_owner must match the handoff frontmatter")
+            if queue.get("plan_status") != "none" and metadata.get("plan_status") != queue.get("plan_status"):
+                add_error(errors, f".orbitos/state/handoff-queues.json:{relative}", "queue plan_status must match the handoff frontmatter")
+            if metadata.get("handoff_status") == "closed" and not queue.get("close"):
+                add_error(errors, f".orbitos/state/handoff-queues.json:{relative}", "closed queued handoff must record acceptance in the projection")
+    return errors
+
+
 def handoff_structure_errors():
     errors = []
     required_paths = [
@@ -872,6 +1147,7 @@ SCHEMAS = {
     "work-items": read_json_like(".orbitos/schemas/work-items.schema.yaml"),
     "role-catalog": read_json_like(".orbitos/schemas/role-catalog.schema.yaml"),
     "collaboration-sessions": read_json_like(".orbitos/schemas/collaboration-sessions.schema.yaml"),
+    "handoff-queue": read_json_like(".orbitos/schemas/handoff-queue.schema.yaml"),
     "chaos-record": read_json_like(".orbitos/schemas/chaos-record.schema.yaml"),
 }
 
@@ -1006,6 +1282,14 @@ for case_path in sorted(knowledge_closed_loop_case_root.glob("*.yaml")):
     case_count += 1
     data = read_json_like(f".orbitos/evals/knowledge-closed-loop/{case_path.name}")
     errors = closed_loop_scenario_errors(data, case_path.name)
+    print_case(case_path.name, ".valid." in case_path.name, errors)
+
+
+collaboration_queue_case_root = ROOT / ".orbitos/evals/collaboration-queue"
+for case_path in sorted(collaboration_queue_case_root.glob("*.yaml")):
+    case_count += 1
+    data = read_json_like(f".orbitos/evals/collaboration-queue/{case_path.name}")
+    errors = collaboration_queue_scenario_errors(data, case_path.name)
     print_case(case_path.name, ".valid." in case_path.name, errors)
 
 
@@ -1359,6 +1643,16 @@ print_case("actual.collaboration-sessions-state", True, collaboration_state_erro
 case_count += 1
 collaboration_consistency_errors_list = collaboration_consistency_errors()
 print_case("actual.collaboration-state-consistency", True, collaboration_consistency_errors_list)
+
+
+case_count += 1
+collaboration_queue_asset_errors_list = collaboration_queue_asset_errors()
+print_case("actual.collaboration-queue-assets", True, collaboration_queue_asset_errors_list)
+
+
+case_count += 1
+collaboration_queue_state_errors_list = collaboration_queue_state_errors()
+print_case("actual.collaboration-queue-state", True, collaboration_queue_state_errors_list)
 
 
 case_count += 1

@@ -11,6 +11,9 @@ return_owner: <原交出 agent_id>
 next_action: <接手后的第一步>
 governance_required: false
 collaboration_session_id:
+plan_status: none
+plan_revision: 0
+current_stage: none
 tags:
   - orbitos
   - agents
@@ -68,6 +71,11 @@ tags:
 - 阶段：
 - 阶段完成证据：
 - 是否已满足交付合同：
+
+## 队列计划（可选）
+
+多 Agent 接力时，发起 Agent 先用 `handoff-queue.py launch` 提出阶段队列并请求用户确认；
+确认后系统写入 `## 阶段队列`，re-plan 时追加 `## 计划修订`。本段仅作说明。
 
 ## 证据与材料入口
 

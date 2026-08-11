@@ -37,7 +37,7 @@ Startup Sync 默认只读取当前 agent 的轻量 profile；经验和历史问�
 - 用户明确要求“启动思考模式”：`.orbitos/workflows/thinking-selection.md`，用于回顾当前讨论并选择方法，不解决任务本身。
 
 - 交出任务：用户显式调用 `$handoff`，或说“交给另一位 Agent 继续”“交接当前任务”或“把任务交给 {agent_id}”，协作模块为 `ready` 时进入 `.orbitos/modules/collaboration/workflows/handoff-adapter.md`，再创建正式 handoff。
-- 获取交接：用户说“获取交接工作”“接手交接”或“查看待接手任务”，协作模块为 `ready` 时进入 `.orbitos/modules/collaboration/workflows/handoff-pickup.md`
+- 获取交接：用户说“获取交接工作”“接手交接”或“查看待接手任务”，协作模块为 `ready` 时进入 `.orbitos/modules/collaboration/workflows/handoff-pickup.md`；多阶段接力（launch card 确认、阶段推进与 re-plan）使用 `.orbitos/scripts/handoff-queue.py`，交接契约见 `agent-handoff.md` 队列章节。
 
 ### 业务 Workflow
 
