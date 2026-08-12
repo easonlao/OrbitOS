@@ -34,10 +34,13 @@ The scheduler's external configuration is the source of truth for job IDs and ca
 
 ### Weekly Review
 
-- Purpose: produce the weekly projection from the existing review workflow.
+- Purpose: produce the weekly projection from the existing review workflow, including the user-authorized restricted week-boundary rollover.
+- Command: `python .orbitos/scripts/weekly-review.py --executor {executor}`.
 - Read scope: event records and current state sources required by `.orbitos/workflows/weekly-review.md`.
-- Write scope: only the current `02-时间线/本周.md` when it already represents the current ISO week.
-- Result: update the weekly summary without changing projects, knowledge, rules, or user content. At a week boundary, stop for a user-confirmed archival run instead of moving the old weekly file.
+- Write scope: only the declared restricted weekly path: `02-时间线/本周.md`, `02-时间线/归档/YYYY-Www.md`, the ignored runtime state `.orbitos/state/maintenance.json`, and the existing today Dashboard managed projection blocks.
+- Result: refresh the current week page, or at a week boundary archive the old week to `02-时间线/归档/YYYY-Www.md` and create the current week page, linking the previous archive. Conflict protection: an existing archive with different content blocks instead of overwriting. Record one passed or failed maintenance receipt, keep the `weekly-review` maintenance item consistent, and refresh the today Dashboard projection.
+- Blocked behavior: a blocked run writes exactly one failed receipt and a `weekly-review` blocked maintenance item, projected into the today Dashboard「需要用户决定 / 当前维护事项」entrance; it exits 2 and leaves the weekly files untouched. An automatic rollover never ends in a wait-for-user rollover decision; blocking happens only when the task cannot continue safely.
+- Prohibitions: no project, knowledge, rule, or other user-content changes; no writes outside the declared restricted weekly path.
 
 Use `.orbitos/modules/automation/workflows/automation-setup.md` only after the user asks to configure one of these tasks.
 

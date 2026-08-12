@@ -88,8 +88,9 @@ If validation fails, follow the task-specific contract:
 ## Dashboard Projection Exception
 
 The automation catalog may explicitly allow a task to update a named managed
-block in `02-时间线/今日.md` or `02-时间线/本周.md`. This is a narrow
-projection exception, not permission to refresh an entire Dashboard page.
+block in `02-时间线/今日.md` or `02-时间线/本周.md`, and, for Weekly Review, its
+declared weekly archive path. This is a narrow projection exception, not
+permission to refresh an entire Dashboard page.
 
 - System Check may update only the `orbitos:system-health` marker block in
   `今日.md`, including when validation fails, and the declared runtime maintenance state/receipt.

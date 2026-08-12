@@ -4,7 +4,7 @@ area: internal
 purpose: workflow
 lifecycle: active
 created: 2026-06-14
-updated: 2026-06-16
+updated: 2026-08-09
 tags:
   - orbitos
   - workflow
@@ -52,19 +52,37 @@ Weekly Review 生成 `02-时间线/本周.md`。
 
 - 如果周期等于当前周，直接刷新 `本周.md`。
 - 如果周期早于当前周，先把旧内容保存到 `02-时间线/归档/YYYY-Www.md`，再生成当前周。
-- 如果目标归档文件已存在，不覆盖；先比较内容差异，必要时创建 `YYYY-Www_2.md` 并在 event 中说明。
+- 如果目标归档文件已存在，不覆盖；先比较内容差异，必要时创建 `YYYY-Www_2.md` 并在 event 中说明。Scheduled 自动模式遵循 `.orbitos/scripts/weekly-review.py`：归档冲突时阻塞而不是创建编号副本。
 - `02-时间线/归档/` 只保存时间线历史快照，不等同于 `99-归档/`。
 - 当前周 `本周.md` 顶部应链接上一周归档；内部 workflow 中只记录示例路径，例如 `02-时间线/归档/2026-W24.md`。
 
 ## Scheduled Automation Mode
 
-Scheduled Weekly Review is a constrained form of this workflow:
+Scheduled Weekly Review is the user-authorized, restricted automatic form of this
+workflow. It runs the week-boundary rollover entirely inside the declared weekly
+timeline path; it never moves, deletes, or rewrites other user content.
 
-- It may refresh `本周.md` only when the file already belongs to the current ISO week.
-- It must not archive, rename, move, or replace a weekly file at a week boundary.
-- When the current page belongs to an earlier week, stop and leave the rollover
-  for a user-confirmed Weekly Review run.
-- Schedule this task within the current week when automatic weekly synthesis is desired.
+允许写入范围：
+
+- `02-时间线/本周.md`
+- `02-时间线/归档/YYYY-Www.md`
+- `.orbitos/state/maintenance.json`（运行 receipt 与维护状态）
+- 已有今日 Dashboard 的受管投影区块（仅由 `today-refresh.py` 管理的 marker）
+
+调用方式：
+
+- `python .orbitos/scripts/weekly-review.py --executor {executor}`
+- 可选：`--date YYYY-MM-DD` 指定 ISO 参考日；`--skip-validation` 跳过校验前置与回检。
+
+Rollover 行为：
+
+- `refresh`：`本周.md` 已属于当前 ISO 周，直接刷新。
+- `bootstrap`：`本周.md` 仍是初始模板，生成当前周页面。
+- `rollover`：旧周先归档到 `02-时间线/归档/YYYY-Www.md`，再生成当前周页面，并链接上一周归档。
+- 冲突保护：目标归档已存在且内容与当前页不同 → 阻塞，不覆盖。
+- 成功：记录一次 passed receipt 并刷新 Dashboard 投影，退出码 0。
+- 阻塞：只写一次 failed receipt，并创建/更新 `weekly-review` 阻塞维护项；刷新 Dashboard 投影，使阻塞出现在今日「需要用户决定 / 当前维护事项」入口；退出码 2，内容保持不变。
+- 自动 rollover 成功时不会以「等待用户决定 rollover」收尾；只有无法安全继续时才阻塞并等待用户决定。
 
 ## 执行流程
 
