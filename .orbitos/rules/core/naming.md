@@ -48,7 +48,7 @@ Meaning:
 - `04-知识`: confirmed, rewritten, human-readable knowledge.
 - `05-阅读`: sustained reading, annotations, progress, and personal reading insights.
 - `06-资源`: reusable references and supporting materials.
-- `07-输出`: Obsidian-produced outputs, drafts, articles, scripts, or publishable work.
+- `07-输出`: formal Markdown outputs produced inside Obsidian.
 - `99-归档`: old or closed material that should not stay active.
 
 Rules:

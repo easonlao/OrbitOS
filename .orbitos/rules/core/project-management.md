@@ -90,7 +90,7 @@ Agent 可以提出路线和优先级建议，但用户决定是否进入 ROADMAP
 - 项目根目录保存本地管理状态、私有信息和专项补充；`repo/` 保存实际产品或发布仓库。
 - 对带 `repo/` 的代码型项目，项目 `STATUS.md` 继续保存当前状态与待确认；`repo/` 内部的 README、计划、review 或其他工程文档不能替代项目状态源。
 - 修改前确认当前文件属于哪一层，并检查正确仓库的 Git 状态；不得把本地状态或私密内容提交到产品仓库。
-- Git 跟踪、提交和发布继续遵守 `git-management.md` 与 `versioning.md`，本规则不重复其细节。
+- Git 跟踪、提交和发布继续遵守 `03-项目/OrbitOS/docs/agents/product-maintenance/git-management.md` 与 `03-项目/OrbitOS/docs/agents/product-maintenance/versioning.md`，本规则不重复其细节。
 
 ## 状态同步
 
