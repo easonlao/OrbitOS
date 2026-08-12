@@ -35,10 +35,15 @@ Startup Sync 不修改用户内容、registry、profile、event、项目或时�
    - `.orbitos/workflows/startup-sync.md`
    - `02-时间线/今日.md`
 2. 读取 registry，确认自己的 `agent_id`、`deployment` 和 `profile_ref`。
-3. 如果当前 agent 未注册，立即停止；只询问用户确认 `agent_id`，确认后另行进入 `agent-onboarding.md`。
+3. 判断当前 registry 条目的 `status`（缺失视为 `active`）：
+   - `offboarding`：立即停止；输出"当前 agent 正处于注销流程中（offboarding），请等待收敛为 offboarded 后再处理"；提示可用 `python .orbitos/scripts/offboard-agent.py status --agent-id {agent_id}` 查看进度。不读取 profile、不运行 env-check、不推进名下任务。
+   - `offboarded`：立即停止；输出"当前 agent 已注销（offboarded，{offboarded_at}）"；如需重新启用，必须由用户明确决定并走 `agent-onboarding.md` 的复活判定，不得静默重新 onboarding。
+   - 缺失 / `active`：继续后续步骤。
+   - 如果当前 agent 未注册，立即停止；只询问用户确认 `agent_id`，确认后另行进入 `agent-onboarding.md`。
 4. 只读取自己的轻量 profile：部署信息、当前定位、最近工作、启动关注和经验入口。
+   - 若条目 `status` 为 `offboarding` / `offboarded`，跳过 profile 读取；profile 已归档到 `99-归档/agents-{id}-{YYYYMMDD}/`。
 5. 不默认读取 experience 文件；仅在任务命中、失败返工或排查历史问题时按入口展开。
-6. 运行 `python .orbitos/scripts/env-check.py --agent-id {agent_id}`；已有当日报告且本次只读时可以直接读取。
+6. 运行 `python .orbitos/scripts/env-check.py --agent-id {agent_id}`；已有当日报告且本次只读时可以直接读取。`status` 为 `offboarding` / `offboarded` 时跳过，不刷新 env（env 已归档或正在归档中）。
 7. 协作模块为 `ready` 时，运行 `python .orbitos/scripts/handoff-status.py --agent-id {agent_id}`；只报告当前 Agent 负责的 `delegated / working / returned` handoff，不自动开始、抢占或改写它们。
 8. 读取 `02-时间线/今日.md`，从其中获取当前摘要、待确认和可继续入口。
 9. 如果 `.orbitos/state/maintenance.json` 存在，读取当前开放维护项的 `status`、`owner_agent`、`lease_until` 和 `next_action`；只同步状态，不自动领取、修复或关闭。恢复维护任务时，后续动作必须基于当前 `revision` 和最新证据。
@@ -52,6 +57,7 @@ Startup Sync 不修改用户内容、registry、profile、event、项目或时�
 - 工作副本缺失必要路径：停止并报告当前路径与缺失项。
 - registry 不可读：停止，不读取任何 profile 或经验文件。
 - agent 未注册：停止，不创建 registry、profile 或 event。
+- 当前 registry 条目 `status` 为 `offboarding` / `offboarded`：停止；不读取 profile、不运行 env-check、不推进名下任务；`offboarding` 提示等待收敛，`offboarded` 提示走复活判定而非静默 onboarding。
 - Python 不可用或 runtime `blocked`：停止写入型工作流并报告原因。
 - 下一步仍不明确：只报告已知状态和可选入口，不扩大任务范围。
 - 维护状态缺失或不可读：只报告缺口；不得从旧 event 推导当前故障，也不得静默创建开放事项。
@@ -62,6 +68,7 @@ Startup Sync 不修改用户内容、registry、profile、event、项目或时�
 ### 进入检查
 
 - [ ] 必要路径存在，当前 `agent_id` 已在 registry 中。
+- [ ] 当前 registry 条目 `status` 非 `offboarding` / `offboarded`（已注销或注销中则停止，不继续后续步骤）。
 - [ ] 已确认 Startup Sync 不推进任务。
 
 ### 执行检查

@@ -43,6 +43,21 @@ def root_valid(root):
     return all(path.exists() for path in required)
 
 
+def registry_status(root, agent_id):
+    """Return the registry lifecycle status for agent_id, or None if absent."""
+    registry_path = root / ".orbitos" / "agents" / "registry.yaml"
+    if not registry_path.is_file():
+        return None
+    try:
+        registry = json.loads(registry_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError, json.JSONDecodeError):
+        return None
+    for item in registry.get("agents", []) if isinstance(registry, dict) else []:
+        if isinstance(item, dict) and item.get("agent_id") == agent_id:
+            return item.get("status") or "active"
+    return None
+
+
 def main():
     parser = argparse.ArgumentParser(description="Check the OrbitOS runtime environment.")
     parser.add_argument("--agent-id", default="unknown", help="Stable OrbitOS agent_id.")
@@ -50,6 +65,20 @@ def main():
     args = parser.parse_args()
 
     root = Path(args.root).resolve() if args.root else Path(__file__).resolve().parents[2]
+    status = registry_status(root, args.agent_id)
+    if status in {"offboarding", "offboarded"}:
+        # Archived agents must not have their env report recreated (offboard
+        # moved the file into 99-归档/agents-{id}-{date}/env-{id}.json).
+        report = {
+            "ok": False,
+            "agent_id": args.agent_id,
+            "checked_at": datetime.now(timezone.utc).astimezone().isoformat(timespec="seconds"),
+            "orbitos_path": str(root),
+            "status": status,
+            "error": f"agent is {status}",
+        }
+        print(json.dumps(report, ensure_ascii=False, indent=2))
+        return 1
     python_info = {
         "available": True,
         "path": sys.executable,

@@ -1,6 +1,7 @@
 """Report open handoffs assigned to one registered Agent without changing state."""
 
 import argparse
+import json
 import re
 from pathlib import Path
 
@@ -21,13 +22,34 @@ def frontmatter(path):
     }
 
 
+def registry_status(root, agent_id):
+    registry_path = root / ".orbitos" / "agents" / "registry.yaml"
+    if not registry_path.is_file():
+        return None
+    try:
+        registry = json.loads(registry_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError, json.JSONDecodeError):
+        return None
+    for item in registry.get("agents", []) if isinstance(registry, dict) else []:
+        if isinstance(item, dict) and item.get("agent_id") == agent_id:
+            return item.get("status") or "active"
+    return None
+
+
 def main():
     parser = argparse.ArgumentParser(description="Report open OrbitOS handoffs for one Agent.")
     parser.add_argument("--agent-id", required=True)
+    parser.add_argument("--root", default=None)
     args = parser.parse_args()
+    root = Path(args.root).resolve() if args.root else ROOT
+    handoff_root = root / "00-系统" / "agents" / "handoff"
+    if registry_status(root, args.agent_id) in {"offboarding", "offboarded"}:
+        # Archived agents must not receive any claimable handoff context.
+        print("handoff: none")
+        return
     pending = []
-    if HANDOFF_ROOT.is_dir():
-        for path in sorted(HANDOFF_ROOT.glob("*.md")):
+    if handoff_root.is_dir():
+        for path in sorted(handoff_root.glob("*.md")):
             data = frontmatter(path)
             if data.get("handoff_status") in OPEN_STATUSES and data.get("current_owner") == args.agent_id:
                 pending.append((data["handoff_status"], data.get("next_action", ""), path.name))

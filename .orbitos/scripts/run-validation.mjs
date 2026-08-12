@@ -44,6 +44,9 @@ function validateValue(value, schema, pathText, errors) {
   if (hasOwn(schema, "enum") && !schema.enum.some((item) => item === value)) {
     addError(errors, pathText, "value is not in enum");
   }
+  if (hasOwn(schema, "const") && value !== schema.const) {
+    addError(errors, pathText, "value is not equal to const");
+  }
   if (hasOwn(schema, "maxItems") && Array.isArray(value) && value.length > schema.maxItems) {
     addError(errors, pathText, `array exceeds maxItems=${schema.maxItems}`);
   }
@@ -76,6 +79,26 @@ function validateValue(value, schema, pathText, errors) {
   if (types.includes("array") && Array.isArray(value) && schema.items) {
     value.forEach((item, index) => validateValue(item, schema.items, `${pathText}[${index}]`, errors));
   }
+
+  if (Array.isArray(schema.allOf)) {
+    for (const branch of schema.allOf) {
+      if (branch && typeof branch === "object" && hasOwn(branch, "if")) {
+        if (schemaHolds(value, branch.if)) {
+          if (branch.then) validateValue(value, branch.then, pathText, errors);
+        } else if (branch.else) {
+          validateValue(value, branch.else, pathText, errors);
+        }
+      } else {
+        validateValue(value, branch, pathText, errors);
+      }
+    }
+  }
+}
+
+function schemaHolds(value, schema) {
+  const probe = [];
+  validateValue(value, schema, "", probe);
+  return probe.length === 0;
 }
 
 function validateLifecycle(value, errors) {
@@ -905,6 +928,29 @@ if (fs.existsSync(path.join(root, "00-系统/agents/BOARD.md"))) {
   if (activeHandoffNames.size && (!board.includes("状态：") || !board.includes("当前负责人：") || !board.includes("下一步："))) addError(handoffStructureErrors, "00-系统/agents/BOARD.md", "current handoff entries must include status, owner, and next action");
 }
 printCase("actual.agent-handoff-structure", true, handoffStructureErrors);
+
+caseCount += 1;
+const offboardingErrors = [];
+const offboardingRegistry = readJsonLike(".orbitos/agents/registry.yaml");
+for (const entry of offboardingRegistry?.agents ?? []) {
+  if (!entry || typeof entry !== "object" || (entry.status || "active") !== "offboarded") continue;
+  const agentId = entry.agent_id;
+  if (typeof agentId !== "string" || !agentId.trim()) continue;
+  for (const field of ["offboarded_at", "offboard_reason"]) {
+    if (typeof entry[field] !== "string" || !entry[field].trim()) {
+      addError(offboardingErrors, ".orbitos/agents/registry.yaml", `offboarded agent ${agentId} is missing ${field}`);
+    }
+  }
+  if (typeof entry.offboard_exception !== "boolean") {
+    addError(offboardingErrors, ".orbitos/agents/registry.yaml", `offboarded agent ${agentId} is missing offboard_exception`);
+  }
+  const dateStr = (entry.offboarded_at || "").replace(/-/g, "");
+  const archiveDir = path.join(root, `99-归档/agents-${agentId}-${dateStr}`);
+  if (!fs.existsSync(archiveDir) || !fs.statSync(archiveDir).isDirectory()) {
+    addError(offboardingErrors, `99-归档/agents-${agentId}-${dateStr}`, "offboarded agent archive directory is missing");
+  }
+}
+printCase("actual.offboarding-consistency", true, offboardingErrors);
 
 caseCount += 1;
 const machineLayerErrors = [];

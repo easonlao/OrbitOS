@@ -89,7 +89,11 @@ def registered_agents(root):
     for path in candidates:
         if path.is_file():
             registry = read_json(path)
-            return {item.get("agent_id") for item in registry.get("agents", []) if isinstance(item, dict)}
+            return {
+                item.get("agent_id")
+                for item in registry.get("agents", [])
+                if isinstance(item, dict) and (item.get("status") or "active") == "active"
+            }
     raise ValueError("agent registry is missing")
 
 

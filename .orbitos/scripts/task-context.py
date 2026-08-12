@@ -236,6 +236,30 @@ def main():
         if agent is None:
             raise ValueError(f"agent is not registered: {args.agent_id}")
 
+        status = agent.get("status") or "active"
+        if status in {"offboarding", "offboarded"}:
+            # Archived/archiving agents must not aggregate any context: profile,
+            # env, work, collab and handoff sources were archived or unbound.
+            result = {
+                "ok": True,
+                "agent_id": args.agent_id,
+                "status": status,
+                "offboarded_at": agent.get("offboarded_at"),
+                "offboard_reason": agent.get("offboard_reason"),
+                "registry": {
+                    "path": str(registry_path.relative_to(root)),
+                    "entry": agent,
+                },
+                "claimable": [],
+                "notice": (
+                    "agent 已注销，不聚合任务上下文"
+                    if status == "offboarded"
+                    else "agent 注销中，不聚合任务上下文"
+                ),
+            }
+            print(json.dumps(result, ensure_ascii=False, indent=2))
+            return 0
+
         profile_ref = agent.get("profile_ref")
         if not isinstance(profile_ref, str) or not profile_ref.strip():
             raise ValueError(f"agent registry entry is missing profile_ref: {args.agent_id}")

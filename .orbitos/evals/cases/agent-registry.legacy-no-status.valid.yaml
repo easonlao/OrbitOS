@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "updated": "2026-06-12",
+  "agents": [
+    {
+      "agent_id": "sample-agent",
+      "deployment": {
+        "location": "Sample workstation",
+        "lan_ip": "192.168.1.10",
+        "access": "local filesystem",
+        "orbitos_path": "/path/to/OrbitOS"
+      },
+      "profile_ref": "00-系统/agents/sample-agent.md",
+      "last_seen": "2026-06-12",
+      "notes": "旧格式条目：无 status / offboard 字段，应默认 active 且通过。"
+    }
+  ]
+}

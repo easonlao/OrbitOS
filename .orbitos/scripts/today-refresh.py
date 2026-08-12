@@ -92,11 +92,60 @@ def reconcile_stale_state(root, executor, max_age_seconds):
         raise RefreshError(result.stderr.strip() or "maintenance reconciliation failed")
 
 
-def item_line(item):
+def offboarded_agent_ids(root):
+    """Registry agent_ids whose lifecycle status is offboarded."""
+    registry_path = root / ".orbitos" / "agents" / "registry.yaml"
+    if not registry_path.is_file():
+        return set()
+    try:
+        registry = json.loads(registry_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError, json.JSONDecodeError):
+        return set()
+    return {
+        item.get("agent_id")
+        for item in (registry.get("agents", []) if isinstance(registry, dict) else [])
+        if isinstance(item, dict) and (item.get("status") or "active") == "offboarded"
+    }
+
+
+def offboard_summary(root, limit=5):
+    """Scan event files for agent_offboarding events, newest last."""
+    events_root = root / ".orbitos" / "logs" / "events"
+    if not events_root.is_dir():
+        return []
+    entries = []
+    for event_path in sorted(events_root.glob("*.yaml")):
+        try:
+            event = json.loads(event_path.read_text(encoding="utf-8"))
+        except (OSError, ValueError, json.JSONDecodeError):
+            continue
+        if not isinstance(event, dict) or event.get("event_type") != "agent_offboarding":
+            continue
+        actor = event.get("actor") if isinstance(event.get("actor"), dict) else {}
+        archive_ref = None
+        outputs = event.get("outputs")
+        if isinstance(outputs, list):
+            for output in outputs:
+                if isinstance(output, dict) and output.get("kind") == "artifact" and output.get("ref"):
+                    archive_ref = output["ref"]
+                    break
+        entries.append(
+            {
+                "agent_id": actor.get("agent_id") or actor.get("name") or "unknown",
+                "timestamp": event.get("timestamp"),
+                "reason": event.get("reason"),
+                "archive_dir": archive_ref,
+            }
+        )
+    return entries[-limit:]
+
+
+def item_line(item, offboarded_ids=frozenset()):
     subject = item.get("subject", item.get("maintenance_id"))
     action = item.get("next_action") or "继续检查"
     owner = item.get("owner_agent") or "待分配"
-    return f"- **{subject}**：责任 Agent `{owner}`；下一步：{action}。"
+    marker = "（负责人已注销，待人工重新分配）" if owner in offboarded_ids else ""
+    return f"- **{subject}**：责任 Agent `{owner}`{marker}；下一步：{action}。"
 
 
 def project_focus(root):
@@ -138,6 +187,7 @@ def project_draft_decisions(root):
 def render_projection(root, state):
     items = list(state.get("items", {}).values())
     active = [item for item in items if item.get("status") in OPEN_STATUSES]
+    offboarded_ids = offboarded_agent_ids(root)
     decisions = [item for item in active if item.get("status") == "blocked" or item.get("requires_user")]
     draft_decisions = project_draft_decisions(root)
     processing = [
@@ -159,14 +209,14 @@ def render_projection(root, state):
     focus = project_focus(root)
     lines = ["## 1. 业务重点", "", *focus, "", "## 2. 需要用户决定", ""]
     if decisions:
-        lines.extend(item_line(item) for item in decisions)
+        lines.extend(item_line(item, offboarded_ids) for item in decisions)
     if draft_decisions:
         lines.extend(draft_decisions)
     if not decisions and not draft_decisions:
         lines.append("- 暂无。")
     lines.extend(["", "## 3. Agent 正在处理", ""])
     if processing:
-        lines.extend(item_line(item) for item in processing)
+        lines.extend(item_line(item, offboarded_ids) for item in processing)
     else:
         lines.append("- 暂无。")
     lines.extend(
@@ -178,6 +228,14 @@ def render_projection(root, state):
             f"- 当前维护事项：开放 {len(active)} 项；未归责 {len(unassigned)} 项。",
         ]
     )
+    offboarded = offboard_summary(root)
+    if offboarded:
+        lines.extend(["", "## 5. 已注销 Agent", ""])
+        for entry in offboarded:
+            when = (entry["timestamp"] or "")[:10] or "日期未知"
+            lines.append(
+                f"- `{entry['agent_id']}`：{when} 注销。原因：{entry['reason']}。归档：{entry['archive_dir']}。"
+            )
     return "\n".join(lines)
 
 

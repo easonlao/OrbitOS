@@ -4,7 +4,7 @@ area: internal
 purpose: eval
 lifecycle: active
 created: 2026-06-12
-updated: 2026-06-19
+updated: 2026-08-12
 tags:
   - orbitos
   - eval
@@ -55,6 +55,8 @@ node .orbitos/scripts/run-validation.mjs
 - 根目录编号流必须存在且不冲突：`00-系统`、`01-收件箱`、`02-时间线`、`03-项目`、`04-知识`、`05-资源`、`06-输出`、`99-归档`。
 - `04-知识/` 一级目录必须使用 `NN-名称`，保持知识分类的稳定阅读顺序。
 - 真实 agent registry 必须符合 schema。
+- agent registry 生命周期契约：`status` 仅允许 `active` / `offboarding` / `offboarded`，`status: offboarded` 条目必须携带 `offboarded_at` 与 `offboard_reason`。
+- agent registry 向后兼容：旧格式条目（无 status / offboard 字段）默认视为 `active`，必须通过。
 - 真实 ingest batch 必须符合 schema，且 `01-收件箱/已入库/` 文件与 batch 记录要互相对应。
 
 ## 文件命名
@@ -65,6 +67,7 @@ node .orbitos/scripts/run-validation.mjs
 - `inbox-triage.*.yaml`
 - `ingest-batch.*.yaml`
 - `lifecycle.*.yaml`
+- `agent-registry.*.yaml`
 
 文档一致性样例位于 `doc-consistency/`，使用相同的 `.valid.` / `.invalid.` 命名约定。
 

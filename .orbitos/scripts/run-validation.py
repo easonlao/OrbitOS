@@ -67,6 +67,9 @@ def validate_value(value, schema, path_text, errors):
     if "enum" in schema and value not in schema["enum"]:
         add_error(errors, path_text, "value is not in enum")
 
+    if "const" in schema and value != schema["const"]:
+        add_error(errors, path_text, "value is not equal to const")
+
     if "maxItems" in schema and isinstance(value, list) and len(value) > schema["maxItems"]:
         add_error(errors, path_text, f"array exceeds maxItems={schema['maxItems']}")
 
@@ -100,6 +103,23 @@ def validate_value(value, schema, path_text, errors):
     if "array" in types and isinstance(value, list) and "items" in schema:
         for index, item in enumerate(value):
             validate_value(item, schema["items"], f"{path_text}[{index}]", errors)
+
+    if "allOf" in schema:
+        for branch in schema["allOf"]:
+            if isinstance(branch, dict) and "if" in branch:
+                if schema_holds(value, branch["if"]):
+                    if "then" in branch:
+                        validate_value(value, branch["then"], path_text, errors)
+                elif "else" in branch:
+                    validate_value(value, branch["else"], path_text, errors)
+            else:
+                validate_value(value, branch, path_text, errors)
+
+
+def schema_holds(value, schema):
+    probe = []
+    validate_value(value, schema, "", probe)
+    return len(probe) == 0
 
 
 def validate_lifecycle(value, errors):
@@ -1126,6 +1146,10 @@ def agent_collaboration_evidence_errors():
     for agent in agents if isinstance(agents, list) else []:
         if not isinstance(agent, dict):
             continue
+        # Archived / archiving agents skip profile-presence checks: their profile
+        # has been moved into 99-归档/agents-{id}-{YYYYMMDD}/ by offboarding.
+        if (agent.get("status") or "active") in {"offboarded", "offboarding"}:
+            continue
         agent_id = agent.get("agent_id")
         if not isinstance(agent_id, str) or not agent_id.strip():
             add_error(errors, ".orbitos/agents/registry.yaml", "registry entry is missing agent_id")
@@ -1163,7 +1187,14 @@ def agent_event_evidence_errors():
 
     registry = read_json_like(".orbitos/agents/registry.yaml")
     agents = registry.get("agents", []) if isinstance(registry, dict) else []
-    agent_ids = registered_agent_ids(agents)
+    agent_ids = [
+        aid
+        for aid in registered_agent_ids(agents)
+        if (next(
+            (a.get("status") for a in agents if isinstance(a, dict) and a.get("agent_id") == aid),
+            "active",
+        ) or "active") != "offboarded"
+    ]
     if len(agent_ids) <= 1:
         return errors
 
@@ -1428,6 +1459,27 @@ print_case("actual.agent-handoff-structure", True, handoff_structure_errors_list
 case_count += 1
 agent_collaboration_evidence_errors_list = agent_collaboration_evidence_errors()
 print_case("actual.agent-collaboration-evidence", True, agent_collaboration_evidence_errors_list)
+
+
+case_count += 1
+offboarding_errors = []
+offboarding_registry = read_json_like(".orbitos/agents/registry.yaml")
+for entry in offboarding_registry.get("agents", []) if isinstance(offboarding_registry, dict) else []:
+    if not isinstance(entry, dict) or (entry.get("status") or "active") != "offboarded":
+        continue
+    agent_id = entry.get("agent_id")
+    if not isinstance(agent_id, str) or not agent_id.strip():
+        continue
+    for field in ("offboarded_at", "offboard_reason"):
+        if not isinstance(entry.get(field), str) or not entry.get(field).strip():
+            add_error(offboarding_errors, ".orbitos/agents/registry.yaml", f"offboarded agent {agent_id} is missing {field}")
+    if not isinstance(entry.get("offboard_exception"), bool):
+        add_error(offboarding_errors, ".orbitos/agents/registry.yaml", f"offboarded agent {agent_id} is missing offboard_exception")
+    date_str = (entry.get("offboarded_at") or "").replace("-", "")
+    archive_dir = ROOT / f"99-归档/agents-{agent_id}-{date_str}"
+    if not archive_dir.is_dir():
+        add_error(offboarding_errors, f"99-归档/agents-{agent_id}-{date_str}", "offboarded agent archive directory is missing")
+print_case("actual.offboarding-consistency", True, offboarding_errors)
 
 
 case_count += 1

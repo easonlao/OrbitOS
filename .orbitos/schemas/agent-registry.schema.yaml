@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "orbitos/agent-registry.schema.yaml",
-  "title": "OrbitOS Agent Registry",
-  "description": "机器可读的 agent 注册表。用于确认 agent_id、部署位置、接入方式和人读档案路径。",
+  "title": "OrbitOS Agent Registry (offboarding 扩展)",
+  "description": "机器可读的 agent 注册表。用于确认 agent_id、部署位置、接入方式和人读档案路径。条目含生命周期状态：active / offboarding / offboarded，旧条目缺省视为 active。",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -85,8 +85,59 @@
               "null"
             ],
             "description": "简短备注。"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "offboarding",
+              "offboarded"
+            ],
+            "default": "active",
+            "description": "生命周期状态。旧条目缺省视为 active。"
+          },
+          "offboarded_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "注销完成日期，YYYY-MM-DD。仅 status=offboarded 时必填。"
+          },
+          "offboard_reason": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "注销原因（人读）。仅 status=offboarded 时必填。"
+          },
+          "offboard_exception": {
+            "type": "boolean",
+            "default": false,
+            "description": "是否异常注销：资源未完全释放、依赖残留、进程可能仍存活。"
           }
-        }
+        },
+        "allOf": [
+          {
+            "if": {
+              "type": "object",
+              "properties": {
+                "status": {
+                  "const": "offboarded"
+                }
+              },
+              "required": [
+                "status"
+              ]
+            },
+            "then": {
+              "type": "object",
+              "required": [
+                "offboarded_at",
+                "offboard_reason"
+              ]
+            }
+          }
+        ]
       }
     }
   }

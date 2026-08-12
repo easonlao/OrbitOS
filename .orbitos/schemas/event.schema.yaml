@@ -84,7 +84,8 @@
         "system_change",
         "inbox_triage",
         "knowledge_use",
-        "validation_failed"
+        "validation_failed",
+        "agent_offboarding"
       ],
       "description": "事件类型。首版保持少量枚举，避免 agent 分类过度。"
     },

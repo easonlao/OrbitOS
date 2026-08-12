@@ -186,6 +186,7 @@ def build_parser():
             "inbox_triage",
             "knowledge_use",
             "validation_failed",
+            "agent_offboarding",
         ],
     )
     parser.add_argument("--file", action="append", default=[], type=parse_file_change)

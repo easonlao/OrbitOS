@@ -46,6 +46,7 @@ Agent Onboarding 用于把一个真实 agent 接入 OrbitOS。
 1. 读取根 `AGENTS.md`。
 2. 读取 `.orbitos/schemas/agent-registry.schema.yaml`。
 3. 读取 `.orbitos/agents/registry.yaml`，确认 `agent_id` 未重复。
+   若现有条目 `status` 为 `offboarded`，不得重新注册，需用户明确决定。
 4. 更新 `.orbitos/agents/registry.yaml`。
 5. 创建 `00-系统/agents/{agent_id}.md`。
 6. 用模板创建轻量 Agent Profile，并填充占位字段。
