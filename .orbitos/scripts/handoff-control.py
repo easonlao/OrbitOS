@@ -259,6 +259,21 @@ def close(args, root):
         raise ValueError("handoff close requires a closed collaboration session that passed hard gates")
     if session["agent_id"] != args.agent_id:
         raise ValueError("only the session owner can close its handoff")
+    if session["role"] == "editor":
+        target = session_record(root, session.get("review_target_session_id"))
+        review = target.get("review", {})
+        refs = {item["ref"] for item in session.get("evidence", [])
+                if item.get("verification_status") == "independently_reviewed"
+                and item.get("actor_agent_id") == args.agent_id}
+        if (target["role"] not in {"writer", "builder"}
+                or target["agent_id"] == args.agent_id
+                or target["status"] not in {"review_required", "closed"}
+                or target["project"] != session["project"] or target["task_ref"] != session["task_ref"]
+                or review.get("status") != "approved"
+                or review.get("reviewer_session_id") != session["session_id"]
+                or review.get("reviewer_agent_id") != args.agent_id
+                or not target.get("evidence") or not refs.intersection(review.get("evidence_refs", []))):
+            raise ValueError("Editor handoff close requires its matching independent approved review")
     queue = queue_or_die(root, args.handoff, metadata)
     for output in args.output:
         if not re.match(r"^[^|]+\|[^|]+(\|[^|]+)*$", output):

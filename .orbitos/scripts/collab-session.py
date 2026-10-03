@@ -436,6 +436,8 @@ def submit_review(record, data, root, args):
         raise ValueError("review requires an editor session")
     if record.get("lease_owner") != args.agent_id:
         raise ValueError(f"session is leased by {record.get('lease_owner')}")
+    if not lease_valid(record):
+        raise ValueError("review requires a valid Editor lease")
     target = get(data, record.get("review_target_session_id"))
     check_revision(target, args.target_expected_revision)
     if target["role"] not in {"writer", "builder"}:
@@ -459,6 +461,10 @@ def submit_review(record, data, root, args):
     record["evidence"].extend(evidence)
     record["evidence_refs"].extend(item["ref"] for item in evidence)
     record["research"] = derive_research(record["evidence"])
+    # As in update_record(closed), retain the gate snapshot taken BEFORE
+    # releasing the lease. A completed rejection is not handoff acceptance.
+    recompute_gate(record)
+    record["gate_state"]["hard_gate_passed"] &= args.decision == "approved"
     record["status"] = "closed"
     record["lease_owner"] = None
     record["lease_until"] = None
@@ -480,7 +486,58 @@ def submit_review(record, data, root, args):
     target["revision"] += 1
     target["updated_at"] = now()
     recompute_gate(target)
+
+
+def repair_review_close(record, data, root, args):
+    """Revalidate an old approved Editor closure; never reopen/change a review.
+
+    This explicit owner-only recovery appends fresh independent evidence and
+    refreshes the derived gate cache. It does not repair arbitrary closed
+    sessions or infer approval from the cache being repaired.
+    """
+    validate_identity(root, args.agent_id, "editor")
+    if record["role"] != "editor" or record["status"] != "closed" or record["agent_id"] != args.agent_id:
+        raise ValueError("repair requires the owner of a closed Editor session")
+    if record.get("lease_owner") or record.get("lease_until"):
+        raise ValueError("closed Editor repair requires no outstanding lease")
+    target = get(data, record.get("review_target_session_id"))
+    check_revision(target, args.target_expected_revision)
+    review = target["review"]
+    if (target["role"] not in {"writer", "builder"}
+            or target["agent_id"] == args.agent_id
+            or target["project"] != record["project"] or target["task_ref"] != record["task_ref"]
+            or target["status"] not in {"review_required", "closed"}
+            or review["status"] != "approved"
+            or review["reviewer_session_id"] != record["session_id"]
+            or review["reviewer_agent_id"] != args.agent_id
+            or not review.get("reviewed_at") or not target.get("evidence")):
+        raise ValueError("repair requires the matching independent approved review")
+    original_refs = {item["ref"] for item in record.get("evidence", [])
+                     if item["actor_agent_id"] == args.agent_id
+                     and item["verification_status"] == "independently_reviewed"}
+    if not original_refs.intersection(review.get("evidence_refs", [])):
+        raise ValueError("repair requires original independent review evidence")
+    if record["review"]["status"] != "not_required" or record["gate_state"]["review_required"]:
+        raise ValueError("repair cannot bypass a pending review gate")
+    evidence = parse_evidence(args.evidence, args.agent_id, allow_review=True)
+    if evidence["verification_status"] != "independently_reviewed":
+        raise ValueError("repair requires fresh independently_reviewed evidence")
+    if record["gate_state"]["hard_gate_passed"]:
+        return  # idempotent, after checking the approval chain
+    record["evidence"].append(evidence)
+    record["evidence_refs"].append(evidence["ref"])
+    record["research"] = derive_research(record["evidence"])
+    # Hold a fresh recovery lease under the state lock, evaluate the normal
+    # gates, then release it without persisting an open/claimed state.
+    record["lease_owner"] = args.agent_id
+    record["lease_until"] = (datetime.now().astimezone() + timedelta(seconds=60)).isoformat(timespec="seconds")
     recompute_gate(record)
+    if not record["gate_state"]["hard_gate_passed"]:
+        raise ValueError("repair requires all existing hard gates")
+    record["lease_owner"] = None
+    record["lease_until"] = None
+    record["revision"] += 1
+    record["updated_at"] = now()
 
 
 def main():
@@ -536,6 +593,13 @@ def main():
     reviewing.add_argument("--evidence", action="append", required=True)
     reviewing.add_argument("--reason")
 
+    repairing = commands.add_parser("repair-review-close")
+    repairing.add_argument("--session-id", required=True)
+    repairing.add_argument("--agent-id", required=True)
+    repairing.add_argument("--expected-revision", type=int, required=True)
+    repairing.add_argument("--target-expected-revision", type=int, required=True)
+    repairing.add_argument("--evidence", required=True)
+
     listing = commands.add_parser("list")
     listing.add_argument("--agent-id")
     listing.add_argument("--project")
@@ -588,6 +652,12 @@ def main():
                     "session": record,
                     "target": get(data, record["review_target_session_id"]),
                 }
+            elif args.command == "repair-review-close":
+                record = get(data, args.session_id)
+                check_revision(record, args.expected_revision)
+                repair_review_close(record, data, root, args)
+                save(root, data)
+                result = {"ok": True, "session": record}
             elif args.command == "update":
                 record = get(data, args.session_id)
                 check_revision(record, args.expected_revision)

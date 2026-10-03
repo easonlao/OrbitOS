@@ -97,6 +97,7 @@
                 "valid_results": {"type": ["string", "null"]},
                 "invalidated_assumptions": {"type": ["string", "null"]},
                 "replacement_role": {"type": ["string", "null"]},
+                "user_authorized_reassignment_receipt": {"type": ["string", "null"]},
                 "proposed_by": {"type": "string"},
                 "proposed_at": {"type": "string"},
                 "confirmed_at": {"type": ["string", "null"]}

@@ -37,6 +37,8 @@ tags:
 - 批准审核必须包含 `independently_reviewed` 证据；驳回审核必须包含结构化证据和明确原因。
 - 审核结果必须写回被审 session 的 `review` 记录，包含 reviewer session、reviewer agent、证据引用、结论和时间。
 - 被驳回的产出只能回到 `returned` 重新修正，不能从驳回状态直接关闭。
+- Editor提交审核必须持有有效租约；关闭时先保存审核完成时的门禁快照，再释放租约，不因完成后的租约为空抹去通过状态。驳回审核不能作为整个handoff的验收通过依据；以Editor会话关闭交接时，必须再核验被审产出的approved记录、独立审核者和证据反向关联。
+- 历史Editor会话若已closed且明确approved，但仅门禁缓存错误，可由原审核者显式运行`collab-session.py repair-review-close`，携带当前session revision、target revision和新鲜independently_reviewed证据。命令在状态锁内取得短期恢复租约、重验既有门禁后立即释放，只追加恢复证据并刷新派生缓存，不重开会话、不改原审核结论、不改被审产物。拒绝未批准、缺原始证据、同一Agent自审、关联不符或版本冲突的恢复；恢复操作必须记录event。
 
 ## 队列硬边界
 

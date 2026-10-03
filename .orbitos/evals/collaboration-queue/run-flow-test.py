@@ -463,6 +463,24 @@ def test_replan_structured_and_latest(tmp):
     check(record["stages"]["s2"]["tool"] == "agent_d" and record["stages"]["s2"]["status"] == "complete", "replacement agent completed the revised stage")
 
 
+def test_user_authorized_unavailable_reassignment(tmp):
+    print("test_user_authorized_unavailable_reassignment (return owner may replace an unavailable current owner only with user receipt)")
+    handoff = write_handoff(tmp, "user-reassign")
+    run_script(QUEUE_SCRIPT, tmp, "launch", ["--handoff", handoff, "--agent-id", "agent_a", "--role", "coordinator", "--return-owner", "agent_a", "--prohibited", "不越界", "--return-format", "结论+证据", "--next-action", "start", "--date", "2026-01-01"] + queue([STAGE_S, STAGE_R2]), True)
+    run_script(QUEUE_SCRIPT, tmp, "confirm", ["--handoff", handoff, "--agent-id", "agent_a", "--plan-revision", "0", "--return-owner", "agent_a", "--receipt", "user accepted", "--date", "2026-01-01"], True)
+    s1, _ = begin_stage(tmp, handoff, "agent_a", "coordinator", "s1")
+    finish_session(tmp, s1, "agent_a")
+    run_script(QUEUE_SCRIPT, tmp, "advance", ["--handoff", handoff, "--agent-id", "agent_a", "--role", "coordinator", "--stage-id", "s1", "--return-owner", "agent_a", "--session-id", s1, "--date", "2026-01-01", "--outcome", "done", "--result", "defined", "--evidence", "board.md"], True)
+    replacement = [dict(STAGE_S), {**STAGE_R2, "tool": "agent_d", "deliverable": "replacement evidence"}]
+    base = ["--handoff", handoff, "--agent-id", "agent_a", "--trigger", "unavailable", "--affected-stage", "s2", "--reason", "agent_b unavailable", "--valid-results", "s1 valid", "--invalidated-assumptions", "agent_b available", "--replacement-role", "agent_d researcher", "--date", "2026-01-01"] + proposed_queue(replacement)
+    run_script(QUEUE_SCRIPT, tmp, "replan", base, False)
+    run_script(QUEUE_SCRIPT, tmp, "replan", base + ["--user-authorized-reassignment-receipt", "user explicitly reassigned agent_b to agent_d"], True)
+    record = queue_record(tmp, handoff)
+    check(record["plan_status"] == "proposed" and record["stages"]["s2"]["tool"] == "agent_d", "authorized reassignment creates a proposed replacement plan")
+    check(record["replans"][-1]["user_authorized_reassignment_receipt"], "authorized reassignment receipt preserved")
+    run_script(QUEUE_SCRIPT, tmp, "confirm", ["--handoff", handoff, "--agent-id", "agent_a", "--plan-revision", "1", "--return-owner", "agent_a", "--receipt", "user confirmed reassignment plan", "--date", "2026-01-01"], True)
+
+
 def test_mark_close_removed(tmp):
     print("test_mark_close_removed (P1: receipt only via governed close)")
     handoff = write_handoff(tmp, "no-mark")
@@ -806,6 +824,7 @@ def main():
         test_forged_return_owner(tmp)
         test_launch_card_full(tmp)
         test_replan_structured_and_latest(tmp)
+        test_user_authorized_unavailable_reassignment(tmp)
         test_mark_close_removed(tmp)
         test_queue_record_lost_fail_closed(tmp)
         test_builder_editor_gates(tmp)

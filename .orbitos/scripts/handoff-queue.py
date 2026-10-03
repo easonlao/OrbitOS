@@ -548,7 +548,13 @@ def replan(args, root):
     record = state["queues"].get(relative)
     if not record:
         raise ValueError("handoff has no queue plan; run launch first")
-    if record["current_owner"] != args.agent_id:
+    reassignment_receipt = (args.user_authorized_reassignment_receipt or "").strip()
+    user_authorized_reassignment = (
+        args.trigger == "unavailable"
+        and args.agent_id == record["return_owner"]
+        and bool(reassignment_receipt)
+    )
+    if record["current_owner"] != args.agent_id and not user_authorized_reassignment:
         raise ValueError(f"only the current owner can trigger a re-plan: {record['current_owner']}")
     if args.trigger == "failure":
         affected = record["stages"].get(args.affected_stage)
@@ -599,6 +605,7 @@ def replan(args, root):
         "valid_results": args.valid_results,
         "invalidated_assumptions": args.invalidated_assumptions,
         "replacement_role": args.replacement_role,
+        "user_authorized_reassignment_receipt": reassignment_receipt or None,
         "proposed_by": args.agent_id,
         "proposed_at": now(),
         "confirmed_at": None,
@@ -615,6 +622,7 @@ def replan(args, root):
         f"- 仍有效结果：{args.valid_results}",
         f"- 失效假设：{args.invalidated_assumptions}",
         f"- 替换角色：{args.replacement_role}",
+        *([f"- 用户强制改派回执：{reassignment_receipt}"] if reassignment_receipt else []),
         f"- 修订 plan_revision：{revision}",
         f"- 提议者：{args.agent_id}",
         "",
@@ -628,6 +636,7 @@ def replan(args, root):
         "plan_revision": revision,
         "plan_status": "proposed",
         "stages": new_order,
+        "user_authorized_reassignment": user_authorized_reassignment,
         "confirm_instruction": f"请用户确认后执行 confirm --plan-revision {revision}",
     }, ensure_ascii=False))
 
@@ -751,6 +760,7 @@ def parser():
     replanning.add_argument("--valid-results", required=True)
     replanning.add_argument("--invalidated-assumptions", required=True)
     replanning.add_argument("--replacement-role", required=True)
+    replanning.add_argument("--user-authorized-reassignment-receipt")
     replanning.add_argument("--proposed-queue", action="append", required=True)
     replanning.add_argument("--date", required=True)
     statusing = commands.add_parser("status")
