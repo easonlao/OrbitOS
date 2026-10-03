@@ -4,7 +4,7 @@ area: internal
 purpose: workflow
 lifecycle: active
 created: 2026-06-12
-updated: 2026-07-07
+updated: 2026-10-03
 tags:
   - orbitos
   - workflow
@@ -13,82 +13,22 @@ tags:
 
 # Startup Sync Workflow
 
-## 目标
+目标：最小确认身份与状态，不推进任务、不做决策、不修改任何文件。
 
-用最小读取确认 agent 身份、runtime 可用性和当前工作入口。Startup Sync 不推进任务，不做决策。
+## 流程
 
-## 触发条件
+1. 确认 `.orbitos/`、`.orbitos/agents/registry.yaml`、`02-时间线/今日.md` 存在；缺失时停止并报告缺失项。
+2. registry 中查本 agent：缺失→停止，请用户确认 `agent_id` 后走 `agent-onboarding.md`；`offboarding` / `offboarded`→停止，前者提示等待收敛，后者提示走复活判定，不静默 onboarding。
+3. 读 `02-时间线/今日.md`，输出短摘要：agent_id、当前任务面板、待确认、可继续入口。
 
-每个 agent 新会话进入 OrbitOS 时执行一次。根 `AGENTS.md` 已提供入口和硬边界，不在这里重复读取用户说明书。
+## 按需工具（不默认执行，任务或排查需要时才跑）
 
-## 状态边界
-
-Startup Sync 不修改用户内容、registry、profile、event、项目或时间线。
-
-允许 `env-check.py` 刷新 `.orbitos/state/env/{agent_id}.json`；这是本地环境报告，不是协作状态。
-
-## 执行流程
-
-1. 确认以下路径存在：
-   - `.orbitos/`
-   - `.orbitos/agents/registry.yaml`
-   - `.orbitos/workflows/startup-sync.md`
-   - `02-时间线/今日.md`
-2. 读取 registry，确认自己的 `agent_id`、`deployment` 和 `profile_ref`。
-3. 判断当前 registry 条目的 `status`（缺失视为 `active`）：
-   - `offboarding`：立即停止；输出"当前 agent 正处于注销流程中（offboarding），请等待收敛为 offboarded 后再处理"；提示可用 `python .orbitos/scripts/offboard-agent.py status --agent-id {agent_id}` 查看进度。不读取 profile、不运行 env-check、不推进名下任务。
-   - `offboarded`：立即停止；输出"当前 agent 已注销（offboarded，{offboarded_at}）"；如需重新启用，必须由用户明确决定并走 `agent-onboarding.md` 的复活判定，不得静默重新 onboarding。
-   - 缺失 / `active`：继续后续步骤。
-   - 如果当前 agent 未注册，立即停止；只询问用户确认 `agent_id`，确认后另行进入 `agent-onboarding.md`。
-4. 只读取自己的轻量 profile：部署信息、当前定位、最近工作、启动关注和经验入口。
-   - 若条目 `status` 为 `offboarding` / `offboarded`，跳过 profile 读取；profile 已归档到 `99-归档/agents-{id}-{YYYYMMDD}/`。
-5. 不默认读取 experience 文件；仅在任务命中、失败返工或排查历史问题时按入口展开。
-6. 运行 `python .orbitos/scripts/env-check.py --agent-id {agent_id}`；已有当日报告且本次只读时可以直接读取。`status` 为 `offboarding` / `offboarded` 时跳过，不刷新 env（env 已归档或正在归档中）。
-7. 协作模块为 `ready` 时，运行 `python .orbitos/scripts/handoff-status.py --agent-id {agent_id}`；只报告当前 Agent 负责的 `delegated / working / returned` handoff，不自动开始、抢占或改写它们。
-8. 读取 `02-时间线/今日.md`，从其中获取当前摘要、待确认和可继续入口。
-9. 如果 `.orbitos/state/maintenance.json` 存在，读取当前开放维护项的 `status`、`owner_agent`、`lease_until` 和 `next_action`；只同步状态，不自动领取、修复或关闭。恢复维护任务时，后续动作必须基于当前 `revision` 和最新证据。
-10. 运行 `python .orbitos/scripts/task-context.py --agent-id {agent_id}` 获取当前 Agent 的统一任务上下文；只读查询，不自动领取任务。该上下文同时显示当前 Agent 名下的 work item 与 collaboration session/角色。传入明确项目路径时，再增加 `--path {path}` 获取路径上的项目入口与状态摘要。
-11. 如果 `00-系统/09-人物档案.md` 存在且仍处于 `baseline_status: pending`，提醒用户：动态人物模块尚未完成首轮问卷，当前只是一份待初始化骨架。
-12. 如果 `00-系统/08-本地协作偏好.md` 存在且仍包含 `TODO_UPDATE_LOCAL_COLLAB_PREFS`，提醒用户这是首次初始化生成的模板，请先按自己的习惯更新后再依赖。
-13. 输出短摘要：`agent_id`、runtime 状态、当前任务面板、当前角色 session、待确认、当前维护项负责人/租约和可继续入口。
-
-## 异常处理
-
-- 工作副本缺失必要路径：停止并报告当前路径与缺失项。
-- registry 不可读：停止，不读取任何 profile 或经验文件。
-- agent 未注册：停止，不创建 registry、profile 或 event。
-- 当前 registry 条目 `status` 为 `offboarding` / `offboarded`：停止；不读取 profile、不运行 env-check、不推进名下任务；`offboarding` 提示等待收敛，`offboarded` 提示走复活判定而非静默 onboarding。
-- Python 不可用或 runtime `blocked`：停止写入型工作流并报告原因。
-- 下一步仍不明确：只报告已知状态和可选入口，不扩大任务范围。
-- 维护状态缺失或不可读：只报告缺口；不得从旧 event 推导当前故障，也不得静默创建开放事项。
-- 动态人物模块未初始化：只提醒当前仍是待初始化骨架，不在 Startup Sync 中自行发问卷或生成主源。
-
-## 执行清单
-
-### 进入检查
-
-- [ ] 必要路径存在，当前 `agent_id` 已在 registry 中。
-- [ ] 当前 registry 条目 `status` 非 `offboarding` / `offboarded`（已注销或注销中则停止，不继续后续步骤）。
-- [ ] 已确认 Startup Sync 不推进任务。
-
-### 执行检查
-
-- [ ] 只读取当前 agent 的轻量 profile，未默认展开经验文件。
-- [ ] runtime 环境未 blocked。
-- [ ] 协作模块 ready 时，已检查当前 Agent 名下的开放 handoff，未自动推进它们。
-- [ ] 已只读检查当前 Agent 名下的开放 collaboration session 与角色，未自动认领或改变阶段。
-- [ ] 默认只读 `今日.md`，其他时间线均按需展开。
-- [ ] 未在 Startup Sync 中擅自生成 `09-人物档案.md` 或启动人物问卷。
-
-### 退出检查
-
-- [ ] 已输出短状态摘要。
-- [ ] 未修改用户内容或协作状态。
+- 统一任务上下文（环境、工作项、维护摘要、项目入口）：`python .orbitos/scripts/task-context.py --agent-id {id}`。
+- 开放 handoff：collaboration 模块为 `ready` 时 `python .orbitos/scripts/handoff-status.py --agent-id {id}`，只读不领取。
+- 维护状态排查：读 `.orbitos/state/maintenance.json`，只同步状态，不自动领取或关闭。
 
 ## 禁止
 
-- 未经用户确认自动注册 agent。
-- registry 不可读时查看其他 agent 的 profile 或经验。
-- 把用户说明书、完整经验或整个 vault 纳入固定冷启动读取。
-- 在 Startup Sync 中读取项目 `AGENTS.md`、`README.md`、`STATUS.md` 或任务文件。
-- 把 Startup Sync 当作任务执行、决策或 Progress Sync。
+- 未经用户确认自动注册 agent；registry 不可读时查看其他 agent 的 profile 或经验。
+- 在本流程中推进任务、做决策或修改用户内容。
+- 把完整经验或整个 vault 纳入固定冷启动读取。

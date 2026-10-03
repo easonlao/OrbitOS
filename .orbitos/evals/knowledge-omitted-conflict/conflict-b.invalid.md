@@ -9,4 +9,4 @@ lifecycle: active
 
 ## 来源
 
-- 原始输入：[[README.md]]
+- 原始输入：[[AGENTS.md]]

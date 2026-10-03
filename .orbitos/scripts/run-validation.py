@@ -1,4 +1,5 @@
 import json
+import os
 import re
 import subprocess
 import sys
@@ -1113,9 +1114,22 @@ def collaboration_consistency_errors():
         if not isinstance(outputs, list) or not outputs:
             add_error(errors, str(event_path.relative_to(ROOT)), "collaboration receipt requires at least one output")
         review = session.get("review", {})
-        if collaboration.get("review_status") != review.get("status"):
-            add_error(errors, str(event_path.relative_to(ROOT)), "collaboration receipt review status must match the session")
-        if collaboration.get("review_status") == "approved":
+        receipt_review_status = collaboration.get("review_status")
+        session_review_status = review.get("status")
+        # Receipts are immutable observations. A Builder's earlier pending
+        # receipt remains valid after a later Editor decision, provided it was
+        # recorded before that decision. Do not require historical events to
+        # mirror the session's current review state.
+        pending_before_decision = (
+            receipt_review_status == "pending"
+            and session_review_status in {"approved", "rejected"}
+            and isinstance(event.get("timestamp"), str)
+            and isinstance(review.get("reviewed_at"), str)
+            and event["timestamp"] <= review["reviewed_at"]
+        )
+        if receipt_review_status != session_review_status and not pending_before_decision:
+            add_error(errors, str(event_path.relative_to(ROOT)), "collaboration receipt review status must match the session or predate its decision")
+        if receipt_review_status == "approved":
             if collaboration.get("reviewer_session_id") != review.get("reviewer_session_id") or collaboration.get("reviewer_agent_id") != review.get("reviewer_agent_id"):
                 add_error(errors, str(event_path.relative_to(ROOT)), "approved collaboration receipt must retain its independent reviewer")
 
@@ -1817,6 +1831,37 @@ for legacy_name in legacy_visible_domains:
     if not (ROOT / legacy_name).is_dir():
         add_error(root_directory_errors, legacy_name, "legacy visible-domain entry must be removed after its directory is gone")
 print_case("actual.root-directories", True, root_directory_errors)
+
+
+case_count += 1
+root_git_boundary_errors = []
+runtime_repo = ROOT / ".git"
+if runtime_repo.is_dir():
+    tracked = subprocess.run(
+        ["git", "ls-files"], cwd=str(ROOT), capture_output=True, text=True, encoding="utf-8", errors="replace"
+    )
+    if tracked.returncode == 0:
+        protected_prefixes = ("01-收件箱/", "02-时间线/", "04-知识/", "05-阅读/", "06-资源/", "99-归档/", "白板/")
+        for line in tracked.stdout.splitlines():
+            line = line.strip().strip('"')
+            if line.startswith("03-项目/") and not line.startswith("03-项目/OrbitOS/"):
+                add_error(root_git_boundary_errors, line, "runtime repo must not track project content; projects own their repos")
+            elif line.startswith(protected_prefixes):
+                add_error(root_git_boundary_errors, line, "runtime repo must not track user-content areas")
+git_dirs = []
+skip_dir_names = {"node_modules", "__pycache__", ".obsidian", ".runtime", ".trash", ".pytest_cache", ".ruff_cache", ".vite", ".playwright-npm-cache"}
+for dirpath, dirnames, filenames in os.walk(ROOT):
+    dirnames[:] = [d for d in dirnames if d not in skip_dir_names and d != ".git"]
+    if ".git" in dirnames:
+        git_dirs.append(Path(dirpath) / ".git")
+for git_dir in git_dirs:
+    parts = git_dir.parent.relative_to(ROOT).parts
+    if len(parts) >= 3 and parts[0] == "03-项目" and parts[2] == "repo":
+        continue
+    if len(parts) == 2 and parts[0] == "03-项目" and parts[1] in {"a-share-valuation", "AgentChat", "mindvideo-checkin"}:
+        continue
+    add_error(root_git_boundary_errors, str(git_dir.relative_to(ROOT)), ".git outside project repo boundaries; whitelist in run-validation before creating")
+print_case("actual.root-git-boundary", True, root_git_boundary_errors)
 
 
 case_count += 1
